@@ -1,7 +1,34 @@
 import { createStore } from "solid-js/store";
 
+export interface RichItem {
+  id: number;
+  name: string;
+  kind: string;
+  location_detail?: string;
+  contents: RichItem[];
+}
+
+export interface RoomMessage {
+  type: "room";
+  name: string;
+  description: string;
+  contents: RichItem[];
+}
+
+export interface InventoryMessage {
+  type: "inventory";
+  items: RichItem[];
+}
+
+export interface TextMessage {
+  type: "message" | "error";
+  text: string;
+}
+
+export type GameMessage = RoomMessage | InventoryMessage | TextMessage;
+
 interface GameState {
-  messages: string[];
+  messages: GameMessage[];
   isConnected: boolean;
   history: string[];
   historyIndex: number;
@@ -25,33 +52,41 @@ export const gameStore = {
 
     ws.onopen = () => {
       setState("isConnected", true);
-      gameStore.addMessage("Connected to Viwo server.");
+      // We don't need a local message here, the server sends a welcome message
     };
 
     ws.onclose = () => {
       setState("isConnected", false);
-      gameStore.addMessage("Disconnected from server.");
+      gameStore.addMessage({
+        type: "error",
+        text: "Disconnected from server.",
+      });
       ws = null;
     };
 
     ws.onmessage = (event) => {
-      gameStore.addMessage(event.data);
+      try {
+        const data = JSON.parse(event.data);
+        gameStore.addMessage(data);
+      } catch (e) {
+        console.error("Failed to parse message", e, event.data);
+        gameStore.addMessage({
+          type: "error",
+          text: "Received invalid data from server.",
+        });
+      }
     };
   },
 
   send: (payload: unknown[]) => {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
-      gameStore.addMessage("Error: Not connected.");
+      gameStore.addMessage({ type: "error", text: "Error: Not connected." });
       return;
     }
     ws.send(JSON.stringify(payload));
-    // Add to history (if it's a simple command, maybe we log it differently?)
-    // For now, just log the string representation
-    // setState("history", (h) => [JSON.stringify(payload), ...h]);
-    // setState("historyIndex", -1);
   },
 
-  addMessage: (msg: string) => {
+  addMessage: (msg: GameMessage) => {
     setState("messages", (msgs) => [...msgs, msg]);
   },
 };

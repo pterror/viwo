@@ -22,9 +22,19 @@ wss.on("connection", (ws: Client) => {
     .get() as { id: number };
   if (guest) {
     ws.playerId = guest.id;
-    ws.send(`Welcome to Viwo! You are logged in as Guest (ID: ${guest.id}).`);
+    ws.send(
+      JSON.stringify({
+        type: "message",
+        text: `Welcome to Viwo! You are logged in as Guest (ID: ${guest.id}).`,
+      }),
+    );
   } else {
-    ws.send("Error: Guest player not found. Please re-seed.");
+    ws.send(
+      JSON.stringify({
+        type: "error",
+        text: "Error: Guest player not found. Please re-seed.",
+      }),
+    );
   }
 
   ws.on("message", (message) => {
@@ -32,13 +42,13 @@ wss.on("connection", (ws: Client) => {
     try {
       data = JSON.parse(message.toString());
     } catch {
-      ws.send("Error: Invalid JSON.");
+      ws.send(JSON.stringify({ type: "error", text: "Invalid JSON." }));
       return;
     }
 
     if (!Array.isArray(data) || typeof data[0] !== "string") {
       ws.send(
-        "Error: Invalid S-expression format. Expected [string, ...args].",
+        JSON.stringify({ type: "error", text: "Invalid S-expression format." }),
       );
       return;
     }
@@ -57,53 +67,69 @@ wss.on("connection", (ws: Client) => {
 
     if (command === "look") {
       if (!player.location_id) {
-        ws.send("You are in the void.");
+        ws.send(
+          JSON.stringify({ type: "message", text: "You are in the void." }),
+        );
         return;
       }
 
       const room = getEntity(player.location_id);
       if (!room) {
-        ws.send("Unknown location.");
+        ws.send(JSON.stringify({ type: "message", text: "Unknown location." }));
         return;
       }
 
       const contents = getContents(room.id).filter((e) => e.id !== player.id);
 
-      let output = `\n**${room.name}**\n`;
-      output += `${room.props["description"] || "Nothing special."}\n`;
+      const richContents = contents.map((item) => ({
+        id: item.id,
+        name: item.name,
+        kind: item.kind,
+        location_detail: item.location_detail,
+        contents: getContents(item.id).map((sub) => ({
+          id: sub.id,
+          name: sub.name,
+          kind: sub.kind,
+          contents: [],
+        })),
+      }));
 
-      if (contents.length > 0) {
-        output += "\nYou see:\n";
-        for (const item of contents) {
-          output += `- ${item.name}`;
-          if (item.location_detail) {
-            output += ` (on ${item.location_detail})`;
-          }
-          const subContents = getContents(item.id);
-          if (subContents.length > 0) {
-            output += ` (containing: ${subContents
-              .map((s) => s.name)
-              .join(", ")})`;
-          }
-          output += "\n";
-        }
-      }
-
-      ws.send(output);
+      ws.send(
+        JSON.stringify({
+          type: "room",
+          name: room.name,
+          description: room.props["description"] || "Nothing special.",
+          contents: richContents,
+        }),
+      );
     } else if (command === "inventory") {
       const items = getContents(player.id);
-      if (items.length === 0) {
-        ws.send("You are not carrying anything.");
-      } else {
-        ws.send(
-          "You are carrying:\n" +
-            items
-              .map((i) => `- ${i.name} (${i.location_detail || "held"})`)
-              .join("\n"),
-        );
-      }
+      const richItems = items.map((item) => ({
+        id: item.id,
+        name: item.name,
+        kind: item.kind,
+        location_detail: item.location_detail,
+        contents: getContents(item.id).map((sub) => ({
+          id: sub.id,
+          name: sub.name,
+          kind: sub.kind,
+          contents: [],
+        })),
+      }));
+
+      ws.send(
+        JSON.stringify({
+          type: "inventory",
+          items: richItems,
+        }),
+      );
     } else {
-      ws.send(`Unknown command: ${command}`);
+      ws.send(
+        JSON.stringify({
+          type: "message",
+          text: `Unknown command: ${command}`,
+        }),
+      );
     }
   });
 
