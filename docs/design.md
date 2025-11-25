@@ -17,6 +17,8 @@ The system is divided into:
 
 1.  **Core Engine**: Handles world state, object persistence, scripting, and logic.
 2.  **API Layer**: Exposes the world to various frontends (WebSocket/HTTP).
+    - **Protocol**: JSON S-expressions (e.g., `["look"]`, `["move", "north"]`).
+    - **Text Support**: Text input is parsed into S-expressions by the client or a gateway layer.
 3.  **Frontends (Plugins)**:
     - Web Client (SolidJS) - Rich HTML display.
     - Discord Bot - Markdown/Text interface.

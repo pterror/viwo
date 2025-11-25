@@ -28,18 +28,34 @@ wss.on("connection", (ws: Client) => {
   }
 
   ws.on("message", (message) => {
-    const text = message.toString().trim();
-    console.log(`[Player ${ws.playerId}] ${text}`);
+    let data: unknown;
+    try {
+      data = JSON.parse(message.toString());
+    } catch {
+      ws.send("Error: Invalid JSON.");
+      return;
+    }
+
+    if (!Array.isArray(data) || typeof data[0] !== "string") {
+      ws.send(
+        "Error: Invalid S-expression format. Expected [string, ...args].",
+      );
+      return;
+    }
+
+    const [command, ...args] = data as [string, ...any[]];
+    console.log(
+      `[Player ${ws.playerId}] Command: ${command}, Args: ${JSON.stringify(
+        args,
+      )}`,
+    );
 
     if (!ws.playerId) return;
 
     const player = getEntity(ws.playerId);
     if (!player) return;
 
-    const parts = text.split(" ");
-    const command = parts[0]?.toLowerCase();
-
-    if (command === "look" || command === "l") {
+    if (command === "look") {
       if (!player.location_id) {
         ws.send("You are in the void.");
         return;
@@ -61,9 +77,8 @@ wss.on("connection", (ws: Client) => {
         for (const item of contents) {
           output += `- ${item.name}`;
           if (item.location_detail) {
-            output += ` (on ${item.location_detail})`; // This is wrong, detail is on the item relative to parent
+            output += ` (on ${item.location_detail})`;
           }
-          // Check for things ON/IN this item
           const subContents = getContents(item.id);
           if (subContents.length > 0) {
             output += ` (containing: ${subContents
@@ -75,7 +90,7 @@ wss.on("connection", (ws: Client) => {
       }
 
       ws.send(output);
-    } else if (command === "i" || command === "inventory") {
+    } else if (command === "inventory") {
       const items = getContents(player.id);
       if (items.length === 0) {
         ws.send("You are not carrying anything.");
@@ -88,7 +103,7 @@ wss.on("connection", (ws: Client) => {
         );
       }
     } else {
-      ws.send("I don't understand that command.");
+      ws.send(`Unknown command: ${command}`);
     }
   });
 
