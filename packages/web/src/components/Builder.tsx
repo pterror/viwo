@@ -1,8 +1,15 @@
 import { createSignal } from "solid-js";
 import { gameStore } from "../store/game";
 
-export default function Builder() {
-  const [direction, setDirection] = createSignal("north");
+interface BuilderProps {
+  initialDirection?: string;
+  onClose?: () => void;
+}
+
+export default function Builder(props: BuilderProps) {
+  const [direction, setDirection] = createSignal(
+    props.initialDirection || "north",
+  );
   const [roomName, setRoomName] = createSignal("");
   const [description, setDescription] = createSignal("");
 
@@ -11,6 +18,7 @@ export default function Builder() {
     if (!roomName()) return;
     gameStore.send(["dig", direction(), roomName()]);
     setRoomName("");
+    props.onClose?.();
   };
 
   const handleUpdateDesc = (e: Event) => {
@@ -23,35 +31,34 @@ export default function Builder() {
   return (
     <div
       style={{
-        "background-color": "#1a1a1d",
-        "border-top": "1px solid #333",
-        padding: "10px",
         display: "flex",
-        gap: "20px",
+        "flex-direction": "column",
+        gap: "15px",
         "font-size": "12px",
       }}
     >
       {/* Dig Panel */}
       <div style={{ display: "flex", "flex-direction": "column", gap: "5px" }}>
         <div style={{ "font-weight": "bold", color: "#888" }}>DIG ROOM</div>
-        <form onSubmit={handleDig} style={{ display: "flex", gap: "5px" }}>
-          <select
-            value={direction()}
-            onInput={(e) => setDirection(e.currentTarget.value)}
-            style={{
-              background: "#333",
-              color: "#fff",
-              border: "none",
-              padding: "4px",
-            }}
-          >
-            <option value="north">North</option>
-            <option value="south">South</option>
-            <option value="east">East</option>
-            <option value="west">West</option>
-            <option value="up">Up</option>
-            <option value="down">Down</option>
-          </select>
+        <form
+          onSubmit={handleDig}
+          style={{ display: "flex", "flex-direction": "column", gap: "10px" }}
+        >
+          <div style={{ display: "flex", gap: "5px" }}>
+            <input
+              type="text"
+              placeholder="Direction (e.g. north, up, portal)"
+              value={direction()}
+              onInput={(e) => setDirection(e.currentTarget.value)}
+              style={{
+                background: "#333",
+                color: "#fff",
+                border: "none",
+                padding: "8px",
+                flex: 1,
+              }}
+            />
+          </div>
           <input
             type="text"
             placeholder="Room Name"
@@ -61,49 +68,97 @@ export default function Builder() {
               background: "#333",
               color: "#fff",
               border: "none",
-              padding: "4px",
+              padding: "8px",
             }}
           />
-          <button type="submit" style={{ cursor: "pointer" }}>
-            Dig
-          </button>
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              "justify-content": "flex-end",
+            }}
+          >
+            {props.onClose && (
+              <button
+                type="button"
+                onClick={props.onClose}
+                style={{
+                  cursor: "pointer",
+                  background: "transparent",
+                  border: "1px solid #444",
+                  color: "#888",
+                  padding: "6px 12px",
+                  "border-radius": "4px",
+                }}
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              type="submit"
+              style={{
+                cursor: "pointer",
+                background: "var(--accent-color)",
+                border: "none",
+                color: "#000",
+                padding: "6px 12px",
+                "border-radius": "4px",
+                "font-weight": "bold",
+              }}
+            >
+              Dig
+            </button>
+          </div>
         </form>
       </div>
 
-      {/* Edit Panel */}
-      <div
-        style={{
-          display: "flex",
-          "flex-direction": "column",
-          gap: "5px",
-          flex: 1,
-        }}
-      >
-        <div style={{ "font-weight": "bold", color: "#888" }}>
-          EDIT DESCRIPTION
-        </div>
-        <form
-          onSubmit={handleUpdateDesc}
-          style={{ display: "flex", gap: "5px" }}
+      {/* Edit Panel (Only show if not in modal mode, or maybe separate?) */}
+      {!props.onClose && (
+        <div
+          style={{
+            display: "flex",
+            "flex-direction": "column",
+            gap: "5px",
+            "border-top": "1px solid #333",
+            "padding-top": "10px",
+          }}
         >
-          <input
-            type="text"
-            placeholder="New description for current room..."
-            value={description()}
-            onInput={(e) => setDescription(e.currentTarget.value)}
-            style={{
-              background: "#333",
-              color: "#fff",
-              border: "none",
-              padding: "4px",
-              flex: 1,
-            }}
-          />
-          <button type="submit" style={{ cursor: "pointer" }}>
-            Set
-          </button>
-        </form>
-      </div>
+          <div style={{ "font-weight": "bold", color: "#888" }}>
+            EDIT DESCRIPTION
+          </div>
+          <form
+            onSubmit={handleUpdateDesc}
+            style={{ display: "flex", gap: "5px" }}
+          >
+            <input
+              type="text"
+              placeholder="New description for current room..."
+              value={description()}
+              onInput={(e) => setDescription(e.currentTarget.value)}
+              style={{
+                background: "#333",
+                color: "#fff",
+                border: "none",
+                padding: "8px",
+                flex: 1,
+              }}
+            />
+            <button
+              type="submit"
+              style={{
+                cursor: "pointer",
+                background: "#333",
+                border: "1px solid #444",
+                color: "#fff",
+                padding: "6px 12px",
+                "border-radius": "4px",
+              }}
+            >
+              Set
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

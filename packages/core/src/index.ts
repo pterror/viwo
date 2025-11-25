@@ -254,15 +254,32 @@ wss.on("connection", (ws: Client) => {
         down: "up",
         in: "out",
         out: "in",
+        northeast: "southwest",
+        southwest: "northeast",
+        northwest: "southeast",
+        southeast: "northwest",
+        ne: "sw",
+        sw: "ne",
+        nw: "se",
+        se: "nw",
+        n: "s",
+        s: "n",
+        e: "w",
+        w: "e",
+        u: "d",
+        d: "u",
       };
-      const opposite = opposites[direction] || "back";
 
-      createEntity({
-        name: opposite,
-        kind: "EXIT",
-        location_id: newRoomId,
-        props: { direction: opposite, destination_id: currentRoomId },
-      });
+      const opposite = opposites[direction];
+
+      if (opposite) {
+        createEntity({
+          name: opposite,
+          kind: "EXIT",
+          location_id: newRoomId,
+          props: { direction: opposite, destination_id: currentRoomId },
+        });
+      }
 
       ws.send(
         JSON.stringify({

@@ -1,7 +1,6 @@
 import { createSignal, onMount, Show } from "solid-js";
 import { gameStore } from "./store/game";
 import GameLog from "./components/GameLog";
-import Actions from "./components/Actions";
 import Builder from "./components/Builder";
 import Compass from "./components/Compass";
 import RoomPanel from "./components/RoomPanel";
@@ -149,7 +148,6 @@ function App() {
           }}
         >
           <Compass />
-          <Actions />
         </div>
 
         {/* Inspector */}
