@@ -424,6 +424,57 @@ wss.on("connection", (ws: Client) => {
       if (player.location_id && target.id === player.location_id) {
         sendRoom(player.location_id);
       }
+    } else if (command === "login") {
+      const id = parseInt(args[0]);
+      if (isNaN(id)) {
+        ws.send(JSON.stringify({ type: "error", text: "Invalid player ID." }));
+        return;
+      }
+      const player = getEntity(id);
+      if (player) {
+        ws.playerId = id;
+        ws.send(
+          JSON.stringify({
+            type: "message",
+            text: `Logged in as ${player.name} (ID: ${player.id}).`,
+          }),
+        );
+      } else {
+        ws.send(JSON.stringify({ type: "error", text: "Player not found." }));
+      }
+    } else if (command === "create_player") {
+      const name = args[0];
+      if (!name) {
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            text: "Usage: create_player <name>",
+          }),
+        );
+        return;
+      }
+
+      // Default start location (Void or Room 1)
+      // For now, let's try to find a "Start" room or just use 1
+      const startRoom = db
+        .query("SELECT id FROM entities WHERE kind = 'ROOM' LIMIT 1")
+        .get() as { id: number };
+      const locationId = startRoom ? startRoom.id : undefined;
+
+      const newId = createEntity({
+        name,
+        kind: "ACTOR",
+        ...(locationId !== undefined ? { location_id: locationId } : {}),
+        props: { description: "A new player." },
+      });
+
+      ws.send(
+        JSON.stringify({
+          type: "player_created",
+          name,
+          id: newId,
+        }),
+      );
     } else {
       ws.send(
         JSON.stringify({

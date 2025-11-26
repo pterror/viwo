@@ -33,3 +33,7 @@ pnpm-debug.log*
 
 # typescript build info
 *.tsbuildinfo
+
+# .env
+.env
+.env.*
