@@ -3,12 +3,16 @@
   "version": "0.0.0",
   "type": "module",
   "exports": {
-    "./constants/adjectives": "./src/constants/adjectives.ts"
+    "./constants/adjectives": "./src/constants/adjectives.ts",
+    "./commands": "./src/commands.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "zod": "4.1.13"
   }
 }

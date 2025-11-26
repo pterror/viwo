@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "@viwo/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/ws": "^8.5.12",
