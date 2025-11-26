@@ -8,6 +8,7 @@ import {
   createEntity,
   updateEntity,
 } from "./repo";
+import { checkPermission } from "./permissions";
 import { PluginManager, CommandContext } from "./plugin";
 
 export { PluginManager };
@@ -301,6 +302,19 @@ export function startServer(port: number = 8080) {
           return;
         }
 
+        const currentRoom = getEntity(player.location_id);
+        if (!currentRoom) return;
+
+        if (!checkPermission(player, currentRoom, "edit")) {
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              text: "You don't have permission to dig here.",
+            }),
+          );
+          return;
+        }
+
         const currentRoomId = player.location_id;
 
         // Create new room
@@ -395,6 +409,19 @@ export function startServer(port: number = 8080) {
           return;
         }
 
+        const currentRoom = getEntity(player.location_id);
+        if (!currentRoom) return;
+
+        if (!checkPermission(player, currentRoom, "edit")) {
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              text: "You don't have permission to create items here.",
+            }),
+          );
+          return;
+        }
+
         createEntity({
           name,
           kind: "ITEM",
@@ -454,6 +481,16 @@ export function startServer(port: number = 8080) {
             JSON.stringify({
               type: "message",
               text: `You don't see '${targetName}' here.`,
+            }),
+          );
+          return;
+        }
+
+        if (!checkPermission(player, target, "edit")) {
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              text: "You don't have permission to edit this.",
             }),
           );
           return;
