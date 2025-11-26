@@ -97,7 +97,7 @@ export const ScriptEditor: Component = () => {
           />
         </div>
         <div class="script-editor__json-preview">
-          <pre>{JSON.stringify(script(), null, 2)}</pre>
+          <pre>{JSON.stringify(script())}</pre>
         </div>
       </div>
     </div>

@@ -1278,27 +1278,30 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 10px;
-  overflow: auto;
+  background-color: var(--bg-app);
+  overflow: hidden; /* Prevent workspace from scrolling */
 }
 
 .script-editor__canvas {
   flex: 1;
-  min-height: 200px;
-  background: var(--bg-primary);
-  border-radius: 4px;
-  padding: 10px;
+  padding: 20px;
+  overflow: auto; /* Allow canvas to scroll */
 }
 
 .script-editor__json-preview {
-  margin-top: 10px;
+  height: 4lh;
+  background-color: var(--bg-panel);
+  border-top: 1px solid var(--border-color);
   padding: 10px;
-  background: #111;
-  color: #0f0;
-  font-family: monospace;
-  font-size: 10px;
-  max-height: 100px;
   overflow: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted); /* Ensure neutral color */
+}
+
+.script-editor__json-preview pre {
+  margin: 0;
+  color: inherit; /* Inherit neutral color */
 }
 
 /* Block Palette */
@@ -1450,17 +1453,18 @@ body {
 
 .block-node__header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   padding: 4px 8px;
   background: rgba(255, 255, 255, 0.05);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   font-size: 12px;
   font-weight: bold;
+  gap: 8px; /* Add gap between label and slot */
 }
 
-.block-node__label {
-  margin-right: 8px;
+.block-node__header-slot {
+  display: flex;
+  align-items: center;
 }
 
 .block-node__delete {
@@ -1470,6 +1474,7 @@ body {
   cursor: pointer;
   font-size: 14px;
   padding: 0 4px;
+  margin-left: auto; /* Push to the right */
 }
 
 .block-node__delete:hover {
@@ -1511,7 +1516,8 @@ body {
   flex: 1;
 }
 
-.block-node__placeholder {
+.block-node__placeholder,
+.block-node--placeholder {
   padding: 4px 8px;
   border: 1px dashed var(--border-color);
   border-radius: 4px;
@@ -1520,6 +1526,15 @@ body {
   background: rgba(0, 0, 0, 0.2);
   min-width: 20px;
   text-align: center;
+  transition: all 0.2s;
+}
+
+.block-node__placeholder:hover,
+.block-node--placeholder:hover {
+  background: var(--bg-element-hover);
+  border-color: var(--accent-color);
+  color: var(--text-primary);
+  box-shadow: 0 0 5px var(--accent-color);
 }
 
 .block-node__input {

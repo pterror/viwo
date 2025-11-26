@@ -5,7 +5,7 @@ export interface BlockDefinition {
   label: string;
   opcode: string;
   category: "logic" | "action" | "math" | "data";
-  layout?: "infix" | "standard" | "primitive"; // New layout property
+  layout?: "infix" | "standard" | "primitive" | "control-flow"; // New layout property
   slots?: {
     name: string;
     type: "block" | "string" | "number" | "boolean";
@@ -20,6 +20,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     label: "If",
     opcode: "if",
     category: "logic",
+    layout: "control-flow",
     slots: [
       { name: "Condition", type: "block" },
       { name: "Then", type: "block" },
