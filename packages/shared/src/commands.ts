@@ -30,6 +30,10 @@ export const CreatePlayerSchema = z.tuple([
   z.string({ message: "Usage: create_player <name>" }),
 ]);
 
+/**
+ * Zod schemas for validating command arguments.
+ * Keys are the command names.
+ */
 export const CommandSchemas = {
   look: LookSchema,
   inventory: InventorySchema,

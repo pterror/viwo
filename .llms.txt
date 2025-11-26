@@ -1,0 +1,28 @@
+# Viwo Project Context
+
+## Overview
+Viwo is a TypeScript-based MUD (Multi-User Dungeon) engine. It uses a modern tech stack with a monorepo structure.
+
+## Tech Stack
+-   **Runtime**: Bun (server), Browser (client)
+-   **Language**: TypeScript
+-   **Frontend**: SolidJS (Web), React + Ink (TUI)
+-   **Integrations**: discord.js (Discord Bot)
+-   **CLI**: minimist, chalk
+-   **Backend**: WebSocket (ws), SQLite (bun:sqlite)
+-   **Monorepo**: Bun Workspaces
+-   **Styling**: CSS Modules / BEM (mostly custom CSS)
+
+## Key Conventions
+-   **Entities**: The core data structure. All game objects (rooms, players, items) are Entities.
+-   **Scripting**: Custom Lisp-like S-expression language for in-game logic.
+-   **Commands**: Validated using Zod schemas in `@viwo/shared`.
+-   **Plugins**: Extensibility via a plugin system in `@viwo/core`.
+
+## Architecture
+See `ARCHITECTURE.md` for a high-level overview.
+See `CODEBASE_MAP.md` for file navigation.
+
+## Development
+-   `bun run dev:server`: Starts the core server.
+-   `bun run dev:web`: Starts the web client.
