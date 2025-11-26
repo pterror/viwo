@@ -20,9 +20,10 @@
   --text-inverse: #000000;
 
   /* Accent */
-  --accent-color: #646cff;
-  --accent-hover: #747bff;
-  --accent-fg: #000000;
+  --accent-base: oklch(100% 0 0);
+  --accent-color: oklch(100% 0 0 / 0.15);
+  --accent-hover: oklch(100% 0 0 / 0.25);
+  --accent-fg: var(--text-primary);
 
   /* Status & Links */
   --status-online: #4f4;
@@ -58,9 +59,10 @@
     --text-inverse: #ffffff;
 
     /* Accent */
-    --accent-color: #535bf2; /* Slightly darker for better contrast on light */
-    --accent-hover: #646cff;
-    --accent-fg: #ffffff;
+    --accent-base: oklch(0% 0 0);
+    --accent-color: oklch(0% 0 0 / 0.15);
+    --accent-hover: oklch(0% 0 0 / 0.25);
+    --accent-fg: var(--text-primary);
 
     /* Status & Links */
     --status-online: #00aa00;
@@ -130,7 +132,7 @@ body {
 
 .app__title {
   font-weight: bold;
-  color: var(--accent-color);
+  color: var(--accent-base);
 }
 
 .app__header-controls {
@@ -523,7 +525,7 @@ body {
 
 .game-log__room {
   margin-bottom: 15px;
-  border-left: 2px solid var(--accent-color);
+  border-left: 2px solid var(--accent-base);
   padding-left: 10px;
 }
 
