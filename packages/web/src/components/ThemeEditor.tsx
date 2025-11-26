@@ -6,9 +6,43 @@ interface Props {
 }
 
 export const ThemeEditor: Component<Props> = (props) => {
-  const colorKeys = Object.keys(themeStore.state.colors) as Array<
+  const colorKeys = Object.keys(themeStore.activeTheme.colors) as Array<
     keyof ThemeColors
   >;
+
+  const handleExport = () => {
+    const theme = themeStore.activeTheme;
+    const dataStr =
+      "data:text/json;charset=utf-8," +
+      encodeURIComponent(JSON.stringify(theme, null, 2));
+    const downloadAnchorNode = document.createElement("a");
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute(
+      "download",
+      `${theme.manifest.name.replace(/\s+/g, "_").toLowerCase()}.json`,
+    );
+    document.body.appendChild(downloadAnchorNode); // required for firefox
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  };
+
+  const handleImport = (e: Event) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const theme = JSON.parse(event.target?.result as string);
+        themeStore.importTheme(theme);
+        alert("Theme imported successfully!");
+      } catch (err) {
+        console.error(err);
+        alert("Failed to import theme. Invalid JSON.");
+      }
+    };
+    reader.readAsText(file);
+  };
 
   return (
     <div
@@ -34,8 +68,8 @@ export const ThemeEditor: Component<Props> = (props) => {
           padding: "20px",
           "border-radius": "8px",
           border: "1px solid var(--border-color)",
-          width: "500px",
-          "max-height": "80vh",
+          width: "600px",
+          "max-height": "85vh",
           "overflow-y": "auto",
           display: "flex",
           "flex-direction": "column",
@@ -64,6 +98,165 @@ export const ThemeEditor: Component<Props> = (props) => {
           >
             ✕
           </button>
+        </div>
+
+        {/* Theme Selector & Actions */}
+        <div style={{ display: "flex", gap: "10px", "align-items": "center" }}>
+          <select
+            value={themeStore.state.activeThemeId}
+            onChange={(e) => themeStore.setActiveTheme(e.currentTarget.value)}
+            style={{
+              flex: 1,
+              padding: "8px",
+              background: "var(--bg-input)",
+              color: "var(--text-primary)",
+              border: "1px solid var(--border-color)",
+              "border-radius": "4px",
+            }}
+          >
+            <For each={themeStore.state.themes}>
+              {(theme) => (
+                <option value={theme.id}>
+                  {theme.manifest.name} {theme.isBuiltin ? "(Built-in)" : ""}
+                </option>
+              )}
+            </For>
+          </select>
+          <button
+            onClick={() => {
+              const name = prompt("Enter new theme name:");
+              if (name) themeStore.createTheme(name);
+            }}
+            style={{
+              padding: "8px",
+              background: "var(--bg-element)",
+              color: "var(--text-primary)",
+              border: "1px solid var(--border-color)",
+              "border-radius": "4px",
+              cursor: "pointer",
+            }}
+            title="New Theme"
+          >
+            +
+          </button>
+          <button
+            onClick={() => {
+              if (confirm("Delete this theme?")) {
+                themeStore.deleteTheme(themeStore.state.activeThemeId);
+              }
+            }}
+            disabled={themeStore.activeTheme.isBuiltin}
+            style={{
+              padding: "8px",
+              background: "var(--bg-element)",
+              color: themeStore.activeTheme.isBuiltin
+                ? "var(--text-muted)"
+                : "var(--error-color)",
+              border: "1px solid var(--border-color)",
+              "border-radius": "4px",
+              cursor: themeStore.activeTheme.isBuiltin
+                ? "not-allowed"
+                : "pointer",
+            }}
+            title="Delete Theme"
+          >
+            🗑️
+          </button>
+          <button
+            onClick={handleExport}
+            style={{
+              padding: "8px",
+              background: "var(--bg-element)",
+              color: "var(--text-primary)",
+              border: "1px solid var(--border-color)",
+              "border-radius": "4px",
+              cursor: "pointer",
+            }}
+            title="Export Theme"
+          >
+            ⬇️
+          </button>
+          <label
+            style={{
+              padding: "8px",
+              background: "var(--bg-element)",
+              color: "var(--text-primary)",
+              border: "1px solid var(--border-color)",
+              "border-radius": "4px",
+              cursor: "pointer",
+              display: "inline-block",
+            }}
+            title="Import Theme"
+          >
+            ⬆️
+            <input
+              type="file"
+              accept=".json"
+              onChange={handleImport}
+              style={{ display: "none" }}
+            />
+          </label>
+        </div>
+
+        {/* Metadata Editor */}
+        <div
+          style={{
+            display: "grid",
+            "grid-template-columns": "1fr 1fr",
+            gap: "10px",
+            padding: "10px",
+            background: "var(--bg-element)",
+            "border-radius": "4px",
+          }}
+        >
+          <div
+            style={{ display: "flex", "flex-direction": "column", gap: "5px" }}
+          >
+            <label
+              style={{ "font-size": "0.8em", color: "var(--text-secondary)" }}
+            >
+              Name
+            </label>
+            <input
+              type="text"
+              value={themeStore.activeTheme.manifest.name}
+              disabled={themeStore.activeTheme.isBuiltin}
+              onChange={(e) =>
+                themeStore.updateManifest({ name: e.currentTarget.value })
+              }
+              style={{
+                padding: "5px",
+                background: "var(--bg-input)",
+                color: "var(--text-primary)",
+                border: "1px solid var(--border-color)",
+                "border-radius": "4px",
+              }}
+            />
+          </div>
+          <div
+            style={{ display: "flex", "flex-direction": "column", gap: "5px" }}
+          >
+            <label
+              style={{ "font-size": "0.8em", color: "var(--text-secondary)" }}
+            >
+              Author
+            </label>
+            <input
+              type="text"
+              value={themeStore.activeTheme.manifest.author}
+              disabled={themeStore.activeTheme.isBuiltin}
+              onChange={(e) =>
+                themeStore.updateManifest({ author: e.currentTarget.value })
+              }
+              style={{
+                padding: "5px",
+                background: "var(--bg-input)",
+                color: "var(--text-primary)",
+                border: "1px solid var(--border-color)",
+                "border-radius": "4px",
+              }}
+            />
+          </div>
         </div>
 
         <div
@@ -115,8 +308,8 @@ export const ThemeEditor: Component<Props> = (props) => {
                   <input
                     type="color"
                     value={
-                      themeStore.state.colors[key].startsWith("#")
-                        ? themeStore.state.colors[key]
+                      themeStore.activeTheme.colors[key].startsWith("#")
+                        ? themeStore.activeTheme.colors[key]
                         : "#000000"
                     }
                     onChange={(e) =>
@@ -133,7 +326,7 @@ export const ThemeEditor: Component<Props> = (props) => {
                   />
                   <input
                     type="text"
-                    value={themeStore.state.colors[key]}
+                    value={themeStore.activeTheme.colors[key]}
                     onChange={(e) =>
                       themeStore.updateColor(key, e.currentTarget.value)
                     }
@@ -164,23 +357,6 @@ export const ThemeEditor: Component<Props> = (props) => {
             "padding-top": "10px",
           }}
         >
-          <button
-            onClick={() => {
-              if (confirm("Reset theme to defaults?")) {
-                themeStore.resetTheme();
-              }
-            }}
-            style={{
-              background: "var(--bg-element)",
-              color: "var(--error-color)",
-              border: "1px solid var(--border-color)",
-              padding: "8px 16px",
-              "border-radius": "4px",
-              cursor: "pointer",
-            }}
-          >
-            Reset Defaults
-          </button>
           <button
             onClick={props.onClose}
             style={{
