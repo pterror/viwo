@@ -9,7 +9,7 @@
         "@types/bun": "^1.3.3",
       },
     },
-    "packages/cli": {
+    "apps/cli": {
       "name": "@viwo/cli",
       "version": "0.0.0",
       "dependencies": {
@@ -21,6 +21,59 @@
         "@types/minimist": "^1.2.5",
         "@types/ws": "^8.5.13",
         "bun-types": "latest",
+      },
+    },
+    "apps/discord-bot": {
+      "name": "@viwo/discord-bot",
+      "version": "0.0.0",
+      "dependencies": {
+        "discord.js": "^14.16.3",
+        "dotenv": "^16.4.5",
+        "ws": "^8.18.0",
+      },
+      "devDependencies": {
+        "@types/ws": "^8.5.13",
+        "bun-types": "latest",
+      },
+    },
+    "apps/server": {
+      "name": "@viwo/server",
+      "version": "0.0.0",
+      "dependencies": {
+        "@viwo/core": "workspace:*",
+        "@viwo/plugin-ai": "workspace:*",
+      },
+      "devDependencies": {
+        "bun-types": "latest",
+        "typescript": "^5.0.0",
+      },
+    },
+    "apps/tui": {
+      "name": "@viwo/tui",
+      "version": "0.0.0",
+      "dependencies": {
+        "ink": "^5.0.0",
+        "ink-text-input": "^6.0.0",
+        "react": "^18.2.0",
+        "ws": "^8.18.0",
+      },
+      "devDependencies": {
+        "@types/react": "^18.2.0",
+        "@types/ws": "^8.5.13",
+        "bun-types": "latest",
+      },
+    },
+    "apps/web": {
+      "name": "@viwo/web",
+      "version": "0.0.0",
+      "dependencies": {
+        "@viwo/shared": "workspace:*",
+        "solid-js": "^1.8.15",
+      },
+      "devDependencies": {
+        "typescript": "^5.3.3",
+        "vite": "^5.1.4",
+        "vite-plugin-solid": "^2.10.1",
       },
     },
     "packages/core": {
@@ -37,20 +90,14 @@
         "typescript": "^5.0.0",
       },
     },
-    "packages/discord-bot": {
-      "name": "@viwo/discord-bot",
+    "packages/shared": {
+      "name": "@viwo/shared",
       "version": "0.0.0",
-      "dependencies": {
-        "discord.js": "^14.16.3",
-        "dotenv": "^16.4.5",
-        "ws": "^8.18.0",
-      },
       "devDependencies": {
-        "@types/ws": "^8.5.13",
-        "bun-types": "latest",
+        "typescript": "^5.0.0",
       },
     },
-    "packages/plugin-ai": {
+    "plugins/ai": {
       "name": "@viwo/plugin-ai",
       "version": "0.0.0",
       "dependencies": {
@@ -94,53 +141,6 @@
       "devDependencies": {
         "bun-types": "latest",
         "typescript": "^5.0.0",
-      },
-    },
-    "packages/server": {
-      "name": "@viwo/server",
-      "version": "0.0.0",
-      "dependencies": {
-        "@viwo/core": "workspace:*",
-        "@viwo/plugin-ai": "workspace:*",
-      },
-      "devDependencies": {
-        "bun-types": "latest",
-        "typescript": "^5.0.0",
-      },
-    },
-    "packages/shared": {
-      "name": "@viwo/shared",
-      "version": "0.0.0",
-      "devDependencies": {
-        "typescript": "^5.0.0",
-      },
-    },
-    "packages/tui": {
-      "name": "@viwo/tui",
-      "version": "0.0.0",
-      "dependencies": {
-        "ink": "^5.0.0",
-        "ink-text-input": "^6.0.0",
-        "react": "^18.2.0",
-        "ws": "^8.18.0",
-      },
-      "devDependencies": {
-        "@types/react": "^18.2.0",
-        "@types/ws": "^8.5.13",
-        "bun-types": "latest",
-      },
-    },
-    "packages/web": {
-      "name": "@viwo/web",
-      "version": "0.0.0",
-      "dependencies": {
-        "@viwo/shared": "workspace:*",
-        "solid-js": "^1.8.15",
-      },
-      "devDependencies": {
-        "typescript": "^5.3.3",
-        "vite": "^5.1.4",
-        "vite-plugin-solid": "^2.10.1",
       },
     },
   },
@@ -457,21 +457,21 @@
 
     "@vercel/oidc": ["@vercel/oidc@3.0.5", "", {}, "sha512-fnYhv671l+eTTp48gB4zEsTW/YtRgRPnkI2nT7x6qw5rkI1Lq2hTmQIpHPgyThI0znLK+vX2n9XxKdXZ7BUbbw=="],
 
-    "@viwo/cli": ["@viwo/cli@workspace:packages/cli"],
+    "@viwo/cli": ["@viwo/cli@workspace:apps/cli"],
 
     "@viwo/core": ["@viwo/core@workspace:packages/core"],
 
-    "@viwo/discord-bot": ["@viwo/discord-bot@workspace:packages/discord-bot"],
+    "@viwo/discord-bot": ["@viwo/discord-bot@workspace:apps/discord-bot"],
 
-    "@viwo/plugin-ai": ["@viwo/plugin-ai@workspace:packages/plugin-ai"],
+    "@viwo/plugin-ai": ["@viwo/plugin-ai@workspace:plugins/ai"],
 
-    "@viwo/server": ["@viwo/server@workspace:packages/server"],
+    "@viwo/server": ["@viwo/server@workspace:apps/server"],
 
     "@viwo/shared": ["@viwo/shared@workspace:packages/shared"],
 
-    "@viwo/tui": ["@viwo/tui@workspace:packages/tui"],
+    "@viwo/tui": ["@viwo/tui@workspace:apps/tui"],
 
-    "@viwo/web": ["@viwo/web@workspace:packages/web"],
+    "@viwo/web": ["@viwo/web@workspace:apps/web"],
 
     "@vladfrangu/async_event_emitter": ["@vladfrangu/async_event_emitter@2.4.7", "", {}, "sha512-Xfe6rpCTxSxfbswi/W/Pz7zp1WWSNn4A0eW4mLkQUewCrXXtMj31lCg+iQyTkh/CkusZSq9eDflu7tjEDXUY6g=="],
 

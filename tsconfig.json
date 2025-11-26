@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@viwo/core": ["packages/core/src/index.ts"],
+      "@viwo/shared": ["packages/shared/src/index.ts"],
+      "@viwo/plugin-ai": ["plugins/ai/src/index.ts"],
+      "@viwo/server": ["apps/server/src/index.ts"],
+      "@viwo/web": ["apps/web/src/index.tsx"],
+      "@viwo/discord-bot": ["apps/discord-bot/src/index.ts"],
+      "@viwo/cli": ["apps/cli/src/index.ts"],
+      "@viwo/tui": ["apps/tui/src/index.tsx"]
+    }
+  }
+}

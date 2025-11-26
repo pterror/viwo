@@ -159,7 +159,7 @@ export class AiPlugin implements Plugin {
 
     const roomItems = ctx.core.getContents(playerEntity.location_id);
     const target = roomItems.find(
-      (e) => e.name.toLowerCase() === targetName.toLowerCase(),
+      (e: any) => e.name.toLowerCase() === targetName.toLowerCase(),
     );
 
     if (!target) {
