@@ -1,5 +1,5 @@
 import { gameStore } from "../store/game";
-import Builder from "./Builder";
+import DigPanel from "./DigPanel";
 import Popover from "./Popover";
 
 export default function Compass() {
@@ -51,7 +51,7 @@ export default function Compass() {
       >
         {(popoverProps) => (
           <div class="compass__builder-wrapper">
-            <Builder
+            <DigPanel
               initialDirection={props.dir}
               isLocked={true}
               hideDirection={true}

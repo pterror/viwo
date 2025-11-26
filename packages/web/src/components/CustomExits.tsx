@@ -1,6 +1,6 @@
 import { Show, For } from "solid-js";
 import { gameStore } from "../store/game";
-import Builder from "./Builder";
+import DigPanel from "./DigPanel";
 import Popover from "./Popover";
 
 const STANDARD_DIRS = [
@@ -38,7 +38,7 @@ export default function CustomExits() {
         >
           {(popoverProps) => (
             <div class="compass__builder-wrapper">
-              <Builder onClose={popoverProps.close} />
+              <DigPanel onClose={popoverProps.close} />
             </div>
           )}
         </Popover>
