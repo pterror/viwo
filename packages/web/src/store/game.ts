@@ -15,6 +15,7 @@ export interface RichItem {
   contents: RichItem[];
   destination_name?: string;
   adjectives?: string[];
+  custom_css?: string;
 }
 
 export interface RoomMessage {
@@ -22,6 +23,7 @@ export interface RoomMessage {
   name: string;
   description: string;
   contents: RichItem[];
+  custom_css?: string;
 }
 
 export interface InventoryMessage {
@@ -34,6 +36,7 @@ export interface ItemMessage {
   name: string;
   description: string;
   contents: RichItem[];
+  custom_css?: string;
 }
 
 interface GameState {

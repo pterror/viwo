@@ -1,6 +1,7 @@
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { gameStore } from "./store/game";
 import { keybindsStore } from "./store/keybinds";
+import { themeStore } from "./store/theme";
 import GameLog from "./components/GameLog";
 import Builder from "./components/Builder";
 import Compass from "./components/Compass";
@@ -9,11 +10,13 @@ import RoomPanel from "./components/RoomPanel";
 import InventoryPanel from "./components/InventoryPanel";
 import InspectorPanel from "./components/InspectorPanel";
 import { SettingsModal } from "./components/SettingsModal";
+import { ThemeEditor } from "./components/ThemeEditor";
 import "./index.css";
 
 function App() {
   const [showBuilder, setShowBuilder] = createSignal(false);
   const [showSettings, setShowSettings] = createSignal(false);
+  const [showThemeEditor, setShowThemeEditor] = createSignal(false);
 
   const handleKeyDown = (e: KeyboardEvent) => {
     // Ignore if typing in an input or textarea
@@ -65,11 +68,41 @@ function App() {
         isOpen={showSettings()}
         onClose={() => setShowSettings(false)}
       />
+      {/* Custom CSS Injection */}
+      <style>
+        {themeStore.state.allowCustomCss && gameStore.state.room?.custom_css
+          ? gameStore.state.room.custom_css
+          : ""}
+      </style>
 
-      {/* Header / Status */}
-      <div class="app__header">
-        <div class="app__title">VIWO</div>
+      <Show when={showThemeEditor()}>
+        <ThemeEditor onClose={() => setShowThemeEditor(false)} />
+      </Show>
+
+      <header class="app__header">
+        <div class="app__title">Viwo</div>
         <div class="app__header-controls">
+          <div
+            class={`app__status ${
+              gameStore.state.isConnected ? "app__status--online" : ""
+            }`}
+          >
+            {gameStore.state.isConnected ? "ONLINE" : "OFFLINE"}
+          </div>
+          <button
+            class="app__builder-btn"
+            onClick={() => setShowThemeEditor(true)}
+          >
+            Theme
+          </button>
+          <button
+            class={`app__builder-btn ${
+              showBuilder() ? "app__builder-btn--active" : ""
+            }`}
+            onClick={() => setShowBuilder(!showBuilder())}
+          >
+            Builder
+          </button>
           <button
             onClick={() => setShowSettings(true)}
             class="app__settings-btn"
@@ -77,61 +110,36 @@ function App() {
           >
             ⚙️
           </button>
-          <button
-            onClick={() => setShowBuilder(!showBuilder())}
-            classList={{
-              "app__builder-btn": true,
-              "app__builder-btn--active": showBuilder(),
-            }}
-          >
-            Builder Mode
-          </button>
-          <div
-            classList={{
-              app__status: true,
-              "app__status--online": gameStore.state.isConnected,
-            }}
-          >
-            {gameStore.state.isConnected ? "ONLINE" : "OFFLINE"}
-          </div>
         </div>
-      </div>
+      </header>
 
-      {/* Left Sidebar (Log / History - Optional, or maybe Chat?) */}
-      <div class="app__sidebar-left">
-        <div class="app__sidebar-header">LOG</div>
-        <GameLog />
+      <aside class="app__sidebar-left">
+        <div class="app__sidebar-header">Navigation</div>
+        <Compass />
         <CustomExits />
-      </div>
+      </aside>
 
-      {/* Center (Room View) */}
-      <div class="app__main">
-        <RoomPanel />
+      <main class="app__main">
+        <GameLog />
         <Show when={showBuilder()}>
           <div class="app__builder-overlay">
             <Builder />
           </div>
         </Show>
-      </div>
+      </main>
 
-      {/* Right Sidebar (Inventory) */}
-      <div class="app__sidebar-right">
-        <div class="app__sidebar-header">INVENTORY</div>
+      <aside class="app__sidebar-right">
+        <div class="app__sidebar-header">Inspector</div>
+        <InspectorPanel />
         <InventoryPanel />
-      </div>
+        <RoomPanel />
+      </aside>
 
-      {/* Bottom Panel (Controls & Inspector) */}
-      <div class="app__bottom">
-        {/* Controls */}
+      <footer class="app__bottom">
         <div class="app__controls">
-          <Compass />
+          {/* Input is handled in GameLog for now, or we can move it here */}
         </div>
-
-        {/* Inspector */}
-        <div class="app__inspector">
-          <InspectorPanel />
-        </div>
-      </div>
+      </footer>
     </div>
   );
 }

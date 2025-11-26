@@ -70,6 +70,18 @@ wss.on("connection", (ws: Client) => {
       const room = getEntity(roomId);
       if (!room) return;
 
+      // CSS Inheritance: Parent (Zone) -> Room
+      let customCss = room.props["custom_css"] || "";
+      if (room.location_id) {
+        const parent = getEntity(room.location_id);
+        if (parent && (parent.kind === "ZONE" || parent.kind === "ROOM")) {
+          const parentCss = parent.props["custom_css"];
+          if (parentCss) {
+            customCss = `${parentCss}\n${customCss}`;
+          }
+        }
+      }
+
       const contents = getContents(room.id).filter((e) => e.id !== player.id);
       const richContents = contents.map((item) => {
         const richItem: any = {
@@ -78,11 +90,13 @@ wss.on("connection", (ws: Client) => {
           kind: item.kind,
           location_detail: item.location_detail,
           adjectives: item.props["adjectives"],
+          custom_css: item.props["custom_css"],
           contents: getContents(item.id).map((sub) => ({
             id: sub.id,
             name: sub.name,
             kind: sub.kind,
             contents: [],
+            custom_css: sub.props["custom_css"],
           })),
         };
 
@@ -101,6 +115,7 @@ wss.on("connection", (ws: Client) => {
           type: "room",
           name: room.name,
           description: room.props["description"] || "Nothing special.",
+          custom_css: customCss,
           contents: richContents,
         }),
       );
@@ -148,6 +163,7 @@ wss.on("connection", (ws: Client) => {
           contents: [],
           location_detail: sub.location_detail,
           adjectives: sub.props["adjectives"],
+          custom_css: sub.props["custom_css"],
         }));
 
         ws.send(
@@ -157,6 +173,7 @@ wss.on("connection", (ws: Client) => {
             description: target.props["description"] || "It's just a thing.",
             contents: richContents,
             adjectives: target.props["adjectives"],
+            custom_css: target.props["custom_css"],
           }),
         );
         return;
@@ -178,11 +195,13 @@ wss.on("connection", (ws: Client) => {
         kind: item.kind,
         location_detail: item.location_detail,
         adjectives: item.props["adjectives"],
+        custom_css: item.props["custom_css"],
         contents: getContents(item.id).map((sub) => ({
           id: sub.id,
           name: sub.name,
           kind: sub.kind,
           contents: [],
+          custom_css: sub.props["custom_css"],
         })),
       }));
 
