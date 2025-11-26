@@ -29,34 +29,18 @@ export default function Builder(props: BuilderProps) {
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        "flex-direction": "column",
-        gap: "15px",
-        "font-size": "12px",
-      }}
-    >
+    <div class="builder">
       {/* Dig Panel */}
-      <div style={{ display: "flex", "flex-direction": "column", gap: "5px" }}>
-        <div style={{ "font-weight": "bold", color: "#888" }}>DIG ROOM</div>
-        <form
-          onSubmit={handleDig}
-          style={{ display: "flex", "flex-direction": "column", gap: "10px" }}
-        >
-          <div style={{ display: "flex", gap: "5px" }}>
+      <div class="builder__panel">
+        <div class="builder__title">DIG ROOM</div>
+        <form onSubmit={handleDig} class="builder__form">
+          <div class="builder__row">
             <input
               type="text"
               placeholder="Direction (e.g. north, up, portal)"
               value={direction()}
               onInput={(e) => setDirection(e.currentTarget.value)}
-              style={{
-                background: "#333",
-                color: "#fff",
-                border: "none",
-                padding: "8px",
-                flex: 1,
-              }}
+              class="builder__input"
             />
           </div>
           <input
@@ -64,46 +48,23 @@ export default function Builder(props: BuilderProps) {
             placeholder="Room Name"
             value={roomName()}
             onInput={(e) => setRoomName(e.currentTarget.value)}
-            style={{
-              background: "#333",
-              color: "#fff",
-              border: "none",
-              padding: "8px",
-            }}
+            class="builder__input"
           />
-          <div
-            style={{
-              display: "flex",
-              gap: "10px",
-              "justify-content": "flex-end",
-            }}
-          >
+          <div class="builder__actions">
             {props.onClose && (
               <button
                 type="button"
                 onClick={props.onClose}
-                style={{
-                  cursor: "pointer",
-                  background: "transparent",
-                  border: "1px solid #444",
-                  color: "#888",
-                  padding: "6px 12px",
-                  "border-radius": "4px",
-                }}
+                class="builder__btn"
               >
                 Cancel
               </button>
             )}
             <button
               type="submit"
-              style={{
-                cursor: "pointer",
-                background: "var(--accent-color)",
-                border: "none",
-                color: "#000",
-                padding: "6px 12px",
-                "border-radius": "4px",
-                "font-weight": "bold",
+              classList={{
+                builder__btn: true,
+                "builder__btn--primary": true,
               }}
             >
               Dig
@@ -115,45 +76,21 @@ export default function Builder(props: BuilderProps) {
       {/* Edit Panel (Only show if not in modal mode, or maybe separate?) */}
       {!props.onClose && (
         <div
-          style={{
-            display: "flex",
-            "flex-direction": "column",
-            gap: "5px",
-            "border-top": "1px solid #333",
-            "padding-top": "10px",
+          classList={{
+            builder__panel: true,
+            "builder__panel--edit": true,
           }}
         >
-          <div style={{ "font-weight": "bold", color: "#888" }}>
-            EDIT DESCRIPTION
-          </div>
-          <form
-            onSubmit={handleUpdateDesc}
-            style={{ display: "flex", gap: "5px" }}
-          >
+          <div class="builder__title">EDIT DESCRIPTION</div>
+          <form onSubmit={handleUpdateDesc} class="builder__row">
             <input
               type="text"
               placeholder="New description for current room..."
               value={description()}
               onInput={(e) => setDescription(e.currentTarget.value)}
-              style={{
-                background: "#333",
-                color: "#fff",
-                border: "none",
-                padding: "8px",
-                flex: 1,
-              }}
+              class="builder__input"
             />
-            <button
-              type="submit"
-              style={{
-                cursor: "pointer",
-                background: "#333",
-                border: "1px solid #444",
-                color: "#fff",
-                padding: "6px 12px",
-                "border-radius": "4px",
-              }}
-            >
+            <button type="submit" class="builder__btn">
               Set
             </button>
           </form>

@@ -26,33 +26,16 @@ export default function Compass() {
     return (
       <button
         onClick={() => handleDir(props.dir)}
-        style={{
-          background: exit() ? "#2a2a2d" : "#111",
-          color: exit() ? "#fff" : "#444",
-          border: "1px solid #333",
-          "border-radius": "4px",
-          cursor: "pointer",
-          "font-size": "10px",
-          display: "flex",
-          "flex-direction": "column",
-          "align-items": "center",
-          "justify-content": "center",
-          padding: "2px",
-          position: "relative",
-          overflow: "hidden",
+        classList={{
+          compass__cell: true,
+          "compass__cell--active": !!exit(),
         }}
       >
-        <div style={{ "font-weight": "bold", "margin-bottom": "2px" }}>
-          {props.label}
-        </div>
+        <div class="compass__cell-label">{props.label}</div>
         <div
-          style={{
-            "font-size": "8px",
-            "white-space": "nowrap",
-            overflow: "hidden",
-            "text-overflow": "ellipsis",
-            "max-width": "100%",
-            color: exit() ? "#aaddff" : "#333",
+          classList={{
+            "compass__cell-dest": true,
+            "compass__cell-dest--active": !!exit(),
           }}
         >
           {exit() ? exit()?.destination_name ?? exit()?.name : "+"}
@@ -63,34 +46,13 @@ export default function Compass() {
 
   return (
     <>
-      <div
-        style={{
-          display: "grid",
-          "grid-template-columns": "repeat(3, 1fr)",
-          "grid-template-rows": "repeat(3, 1fr)",
-          gap: "4px",
-          width: "280px",
-          height: "140px",
-        }}
-      >
+      <div class="compass">
         <Cell dir="northwest" label="NW" />
         <Cell dir="north" label="N" />
         <Cell dir="northeast" label="NE" />
 
         <Cell dir="west" label="W" />
-        <div
-          style={{
-            display: "flex",
-            "align-items": "center",
-            "justify-content": "center",
-            "font-size": "10px",
-            color: "#666",
-            background: "#151518",
-            "border-radius": "50%",
-          }}
-        >
-          Here
-        </div>
+        <div class="compass__center">Here</div>
         <Cell dir="east" label="E" />
 
         <Cell dir="southwest" label="SW" />
@@ -99,29 +61,9 @@ export default function Compass() {
       </div>
 
       <Show when={showDig()}>
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.5)",
-            display: "flex",
-            "align-items": "center",
-            "justify-content": "center",
-            "z-index": 100,
-          }}
-        >
-          <div
-            style={{
-              background: "#1a1a1d",
-              padding: "20px",
-              border: "1px solid #444",
-              "border-radius": "8px",
-              width: "300px",
-            }}
-          >
-            <div style={{ "margin-bottom": "10px", "font-weight": "bold" }}>
-              Dig {showDig()}
-            </div>
+        <div class="compass__modal">
+          <div class="compass__modal-content">
+            <div class="compass__modal-title">Dig {showDig()}</div>
             <Builder
               initialDirection={showDig()!}
               onClose={() => setShowDig(null)}

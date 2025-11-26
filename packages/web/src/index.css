@@ -42,3 +42,547 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+
+/* App */
+.app {
+  display: grid;
+  grid-template-columns: 250px 1fr 250px;
+  grid-template-rows: auto 1fr 200px;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.app__header {
+  grid-column: 1 / -1;
+  background-color: #111;
+  border-bottom: 1px solid #333;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.app__title {
+  font-weight: bold;
+  color: var(--accent-color);
+}
+
+.app__header-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.app__builder-btn {
+  background: #333;
+  color: #fff;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8em;
+}
+
+.app__builder-btn--active {
+  background: var(--accent-color);
+  color: #000;
+}
+
+.app__status {
+  font-size: 12px;
+  color: #f44;
+}
+
+.app__status--online {
+  color: #4f4;
+}
+
+.app__sidebar-left {
+  grid-row: 2 / 3;
+  grid-column: 1 / 2;
+  border-right: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app__sidebar-header {
+  padding: 10px;
+  font-size: 0.9em;
+  color: #666;
+  border-bottom: 1px solid #333;
+}
+
+.app__main {
+  grid-row: 2 / 3;
+  grid-column: 2 / 3;
+  overflow: hidden;
+  position: relative;
+}
+
+.app__builder-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+}
+
+.app__sidebar-right {
+  grid-row: 2 / 3;
+  grid-column: 3 / 4;
+  overflow: hidden;
+}
+
+.app__bottom {
+  grid-row: 3 / 4;
+  grid-column: 1 / -1;
+  border-top: 1px solid #333;
+  display: flex;
+  background-color: #111;
+}
+
+.app__controls {
+  padding: 20px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  border-right: 1px solid #333;
+}
+
+.app__inspector {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Compass */
+.compass {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 4px;
+  width: 280px;
+  height: 140px;
+}
+
+.compass__cell {
+  background: #111;
+  color: #444;
+  border: 1px solid #333;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  position: relative;
+  overflow: hidden;
+}
+
+.compass__cell--active {
+  background: #2a2a2d;
+  color: #fff;
+}
+
+.compass__cell-label {
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.compass__cell-dest {
+  font-size: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  color: #333;
+}
+
+.compass__cell-dest--active {
+  color: #aaddff;
+}
+
+.compass__center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #666;
+  background: #151518;
+  border-radius: 50%;
+}
+
+.compass__modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.compass__modal-content {
+  background: #1a1a1d;
+  padding: 20px;
+  border: 1px solid #444;
+  border-radius: 8px;
+  width: 300px;
+}
+
+.compass__modal-title {
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+/* Builder */
+.builder {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  font-size: 12px;
+}
+
+.builder__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.builder__panel--edit {
+  border-top: 1px solid #333;
+  padding-top: 10px;
+}
+
+.builder__title {
+  font-weight: bold;
+  color: #888;
+}
+
+.builder__form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.builder__form--row {
+  flex-direction: row;
+  gap: 5px;
+}
+
+.builder__row {
+  display: flex;
+  gap: 5px;
+}
+
+.builder__input {
+  background: #333;
+  color: #fff;
+  border: none;
+  padding: 8px;
+  flex: 1;
+}
+
+.builder__input--full {
+  width: 100%;
+}
+
+.builder__actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.builder__btn {
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid #444;
+  color: #888;
+  padding: 6px 12px;
+  border-radius: 4px;
+}
+
+.builder__btn--primary {
+  background: var(--accent-color);
+  border: none;
+  color: #000;
+  font-weight: bold;
+}
+
+.builder__btn--secondary {
+  background: #333;
+  color: #fff;
+}
+
+/* GameLog */
+.game-log {
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.game-log__item {
+  margin-left: 15px;
+}
+
+.game-log__link {
+  color: #aaddff;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
+.game-log__detail {
+  color: #888;
+  font-size: 0.9em;
+}
+
+.game-log__sub-items {
+  margin-left: 10px;
+  border-left: 1px solid #444;
+  padding-left: 5px;
+}
+
+.game-log__room {
+  margin-bottom: 15px;
+  border-left: 2px solid var(--accent-color);
+  padding-left: 10px;
+}
+
+.game-log__room-name {
+  font-weight: bold;
+  font-size: 1.1em;
+  margin-bottom: 5px;
+}
+
+.game-log__room-desc {
+  margin-bottom: 10px;
+  color: #ccc;
+}
+
+.game-log__exits {
+  margin-bottom: 10px;
+  font-size: 0.9em;
+}
+
+.game-log__exits-label {
+  color: #888;
+}
+
+.game-log__exit-link {
+  color: #aaddff;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.game-log__items-label {
+  font-size: 0.9em;
+  color: #888;
+  margin-bottom: 5px;
+}
+
+.game-log__inventory {
+  margin-bottom: 15px;
+  background: #1a1a1d;
+  padding: 10px;
+  border-radius: 4px;
+}
+
+.game-log__inventory-title {
+  font-weight: bold;
+  margin-bottom: 5px;
+  color: #aaa;
+}
+
+.game-log__inventory-empty {
+  color: #666;
+  font-style: italic;
+}
+
+.game-log__message {
+  margin-bottom: 8px;
+}
+
+.game-log__message--error {
+  color: #ff6b6b;
+}
+
+.game-log__inspect {
+  margin-bottom: 15px;
+  border: 1px solid #444;
+  padding: 10px;
+  background: #222;
+}
+
+.game-log__inspect-name {
+  font-weight: bold;
+  color: #aaddff;
+}
+
+.game-log__inspect-desc {
+  margin-bottom: 10px;
+  color: #ccc;
+}
+
+/* InspectorPanel */
+.inspector-panel {
+  padding: 10px;
+  background-color: #1a1a1d;
+  border-top: 1px solid #333;
+  height: 100%;
+  overflow: auto;
+}
+
+.inspector-panel__title {
+  font-size: 0.9em;
+  text-transform: uppercase;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.inspector-panel__empty {
+  color: #444;
+  font-style: italic;
+}
+
+.inspector-panel__name {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.inspector-panel__desc {
+  color: #ccc;
+  margin-bottom: 10px;
+  font-size: 0.9em;
+}
+
+.inspector-panel__contents-label {
+  font-size: 0.8em;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.inspector-panel__item {
+  margin-left: 10px;
+  margin-top: 2px;
+}
+
+.inspector-panel__item-link {
+  color: #aaddff;
+  cursor: pointer;
+}
+
+.inspector-panel__item-contents {
+  border-left: 1px solid #444;
+  padding-left: 5px;
+}
+
+/* InventoryPanel */
+.inventory-panel {
+  padding: 10px;
+  background-color: #151518;
+  border-left: 1px solid #333;
+  height: 100%;
+  overflow: auto;
+}
+
+.inventory-panel__title {
+  font-size: 0.9em;
+  text-transform: uppercase;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.inventory-panel__item {
+  margin-bottom: 5px;
+}
+
+.inventory-panel__item-link {
+  color: #aaddff;
+  cursor: pointer;
+}
+
+.inventory-panel__item-detail {
+  color: #666;
+  font-size: 0.8em;
+  margin-left: 5px;
+}
+
+/* RoomPanel */
+.room-panel {
+  padding: 10px;
+  background-color: #1a1a1d;
+  border-bottom: 1px solid #333;
+  height: 100%;
+  overflow: auto;
+}
+
+.room-panel__loading {
+  color: #666;
+}
+
+.room-panel__name {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 5px;
+}
+
+.room-panel__desc {
+  color: #ccc;
+  margin-bottom: 15px;
+  line-height: 1.4;
+}
+
+.room-panel__section {
+  margin-bottom: 10px;
+}
+
+.room-panel__section-title {
+  font-size: 0.8em;
+  text-transform: uppercase;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.room-panel__exits {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.room-panel__exit-tag {
+  color: #aaddff;
+  cursor: pointer;
+  background: #333;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.room-panel__item {
+  margin-left: 10px;
+  margin-top: 2px;
+}
+
+.room-panel__item-link {
+  color: #aaddff;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.room-panel__item-detail {
+  color: #666;
+  font-size: 0.8em;
+  margin-left: 5px;
+}
+
+.room-panel__item-contents {
+  border-left: 1px solid #444;
+  padding-left: 5px;
+}

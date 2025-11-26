@@ -16,50 +16,24 @@ function App() {
   });
 
   return (
-    <div
-      style={{
-        display: "grid",
-        "grid-template-columns": "250px 1fr 250px",
-        "grid-template-rows": "auto 1fr 200px",
-        height: "100vh",
-        width: "100vw",
-        overflow: "hidden",
-      }}
-    >
+    <div class="app">
       {/* Header / Status */}
-      <div
-        style={{
-          "grid-column": "1 / -1",
-          "background-color": "#111",
-          "border-bottom": "1px solid #333",
-          padding: "10px 20px",
-          display: "flex",
-          "justify-content": "space-between",
-          "align-items": "center",
-        }}
-      >
-        <div style={{ "font-weight": "bold", color: "var(--accent-color)" }}>
-          VIWO
-        </div>
-        <div style={{ display: "flex", gap: "10px", "align-items": "center" }}>
+      <div class="app__header">
+        <div class="app__title">VIWO</div>
+        <div class="app__header-controls">
           <button
             onClick={() => setShowBuilder(!showBuilder())}
-            style={{
-              background: showBuilder() ? "var(--accent-color)" : "#333",
-              color: showBuilder() ? "#000" : "#fff",
-              border: "none",
-              padding: "4px 8px",
-              "border-radius": "4px",
-              cursor: "pointer",
-              "font-size": "0.8em",
+            classList={{
+              "app__builder-btn": true,
+              "app__builder-btn--active": showBuilder(),
             }}
           >
             Builder Mode
           </button>
           <div
-            style={{
-              "font-size": "12px",
-              color: gameStore.state.isConnected ? "#4f4" : "#f44",
+            classList={{
+              app__status: true,
+              "app__status--online": gameStore.state.isConnected,
             }}
           >
             {gameStore.state.isConnected ? "ONLINE" : "OFFLINE"}
@@ -68,90 +42,35 @@ function App() {
       </div>
 
       {/* Left Sidebar (Log / History - Optional, or maybe Chat?) */}
-      <div
-        style={{
-          "grid-row": "2 / 3",
-          "grid-column": "1 / 2",
-          "border-right": "1px solid #333",
-          display: "flex",
-          "flex-direction": "column",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            padding: "10px",
-            "font-size": "0.9em",
-            color: "#666",
-            "border-bottom": "1px solid #333",
-          }}
-        >
-          LOG
-        </div>
+      <div class="app__sidebar-left">
+        <div class="app__sidebar-header">LOG</div>
         <GameLog />
       </div>
 
       {/* Center (Room View) */}
-      <div
-        style={{
-          "grid-row": "2 / 3",
-          "grid-column": "2 / 3",
-          overflow: "hidden",
-          position: "relative",
-        }}
-      >
+      <div class="app__main">
         <RoomPanel />
         <Show when={showBuilder()}>
-          <div
-            style={{
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              "z-index": 10,
-            }}
-          >
+          <div class="app__builder-overlay">
             <Builder />
           </div>
         </Show>
       </div>
 
       {/* Right Sidebar (Inventory) */}
-      <div
-        style={{
-          "grid-row": "2 / 3",
-          "grid-column": "3 / 4",
-          overflow: "hidden",
-        }}
-      >
+      <div class="app__sidebar-right">
         <InventoryPanel />
       </div>
 
       {/* Bottom Panel (Controls & Inspector) */}
-      <div
-        style={{
-          "grid-row": "3 / 4",
-          "grid-column": "1 / -1",
-          "border-top": "1px solid #333",
-          display: "flex",
-          "background-color": "#111",
-        }}
-      >
+      <div class="app__bottom">
         {/* Controls */}
-        <div
-          style={{
-            padding: "20px",
-            display: "flex",
-            gap: "20px",
-            "align-items": "center",
-            "border-right": "1px solid #333",
-          }}
-        >
+        <div class="app__controls">
           <Compass />
         </div>
 
         {/* Inspector */}
-        <div style={{ flex: 1, overflow: "hidden" }}>
+        <div class="app__inspector">
           <InspectorPanel />
         </div>
       </div>
