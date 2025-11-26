@@ -306,6 +306,50 @@ wss.on("connection", (ws: Client) => {
       // Auto-move to new room
       moveEntity(player.id, newRoomId);
       sendRoom(newRoomId);
+    } else if (command === "create") {
+      if (args.length < 1) {
+        ws.send(
+          JSON.stringify({
+            type: "message",
+            text: "Usage: create <name> [props_json]",
+          }),
+        );
+        return;
+      }
+      const name = args[0];
+      let props = {};
+      if (args.length > 1) {
+        try {
+          props = JSON.parse(args.slice(1).join(" "));
+        } catch {
+          ws.send(
+            JSON.stringify({ type: "message", text: "Invalid props JSON." }),
+          );
+          return;
+        }
+      }
+
+      if (!player.location_id) {
+        ws.send(
+          JSON.stringify({ type: "message", text: "You are in the void." }),
+        );
+        return;
+      }
+
+      createEntity({
+        name,
+        kind: "ITEM",
+        location_id: player.location_id,
+        props,
+      });
+
+      ws.send(
+        JSON.stringify({
+          type: "message",
+          text: `Created '${name}'.`,
+        }),
+      );
+      sendRoom(player.location_id);
     } else if (command === "set") {
       // ... (keep set logic) ...
       if (args.length < 3) {
