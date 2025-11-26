@@ -2,11 +2,12 @@ import { createSignal, Show } from "solid-js";
 import { gameStore } from "../store/game";
 import ItemCreator from "./ItemCreator";
 import ItemEditor from "./ItemEditor";
+import { ScriptEditor } from "./ScriptEditor/ScriptEditor";
 
 export default function Builder() {
-  const [activeTab, setActiveTab] = createSignal<"room" | "create" | "edit">(
-    "room",
-  );
+  const [activeTab, setActiveTab] = createSignal<
+    "room" | "create" | "edit" | "script"
+  >("room");
   const [description, setDescription] = createSignal("");
 
   const handleUpdateDesc = (e: Event) => {
@@ -43,6 +44,14 @@ export default function Builder() {
         >
           Edit Item
         </button>
+        <button
+          onClick={() => setActiveTab("script")}
+          class={`builder__tab ${
+            activeTab() === "script" ? "builder__tab--active" : ""
+          }`}
+        >
+          Script
+        </button>
       </div>
 
       <Show when={activeTab() === "room"}>
@@ -69,6 +78,10 @@ export default function Builder() {
 
       <Show when={activeTab() === "edit"}>
         <ItemEditor />
+      </Show>
+
+      <Show when={activeTab() === "script"}>
+        <ScriptEditor />
       </Show>
     </div>
   );
