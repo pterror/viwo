@@ -1,4 +1,14 @@
 import { describe, test, expect, mock } from "bun:test";
+import { Database } from "bun:sqlite";
+import { initSchema } from "../schema";
+
+// Setup in-memory DB
+const db = new Database(":memory:");
+initSchema(db);
+
+// Mock the db module
+mock.module("../db", () => ({ db }));
+
 import { evaluate, ScriptContext } from "./interpreter";
 import { Entity } from "../repo";
 
@@ -19,20 +29,10 @@ const mockEntity = (id: number, props: any = {}): Entity => ({
   slug: null,
 });
 
-// Mock repo and permissions
-mock.module("../repo", () => ({
-  updateEntity: mock((_id, _data) => {
-    // Optional: update the local target if we can access it, or just verify the call
-  }),
-  Entity: {}, // Type only
-}));
-
 const checkPermissionMock = mock(() => true);
 mock.module("../permissions", () => ({
   checkPermission: checkPermissionMock,
 }));
-
-import { updateEntity } from "../repo";
 
 describe("Interpreter", () => {
   const caller = mockEntity(1);
@@ -122,15 +122,28 @@ describe("Interpreter", () => {
       permissions: { view: "public", edit: "public" },
     };
 
+    // Insert target into DB so updateEntity works
+    db.query("INSERT INTO entities (id, name, kind) VALUES (?, ?, ?)").run(
+      target.id,
+      target.name,
+      target.kind,
+    );
+    db.query(
+      "INSERT INTO entity_data (entity_id, props, state, ai_context) VALUES (?, ?, ?, ?)",
+    ).run(target.id, JSON.stringify(target.props), "{}", "{}");
+
     // prop
     expect(await evaluate(["prop", "this", "foo"], ctx)).toBe("bar");
 
     // set
     await evaluate(["set", "this", "foo", "baz"], ctx);
-    expect(updateEntity).toHaveBeenCalled();
-    const call = (updateEntity as any).mock.lastCall;
-    expect(call[0]).toBe(target.id);
-    expect(call[1].props.foo).toBe("baz");
+
+    // Verify DB update
+    const row = db
+      .query("SELECT props FROM entity_data WHERE entity_id = ?")
+      .get(target.id) as any;
+    const props = JSON.parse(row.props);
+    expect(props.foo).toBe("baz");
   });
 
   test("loops", async () => {

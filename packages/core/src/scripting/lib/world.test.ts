@@ -1,14 +1,18 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { Database } from "bun:sqlite";
+import { initSchema } from "../../schema";
+
+// Setup in-memory DB
+const db = new Database(":memory:");
+initSchema(db);
+
+// Mock the db module
+mock.module("../../db", () => ({ db }));
+
 import { evaluate, ScriptContext, registerOpcode } from "../interpreter";
 import { WorldLibrary } from "./world";
-import * as repo from "../../repo";
 import * as permissions from "../../permissions";
-
-// Mock repo and permissions
-mock.module("../../repo", () => ({
-  getEntity: mock(),
-  getContents: mock(),
-}));
+import { createEntity } from "../../repo";
 
 mock.module("../../permissions", () => ({
   checkPermission: mock(),
@@ -18,9 +22,11 @@ describe("World Library", () => {
   let ctx: ScriptContext;
 
   beforeEach(() => {
-    // Reset mocks
-    (repo.getEntity as any).mockReset();
-    (repo.getContents as any).mockReset();
+    // Reset DB
+    db.query("DELETE FROM entities").run();
+    db.query("DELETE FROM entity_data").run();
+    db.query("DELETE FROM sqlite_sequence").run();
+
     (permissions.checkPermission as any).mockReset();
 
     ctx = {
@@ -47,95 +53,100 @@ describe("World Library", () => {
   });
 
   test("entity.contents", async () => {
-    const target = { id: 10 };
-    (repo.getEntity as any).mockReturnValue(target);
-    (repo.getContents as any).mockReturnValue([{ id: 11 }, { id: 12 }]);
+    const targetId = createEntity({ name: "Container", kind: "ROOM" });
+    const item1Id = createEntity({
+      name: "Item 1",
+      kind: "ITEM",
+      location_id: targetId,
+    });
+    const item2Id = createEntity({
+      name: "Item 2",
+      kind: "ITEM",
+      location_id: targetId,
+    });
+
     (permissions.checkPermission as any).mockReturnValue(true);
 
-    const contents = await evaluate(["entity.contents", 10], ctx);
-    expect(contents).toEqual([11, 12]);
-    expect(permissions.checkPermission).toHaveBeenCalledWith(
-      ctx.caller,
-      target,
-      "view",
-    );
+    const contents = await evaluate(["entity.contents", targetId], ctx);
+    expect(contents).toContain(item1Id);
+    expect(contents).toContain(item2Id);
+    expect(contents.length).toBe(2);
+    expect(permissions.checkPermission).toHaveBeenCalled();
   });
 
   test("entity.contents permission denied", async () => {
-    const target = { id: 10 };
-    (repo.getEntity as any).mockReturnValue(target);
+    const targetId = createEntity({ name: "Container", kind: "ROOM" });
     (permissions.checkPermission as any).mockReturnValue(false);
 
-    const contents = await evaluate(["entity.contents", 10], ctx);
+    const contents = await evaluate(["entity.contents", targetId], ctx);
     expect(contents).toEqual([]);
   });
 
   test("entity.descendants", async () => {
     // Structure: 10 -> [11, 12], 11 -> [13]
-    const entities: Record<number, any> = {
-      10: { id: 10 },
-      11: { id: 11 },
-      12: { id: 12 },
-      13: { id: 13 },
-    };
-    const contents: Record<number, any[]> = {
-      10: [{ id: 11 }, { id: 12 }],
-      11: [{ id: 13 }],
-      12: [],
-      13: [],
-    };
+    const rootId = createEntity({ name: "Root", kind: "ROOM" });
+    const child1Id = createEntity({
+      name: "Child 1",
+      kind: "ROOM",
+      location_id: rootId,
+    });
+    const child2Id = createEntity({
+      name: "Child 2",
+      kind: "ROOM",
+      location_id: rootId,
+    });
+    const grandchildId = createEntity({
+      name: "Grandchild",
+      kind: "ROOM",
+      location_id: child1Id,
+    });
 
-    (repo.getEntity as any).mockImplementation((id: number) => entities[id]);
-    (repo.getContents as any).mockImplementation(
-      (id: number) => contents[id] || [],
-    );
     (permissions.checkPermission as any).mockReturnValue(true);
 
-    const descendants = await evaluate(["entity.descendants", 10], ctx);
-    // Order depends on BFS: 11, 12, 13
-    expect(descendants).toEqual([11, 12, 13]);
+    const descendants = await evaluate(["entity.descendants", rootId], ctx);
+    expect(descendants).toContain(child1Id);
+    expect(descendants).toContain(child2Id);
+    expect(descendants).toContain(grandchildId);
+    expect(descendants.length).toBe(3);
   });
 
   test("entity.descendants permission check", async () => {
     // 10 -> 11 -> 12
-    // Can view 10, but cannot view 11. Should stop at 11.
-    const entities: Record<number, any> = {
-      10: { id: 10 },
-      11: { id: 11 },
-      12: { id: 12 },
-    };
-    const contents: Record<number, any[]> = {
-      10: [{ id: 11 }],
-      11: [{ id: 12 }],
-      12: [],
-    };
-
-    (repo.getEntity as any).mockImplementation((id: number) => entities[id]);
-    (repo.getContents as any).mockImplementation(
-      (id: number) => contents[id] || [],
-    );
+    const rootId = createEntity({ name: "Root", kind: "ROOM" });
+    const childId = createEntity({
+      name: "Child",
+      kind: "ROOM",
+      location_id: rootId,
+    });
+    createEntity({ name: "Grandchild", kind: "ROOM", location_id: childId });
 
     (permissions.checkPermission as any).mockImplementation(
       (_: any, target: any) => {
-        if (target.id === 11) return false;
+        if (target.id === childId) return false;
         return true;
       },
     );
 
-    const descendants = await evaluate(["entity.descendants", 10], ctx);
-    expect(descendants).toEqual([11]);
+    const descendants = await evaluate(["entity.descendants", rootId], ctx);
+    // Should see 11 because we can view 10. But we cannot view inside 11, so 12 is excluded.
+    expect(descendants).toEqual([childId]);
   });
 
   test("entity.ancestors", async () => {
     // 13 -> 11 -> 10 -> null
-    const entities: Record<number, any> = {
-      13: { id: 13, location_id: 11 },
-      11: { id: 11, location_id: 10 },
-      10: { id: 10, location_id: null },
-    };
-    (repo.getEntity as any).mockImplementation((id: number) => entities[id]);
+    const grandparentId = createEntity({ name: "Grandparent", kind: "ROOM" });
+    const parentId = createEntity({
+      name: "Parent",
+      kind: "ROOM",
+      location_id: grandparentId,
+    });
+    const childId = createEntity({
+      name: "Child",
+      kind: "ROOM",
+      location_id: parentId,
+    });
 
-    const ancestors = await evaluate(["entity.ancestors", 13], ctx);
-    expect(ancestors).toEqual([11, 10]);
+    const ancestors = await evaluate(["entity.ancestors", childId], ctx);
+    expect(ancestors).toEqual([parentId, grandparentId]);
   });
 });

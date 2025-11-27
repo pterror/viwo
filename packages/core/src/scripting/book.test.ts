@@ -1,5 +1,12 @@
-import { describe, it, expect, beforeEach } from "bun:test";
-import { evaluate } from "./interpreter";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  beforeAll,
+  afterAll,
+} from "bun:test";
+import { evaluate, getOpcode } from "./interpreter";
 import { registerListLibrary } from "./lib/list";
 import { registerStringLibrary } from "./lib/string";
 import { registerObjectLibrary } from "./lib/object";
@@ -10,6 +17,24 @@ describe("Book Item Scripting", () => {
   let book: Entity;
   let caller: Entity;
   let messages: string[] = [];
+
+  // Save original opcodes
+  let originalTell: any;
+  let originalProp: any;
+  let originalSet: any;
+
+  beforeAll(() => {
+    originalTell = getOpcode("tell");
+    originalProp = getOpcode("prop");
+    originalSet = getOpcode("set");
+  });
+
+  afterAll(() => {
+    // Restore original opcodes
+    if (originalTell) registerOpcode("tell", originalTell);
+    if (originalProp) registerOpcode("prop", originalProp);
+    if (originalSet) registerOpcode("set", originalSet);
+  });
 
   beforeEach(() => {
     // Mock system context

@@ -31,10 +31,12 @@ global.crypto = {
 global.confirm = mock(() => true);
 global.alert = mock(() => {});
 
-import { themeStore, loadInitialState } from "./theme";
+// Remove static import
+// import { themeStore, loadInitialState } from "./theme";
 
 describe("Theme Store", () => {
-  // themeStore is imported directly
+  let themeStore: any;
+  let loadInitialState: any;
 
   beforeEach(async () => {
     // Clear storage (whichever mock is used)
@@ -42,14 +44,12 @@ describe("Theme Store", () => {
       global.localStorage.clear();
     }
 
+    // Dynamic import to ensure mocks are set up first
+    const module = await import("./theme");
+    themeStore = module.themeStore;
+    loadInitialState = module.loadInitialState;
+
     themeStore.reset();
-    // Reset state to default if needed (though import usually caches, so we might need to rely on store actions to reset or use a fresh isolate if possible.
-    // Since Bun caches modules, we might need to manually reset the store state if the module is reused.)
-    // However, for unit tests, we often want to test the *initial load* logic which only runs once.
-    // We might need to use `jest.resetModules()` equivalent or just test actions on the existing store.
-    // For now, let's assume we can test actions. For initial load, we might need a separate test file or trickery.
-    // Actually, we can just manually reset the store state using setState if it was exported, but it's not.
-    // We'll test actions primarily.
   });
 
   test("Initial State", () => {

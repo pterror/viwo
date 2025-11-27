@@ -399,6 +399,10 @@ export function registerOpcode(
   OPS[name] = handler;
 }
 
+export function getOpcode(name: string) {
+  return OPS[name];
+}
+
 export async function evaluate(ast: any, ctx: ScriptContext): Promise<any> {
   // Gas Check
   if (ctx.gas !== undefined) {
