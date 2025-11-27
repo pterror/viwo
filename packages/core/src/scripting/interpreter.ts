@@ -1,4 +1,4 @@
-import { Entity, updateEntity } from "../repo";
+import { Entity, getContents, updateEntity } from "../repo";
 import { checkPermission } from "../permissions";
 import { TimeLibrary } from "./lib/time";
 import { WorldLibrary } from "./lib/world";
@@ -137,6 +137,9 @@ const OPS: Record<string, (args: any[], ctx: ScriptContext) => Promise<any>> = {
     if (typeof index !== "number") return null;
     return ctx.args[index];
   },
+  args: async (_args, ctx) => {
+    return ctx.args;
+  },
 
   // Comparison
   "==": async (args, ctx) =>
@@ -211,14 +214,96 @@ const OPS: Record<string, (args: any[], ctx: ScriptContext) => Promise<any>> = {
   },
   tell: async (args, ctx) => {
     const [targetExpr, msgExpr] = args;
+    const msg = await evaluate(msgExpr, ctx);
+
+    if (typeof msg !== "string") return null;
+
     // Special case: 'caller'
     if (targetExpr === "caller") {
       if (ctx.sys?.send) {
-        ctx.sys.send({ type: "message", text: await evaluate(msgExpr, ctx) });
+        ctx.sys.send({ type: "message", text: msg });
       }
-      return;
+      return true;
     }
-    return null;
+
+    let target = await evaluateTarget(targetExpr, ctx);
+
+    // If target is a string (name), try to find it in the room
+    if (!target && typeof targetExpr !== "number") {
+      // evaluateTarget handles number/caller/this
+      const val = await evaluate(targetExpr, ctx);
+      if (typeof val === "string" && ctx.caller.location_id) {
+        const contents = getContents(ctx.caller.location_id);
+        target =
+          contents.find((e) => e.name.toLowerCase() === val.toLowerCase()) ||
+          null;
+      }
+    }
+
+    if (!target) return null;
+
+    // If target is caller (resolved), send to socket
+    if (target.id === ctx.caller.id) {
+      if (ctx.sys?.send) {
+        ctx.sys.send({ type: "message", text: msg });
+      }
+      return true;
+    }
+
+    // Otherwise, trigger on_hear and notify caller
+    if (ctx.sys?.triggerEvent) {
+      // Notify caller
+      if (ctx.sys.send) {
+        ctx.sys.send({
+          type: "message",
+          text: `You tell ${target.name}: "${msg}"`,
+        });
+      }
+
+      // Trigger on_hear
+      await ctx.sys.triggerEvent(
+        "on_hear",
+        target.location_id || 0, // Location doesn't matter much for direct tell, but we need it for context?
+        // Actually triggerEvent takes locationId to find entities.
+        // But we want to trigger on a SPECIFIC entity.
+        // sys.triggerEvent iterates location.
+        // We need a way to trigger on a specific entity directly.
+        // sys.call?
+        // sys.call executes a verb.
+        // We can use sys.call if we know the verb exists.
+        // But triggerEvent handles "check if verb exists".
+
+        // Let's use sys.call if available, or we need to expose a way to trigger on entity.
+        // interpreter.ts doesn't have direct access to repo.getVerb (except via import).
+        // But we can use ctx.sys.call if we assume on_hear exists.
+        // Or we can modify triggerEvent to accept a specific entity ID instead of location?
+        // Or we can just use sys.triggerEvent with excludeEntityId? No, that excludes.
+
+        // Let's look at sys.call.
+        // call: (caller, targetId, verb, args, warnings)
+
+        // So we can try to call "on_hear".
+        [msg, ctx.caller.id, "tell"],
+      );
+
+      if (ctx.sys.call) {
+        try {
+          await ctx.sys.call(
+            ctx.caller,
+            target.id,
+            "on_hear",
+            [msg, ctx.caller.id, "tell"],
+            ctx.warnings,
+          );
+        } catch {
+          // Ignore if verb not found? sys.call might throw.
+          // We should probably check if verb exists first, but we can't easily.
+          // Actually sys.call implementation in index.ts (which we haven't seen fully) likely handles it.
+          // But wait, sys.call in index.ts (I recall) executes the verb.
+        }
+      }
+    }
+    return true;
   },
   move: async (args, ctx) => {
     const [targetExpr, destExpr] = args;

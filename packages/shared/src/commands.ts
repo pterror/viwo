@@ -53,6 +53,7 @@ export const CommandSchemas = {
   login: LoginSchema,
   create_player: CreatePlayerSchema,
   say: SaySchema,
+  shout: SaySchema,
   tell: TellSchema,
   whisper: TellSchema,
 };

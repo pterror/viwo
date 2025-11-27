@@ -370,70 +370,7 @@ export function startServer(port: number = 8080) {
         return;
       }
 
-      if (command === "say") {
-        const msg = args.join(" ");
-        if (!player.location_id) return;
-
-        // Broadcast to room
-        sys.broadcast!(`${player.name} says: "${msg}"`, player.location_id);
-
-        // Trigger on_hear
-        sys.triggerEvent!(
-          "on_hear",
-          player.location_id,
-          [msg, player.id],
-          player.id,
-        );
-      } else if (command === "tell" || command === "whisper") {
-        // args: [targetName, ...messageParts]
-        const targetName = args[0].toLowerCase();
-        const msg = args.slice(1).join(" ");
-
-        if (!player.location_id) return;
-
-        // Find target in room
-        const contents = getContents(player.location_id);
-        const target = contents.find((e) => e.name.toLowerCase() === targetName);
-
-        if (!target) {
-          ws.send(
-            JSON.stringify({
-              type: "message",
-              text: `You don't see '${targetName}' here.`,
-            }),
-          );
-          return;
-        }
-
-        // Send message to player (if target is player)
-        // For now, we don't have direct player-to-player messaging via socket unless we map entity ID to socket.
-        // But we can trigger on_hear on the target.
-
-        ws.send(
-          JSON.stringify({
-            type: "message",
-            text: `You tell ${target.name}: "${msg}"`,
-          }),
-        );
-
-        // Trigger on_hear on target ONLY
-        const verb = getVerb(target.id, "on_hear");
-        if (verb) {
-          const { evaluate } = require("./scripting/interpreter");
-          try {
-            await evaluate(verb.code, {
-              caller: target, // The target is the agent
-              this: target,
-              args: [msg, player.id, "tell"],
-              gas: 500,
-              sys,
-              warnings: [],
-            });
-          } catch (e) {
-            console.error(`Error triggering on_hear on ${target.id}:`, e);
-          }
-        }
-      } else if (command === "look") {
+      if (command === "look") {
         // ... (existing look target logic) ...
         if (args.length > 0 && args[0]) {
           // ... (keep existing target look logic) ...

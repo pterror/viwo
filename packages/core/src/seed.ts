@@ -75,6 +75,33 @@ export function seed() {
     },
   });
 
+  // Add verbs to Player Base
+  addVerb(playerBaseId, "say", ["say", ["str.join", ["args"], " "]]);
+
+  addVerb(playerBaseId, "shout", [
+    "say",
+    ["str.concat", "shouts: ", ["str.join", ["args"], " "]],
+  ]);
+
+  addVerb(playerBaseId, "tell", [
+    "tell",
+    ["arg", 0],
+    ["str.join", ["list.slice", ["args"], 1], " "],
+  ]);
+
+  addVerb(playerBaseId, "on_hear", [
+    "tell",
+    "caller",
+    [
+      "str.concat",
+      ["prop", ["arg", 1], "name"],
+      " ",
+      ["arg", 2], // type (say/tell)
+      "s: ",
+      ["arg", 0], // msg
+    ],
+  ]);
+
   // 3. Create a Lobby Room
   const lobbyId = createEntity({
     name: "Lobby",
