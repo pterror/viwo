@@ -346,4 +346,59 @@ export function seedHotel(lobbyId: number, voidId: number) {
       ["str.concat", "You enter Room ", ["var", "roomNum"], "."],
     ],
   ]);
+
+  // 9. NPCs
+
+  // Receptionist (in Hotel Lobby)
+  const receptionistId = createEntity({
+    name: "Receptionist",
+    kind: "ACTOR",
+    location_id: hotelLobbyId,
+    props: {
+      description: "A friendly receptionist standing behind the desk.",
+    },
+  });
+
+  addVerb(receptionistId, "on_hear", [
+    "seq",
+    ["let", "msg", ["arg", 0]],
+    ["let", "speakerId", ["arg", 1]],
+
+    // Simple heuristics
+    [
+      "if",
+      ["str.includes", ["str.lower", ["var", "msg"]], "room"],
+      [
+        "say",
+        "We have lovely rooms available on floors 1-100. Just use the elevator!",
+      ],
+      [
+        "if",
+        ["str.includes", ["str.lower", ["var", "msg"]], "hello"],
+        ["say", "Welcome to the Grand Hotel! How may I help you?"],
+      ],
+    ],
+  ]);
+
+  // Golem (in Void for now, maybe move to lobby?)
+  // Let's put the Golem in the Hotel Lobby too for testing
+  const golemId = createEntity({
+    name: "Stone Golem",
+    kind: "ACTOR",
+    location_id: hotelLobbyId,
+    props: {
+      description: "A massive stone golem. It seems to be listening.",
+    },
+  });
+
+  addVerb(golemId, "on_hear", [
+    "seq",
+    ["let", "msg", ["arg", 0]],
+    ["let", "type", ["arg", 2]],
+    [
+      "if",
+      ["==", ["var", "type"], "tell"],
+      ["say", ["str.concat", "Golem echoes: ", ["var", "msg"]]],
+    ],
+  ]);
 }

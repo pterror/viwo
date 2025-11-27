@@ -24,6 +24,12 @@ export type ScriptSystemContext = {
   ) => void;
   broadcast?: (msg: unknown, locationId?: number) => void;
   give?: (entityId: number, destId: number, newOwnerId: number) => void;
+  triggerEvent?: (
+    eventName: string,
+    locationId: number,
+    args: unknown[],
+    excludeEntityId?: number,
+  ) => void | Promise<void>;
 };
 
 export type ScriptContext = {
@@ -385,6 +391,30 @@ const OPS: Record<string, (args: any[], ctx: ScriptContext) => Promise<any>> = {
 
     if (ctx.sys?.broadcast) {
       ctx.sys.broadcast(msg, loc);
+    }
+    return true;
+  },
+  say: async (args, ctx) => {
+    const [msgExpr] = args;
+    const msg = await evaluate(msgExpr, ctx);
+
+    if (typeof msg !== "string") return null;
+
+    if (ctx.sys?.broadcast) {
+      // Broadcast to room
+      ctx.sys.broadcast(
+        `${ctx.caller.name} says: "${msg}"`,
+        ctx.caller.location_id || undefined,
+      );
+    }
+
+    if (ctx.sys?.triggerEvent && ctx.caller.location_id) {
+      await ctx.sys.triggerEvent(
+        "on_hear",
+        ctx.caller.location_id,
+        [msg, ctx.caller.id, "say"],
+        ctx.caller.id, // Exclude speaker? Maybe not, they might want to hear themselves? Usually exclude.
+      );
     }
     return true;
   },

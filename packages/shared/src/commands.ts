@@ -30,6 +30,14 @@ export const CreatePlayerSchema = z.tuple([
   z.string({ message: "Usage: create_player <name>" }),
 ]);
 
+export const SaySchema = z
+  .array(z.string())
+  .min(1, { message: "Usage: say <message>" });
+
+export const TellSchema = z
+  .array(z.string())
+  .min(2, { message: "Usage: tell <target> <message>" });
+
 /**
  * Zod schemas for validating command arguments.
  * Keys are the command names.
@@ -44,6 +52,9 @@ export const CommandSchemas = {
   set: SetArgsSchema,
   login: LoginSchema,
   create_player: CreatePlayerSchema,
+  say: SaySchema,
+  tell: TellSchema,
+  whisper: TellSchema,
 };
 
 export type CommandName = keyof typeof CommandSchemas;
