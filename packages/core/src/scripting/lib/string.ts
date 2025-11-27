@@ -22,9 +22,11 @@ export function registerStringLibrary() {
   });
 
   registerOpcode("str.concat", async (args, ctx) => {
-    const a = await evaluate(args[0], ctx);
-    const b = await evaluate(args[1], ctx);
-    return String(a) + String(b);
+    let result = "";
+    for (const arg of args) {
+      result += String(await evaluate(arg, ctx));
+    }
+    return result;
   });
 
   registerOpcode("str.slice", async (args, ctx) => {

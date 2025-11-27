@@ -566,4 +566,132 @@ export function seed() {
     prototype_id: mailboxProtoId,
     owner_id: playerId,
   });
+
+  // 6. Create a Book
+  const bookId = createEntity({
+    name: "Ancient Tome",
+    kind: "ITEM",
+    location_id: lobbyId,
+    props: {
+      description: "A dusty old book with many chapters.",
+      chapters: [
+        {
+          title: "The Beginning",
+          content: "In the beginning, there was the void.",
+        },
+        { title: "The Middle", content: "Then, things happened." },
+        { title: "The End", content: "Finally, it was over." },
+      ],
+      adjectives: ["material:paper", "weight:light"],
+    },
+  });
+
+  // Verb: read <chapter_index>
+  addVerb(bookId, "read", [
+    "seq",
+    ["let", "index", ["arg", 0]],
+    ["let", "chapters", ["prop", "this", "chapters"]],
+    ["let", "chapter", ["list.get", ["var", "chapters"], ["var", "index"]]],
+    [
+      "if",
+      ["var", "chapter"],
+      [
+        "tell",
+        "caller",
+        [
+          "str.concat",
+          "Chapter: ",
+          ["obj.get", ["var", "chapter"], "title"],
+          "\n\n",
+          ["obj.get", ["var", "chapter"], "content"],
+        ],
+      ],
+      ["tell", "caller", "Chapter not found."],
+    ],
+  ]);
+
+  // Verb: list_chapters
+  addVerb(bookId, "list_chapters", [
+    "seq",
+    ["let", "chapters", ["prop", "this", "chapters"]],
+    [
+      "tell",
+      "caller",
+      [
+        "str.join",
+        [
+          "list.map",
+          ["var", "chapters"],
+          ["lambda", ["c"], ["obj.get", ["var", "c"], "title"]],
+        ],
+        "\n",
+      ],
+    ],
+  ]);
+
+  // Verb: add_chapter <title> <content>
+  // Only owner can add chapters? For now, let's say anyone can.
+  addVerb(bookId, "add_chapter", [
+    "seq",
+    ["let", "title", ["arg", 0]],
+    ["let", "content", ["arg", 1]],
+    ["let", "chapters", ["prop", "this", "chapters"]],
+    ["let", "newChapter", {}],
+    ["obj.set", ["var", "newChapter"], "title", ["var", "title"]],
+    ["obj.set", ["var", "newChapter"], "content", ["var", "content"]],
+    ["list.push", ["var", "chapters"], ["var", "newChapter"]],
+    ["set", "this", "chapters", ["var", "chapters"]], // Persist changes
+    ["tell", "caller", "Chapter added."],
+  ]);
+
+  // Verb: search_chapters <query>
+  addVerb(bookId, "search_chapters", [
+    "seq",
+    ["let", "query", ["arg", 0]],
+    ["let", "chapters", ["prop", "this", "chapters"]],
+    [
+      "let",
+      "results",
+      [
+        "list.filter",
+        ["var", "chapters"],
+        [
+          "lambda",
+          ["c"],
+          [
+            "or",
+            [
+              "str.includes",
+              ["str.lower", ["obj.get", ["var", "c"], "title"]],
+              ["str.lower", ["var", "query"]],
+            ],
+            [
+              "str.includes",
+              ["str.lower", ["obj.get", ["var", "c"], "content"]],
+              ["str.lower", ["var", "query"]],
+            ],
+          ],
+        ],
+      ],
+    ],
+    [
+      "tell",
+      "caller",
+      [
+        "str.concat",
+        "Found ",
+        ["list.len", ["var", "results"]],
+        " matches:\n",
+        [
+          "str.join",
+          [
+            "list.map",
+            ["var", "results"],
+            ["lambda", ["c"], ["obj.get", ["var", "c"], "title"]],
+          ],
+          "\n",
+        ],
+      ],
+    ],
+  ]);
 }

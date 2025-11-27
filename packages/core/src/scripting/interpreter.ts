@@ -126,6 +126,11 @@ const OPS: Record<string, (args: any[], ctx: ScriptContext) => Promise<any>> = {
     }
     return null;
   },
+  arg: async (args, ctx) => {
+    const index = await evaluate(args[0], ctx);
+    if (typeof index !== "number") return null;
+    return ctx.args[index];
+  },
 
   // Comparison
   "==": async (args, ctx) =>
