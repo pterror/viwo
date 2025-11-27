@@ -532,4 +532,38 @@ export function seed() {
     ["schedule", "toll", [], 60000], // Every minute
   ]);
   addVerb(towerId, "start", ["schedule", "toll", [], 0]);
+
+  // 5. Mailbox
+  // A prototype for mailboxes.
+  const mailboxProtoId = createEntity({
+    name: "Mailbox Prototype",
+    kind: "ITEM",
+    props: {
+      description: "A secure mailbox.",
+      permissions: {
+        view: ["owner"], // Only owner can see contents
+        enter: [], // No one can manually put things in (must use deposit)
+      },
+    },
+  });
+
+  addVerb(
+    mailboxProtoId,
+    "deposit",
+    [
+      "give",
+      ["arg", 0], // The item to deposit
+      "this", // The mailbox
+    ],
+    { call: "public" },
+  ); // Anyone can call deposit
+
+  // Give the player a mailbox
+  createEntity({
+    name: "My Mailbox",
+    kind: "ITEM",
+    location_id: playerId, // Carried by player
+    prototype_id: mailboxProtoId,
+    owner_id: playerId,
+  });
 }

@@ -64,6 +64,7 @@ export class TaskScheduler {
               // Let's make the scheduler a singleton export in index.ts or here.
               // If we export an instance here, index.ts can use it.
             },
+            warnings: [],
           });
         }
       } catch (e) {

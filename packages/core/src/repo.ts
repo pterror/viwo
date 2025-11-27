@@ -190,6 +190,7 @@ export function updateEntity(
     name?: string;
     location_id?: number;
     location_detail?: string;
+    owner_id?: number;
     props?: Record<string, any>;
     state?: Record<string, any>;
     ai_context?: Record<string, any>;
@@ -209,6 +210,14 @@ export function updateEntity(
   if (data.location_detail !== undefined) {
     updates.push("location_detail = ?");
     params.push(data.location_detail);
+  }
+  if (data.owner_id !== undefined) {
+    updates.push("owner_id = ?");
+    params.push(data.owner_id);
+  }
+  if (data.owner_id !== undefined) {
+    updates.push("owner_id = ?");
+    params.push(data.owner_id);
   }
 
   if (updates.length > 0) {

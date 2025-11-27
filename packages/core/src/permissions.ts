@@ -35,8 +35,13 @@ export function checkPermission(
     if (allowedUsers.includes(actor.id) || allowedUsers.includes("public")) {
       return true;
     }
+    // Explicit deny (or not in allow list) stops recursion
+    return false;
   } else if (allowedUsers === "public") {
     return true;
+  } else if (allowedUsers !== undefined) {
+    // If it's defined but not public/array (e.g. null or empty), we treat as deny and stop recursion
+    return false;
   }
 
   // 4. Cascading/Area (Recursive check on parent)

@@ -67,6 +67,10 @@ export function startServer(port: number = 8080) {
           }
         });
       },
+      give: (entityId, destId, newOwnerId) => {
+        // Update location and owner
+        updateEntity(entityId, { location_id: destId, owner_id: newOwnerId });
+      },
       call: async (caller, targetId, verbName, callArgs, warnings) => {
         const targetVerb = getVerb(targetId, verbName);
         const targetEnt = getEntity(targetId);

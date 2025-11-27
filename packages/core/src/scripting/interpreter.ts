@@ -23,6 +23,7 @@ export type ScriptSystemContext = {
     delay: number,
   ) => void;
   broadcast?: (msg: unknown, locationId?: number) => void;
+  give?: (entityId: number, destId: number, newOwnerId: number) => void;
 };
 
 export type ScriptContext = {
@@ -217,8 +218,52 @@ const OPS: Record<string, (args: any[], ctx: ScriptContext) => Promise<any>> = {
     }
 
     if (ctx.sys?.move) {
+      // Check enter permission on destination
+      if (!checkPermission(ctx.caller, dest, "enter")) {
+        throw new ScriptError(`Permission denied: cannot enter ${dest.id}`);
+      }
       ctx.sys.move(target.id, dest.id);
     }
+    return true;
+  },
+  give: async (args, ctx) => {
+    const [targetExpr, destExpr] = args;
+    const target = await evaluateTarget(targetExpr, ctx);
+    const dest = await evaluateTarget(destExpr, ctx);
+
+    if (!target || !dest) return null;
+
+    // 1. Check if caller can edit the target (ownership/holding)
+    if (!checkPermission(ctx.caller, target, "edit")) {
+      throw new ScriptError(`Permission denied: cannot give ${target.id}`);
+    }
+
+    // 2. Transfer ownership
+    // If destination is an actor (player), they become the owner.
+    // If destination is a container (mailbox), the container's owner becomes the owner?
+    // Or we just set owner_id to dest.owner_id.
+    // Let's assume dest is the receiver.
+    let newOwnerId = dest.id;
+    if (dest.owner_id && dest.kind !== "ACTOR") {
+      newOwnerId = dest.owner_id;
+    }
+
+    // We need a way to update owner. sys.move only updates location.
+    // We might need sys.update or similar.
+    // Or we can assume 'give' implies moving to the destination and changing owner.
+    // Since we don't have sys.update exposed fully, we might need to add it or use a specific sys.give.
+    // Let's add sys.give or expand sys.move?
+    // Expanding sys is harder without changing interface.
+    // Let's use a direct repo call if possible? No, we should use sys.
+    // Let's assume we can add `give` to sys.
+    if (ctx.sys?.give) {
+      ctx.sys.give(target.id, dest.id, newOwnerId);
+    } else {
+      // Fallback if sys.give not available (should be added to index.ts)
+      // For now, just move, but that doesn't transfer ownership.
+      if (ctx.sys?.move) ctx.sys.move(target.id, dest.id);
+    }
+
     return true;
   },
   destroy: async (args, ctx) => {

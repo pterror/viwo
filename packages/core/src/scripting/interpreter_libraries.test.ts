@@ -30,13 +30,14 @@ const ctx: ScriptContext = {
     create: mock(() => 3),
     send: mock(() => {}),
     destroy: mock(() => {}),
-    call: mock(async (targetId, verb, args) => {
+    call: mock(async (_caller, targetId, verb, args, _warnings) => {
       if (targetId === 2 && verb === "test") {
         return "called " + args.join(",");
       }
       return null;
     }),
   },
+  warnings: [],
 };
 
 describe("Interpreter Libraries", () => {
