@@ -270,6 +270,95 @@ export function startServer(port: number = 8080) {
         );
       };
 
+      const sendInventory = async (playerId: number) => {
+        const items = getContents(playerId);
+        const richItems = await Promise.all(
+          items.map(async (item) => {
+            const props = await resolveEntityProps(item);
+            return {
+              id: item.id,
+              name: item.name,
+              kind: item.kind,
+              location_detail: item.location_detail,
+              adjectives: props["adjectives"],
+              custom_css: props["custom_css"],
+              contents: getContents(item.id).map((sub) => ({
+                id: sub.id,
+                name: sub.name,
+                kind: sub.kind,
+                contents: [],
+                custom_css: sub.props["custom_css"],
+                verbs: getVerbs(sub.id).map((v) => v.name),
+              })),
+              verbs: getVerbs(item.id).map((v) => v.name),
+            };
+          }),
+        );
+
+        const client = Array.from(wss.clients).find(
+          (c: any) => c.playerId === playerId,
+        );
+        if (client && client.readyState === WebSocket.OPEN) {
+          client.send(
+            JSON.stringify({
+              type: "inventory",
+              items: richItems,
+            }),
+          );
+        }
+      };
+
+      const sendItem = async (itemId: number) => {
+        const item = getEntity(itemId);
+        if (!item) return;
+
+        const richContents = await Promise.all(
+          getContents(item.id).map(async (sub) => {
+            const props = await resolveEntityProps(sub);
+            return {
+              id: sub.id,
+              name: sub.name,
+              kind: sub.kind,
+              contents: [],
+              location_detail: sub.location_detail,
+              adjectives: props["adjectives"],
+              custom_css: props["custom_css"],
+              verbs: getVerbs(sub.id).map((v) => v.name),
+            };
+          }),
+        );
+
+        const props = await resolveEntityProps(item);
+
+        // Send to everyone? No, usually just the looker.
+        // But sendItem here is generic.
+        // The opcode `sys.send_item` takes an ID.
+        // But who do we send it to?
+        // `sendRoom` sends to the player in the room?
+        // No, `sendRoom` sends to `ws`?
+        // Wait, `sendRoom` in `index.ts` uses `ws.send` at the end?
+        // Let's check `sendRoom` implementation again.
+        // It uses `ws.send`. `ws` is the connection of the player executing the command.
+        // So `sendItem` should also use `ws.send`.
+        // But `sendInventory` uses `wss.clients.find` because it takes `playerId`.
+        // `sendRoom` takes `roomId` but sends to `ws`?
+        // If `sendRoom` is called by `sys.send_room(roomId)`, it should send to the caller.
+        // In `index.ts`, `sendRoom` is defined inside the connection handler, so `ws` is available.
+        // So `sendItem` should also use `ws`.
+
+        ws.send(
+          JSON.stringify({
+            type: "item",
+            name: item.name,
+            description: props["description"] || "It's just a thing.",
+            contents: richContents,
+            adjectives: props["adjectives"],
+            custom_css: props["custom_css"],
+            verbs: getVerbs(item.id).map((v) => v.name),
+          }),
+        );
+      };
+
       // Plugin Hook
       const ctx: CommandContext = {
         player: { id: player.id, ws },
@@ -284,6 +373,14 @@ export function startServer(port: number = 8080) {
           updateEntity,
           deleteEntity,
           sendRoom,
+          sendInventory,
+          sendItem,
+          canEdit: (playerId, entityId) => {
+            const player = getEntity(playerId);
+            const entity = getEntity(entityId);
+            if (!player || !entity) return false;
+            return checkPermission(player, entity, "edit");
+          },
         },
       };
 
@@ -365,398 +462,11 @@ export function startServer(port: number = 8080) {
         return;
       }
 
-      if (command === "look") {
-        // ... (existing look target logic) ...
-        if (args.length > 0 && args[0]) {
-          // ... (keep existing target look logic) ...
-          const targetName = args[0].toString().toLowerCase();
-          // ... (copy existing recursive search) ...
-          // Helper to recursively find an item by name
-          const findRecursive = (
-            containerId: number,
-            name: string,
-          ): { id: number; name: string; kind: string; props: any } | null => {
-            const contents = getContents(containerId);
-            for (const item of contents) {
-              if (item.name.toLowerCase() === name) return item;
-              const found = findRecursive(item.id, name);
-              if (found) return found;
-            }
-            return null;
-          };
-
-          let target = null;
-          if (player.location_id)
-            target = findRecursive(player.location_id, targetName);
-          if (!target) target = findRecursive(player.id, targetName);
-
-          if (!target) {
-            ws.send(
-              JSON.stringify({
-                type: "message",
-                text: `You don't see '${args[0]}' here.`,
-              }),
-            );
-            return;
-          }
-
-          const richContents = await Promise.all(
-            getContents(target.id).map(async (sub) => {
-              const props = await resolveEntityProps(sub);
-              return {
-                id: sub.id,
-                name: sub.name,
-                kind: sub.kind,
-                contents: [],
-                location_detail: sub.location_detail,
-                adjectives: props["adjectives"],
-                custom_css: props["custom_css"],
-                verbs: getVerbs(sub.id).map((v) => v.name),
-              };
-            }),
-          );
-
-          const targetProps = await resolveEntityProps(target);
-
-          ws.send(
-            JSON.stringify({
-              type: "item",
-              name: target.name,
-              description: targetProps["description"] || "It's just a thing.",
-              contents: richContents,
-              adjectives: targetProps["adjectives"],
-              custom_css: targetProps["custom_css"],
-              verbs: getVerbs(target.id).map((v) => v.name),
-            }),
-          );
-          return;
-        }
-
-        if (!player.location_id) {
-          ws.send(
-            JSON.stringify({ type: "message", text: "You are in the void." }),
-          );
-          return;
-        }
-        sendRoom(player.location_id);
-      } else if (command === "inventory") {
-        // ... (keep existing inventory logic) ...
-        const items = getContents(player.id);
-        const richItems = await Promise.all(
-          items.map(async (item) => {
-            const props = await resolveEntityProps(item);
-            return {
-              id: item.id,
-              name: item.name,
-              kind: item.kind,
-              location_detail: item.location_detail,
-              adjectives: props["adjectives"],
-              custom_css: props["custom_css"],
-              contents: getContents(item.id).map((sub) => ({
-                id: sub.id,
-                name: sub.name,
-                kind: sub.kind,
-                contents: [],
-                custom_css: sub.props["custom_css"],
-                verbs: getVerbs(sub.id).map((v) => v.name),
-              })),
-              verbs: getVerbs(item.id).map((v) => v.name),
-            };
-          }),
-        );
-
-        ws.send(
-          JSON.stringify({
-            type: "inventory",
-            items: richItems,
-          }),
-        );
-      } else if (command === "move" || command === "go") {
-        // Zod validated args[0] exists
-        const direction = args[0].toLowerCase();
-
-        if (!player.location_id) {
-          ws.send(
-            JSON.stringify({ type: "message", text: "You are in the void." }),
-          );
-          return;
-        }
-
-        const roomContents = getContents(player.location_id);
-        const exit = roomContents.find(
-          (e) => e.kind === "EXIT" && e.props["direction"] === direction,
-        );
-
-        if (exit) {
-          moveEntity(player.id, exit.props["destination_id"]);
-          ws.send(
-            JSON.stringify({
-              type: "message",
-              text: `You move ${direction}...`,
-            }),
-          );
-          sendRoom(exit.props["destination_id"]);
-        } else {
-          ws.send(
-            JSON.stringify({ type: "message", text: "You can't go that way." }),
-          );
-        }
-      } else if (command === "dig") {
-        // Zod validated args length >= 2
-        const direction = args[0].toLowerCase();
-        // args is [direction, ...rest] or [direction, roomName] depending on how we handled it.
-        // In schema we used z.array(z.string()).min(2)
-        // So args is string[]
-        const roomName = args.slice(1).join(" ");
-
-        if (!player.location_id) {
-          ws.send(
-            JSON.stringify({ type: "message", text: "You can't dig here." }),
-          );
-          return;
-        }
-
-        const currentRoom = getEntity(player.location_id);
-        if (!currentRoom) return;
-
-        if (!checkPermission(player, currentRoom, "edit")) {
-          ws.send(
-            JSON.stringify({
-              type: "error",
-              text: "You don't have permission to dig here.",
-            }),
-          );
-          return;
-        }
-
-        const currentRoomId = player.location_id;
-
-        // Create new room
-        const newRoomId = createEntity({
-          name: roomName,
-          kind: "ROOM",
-          props: { description: "A newly dug room." },
-        });
-
-        // Create exit from current to new
-        createEntity({
-          name: direction,
-          kind: "EXIT",
-          location_id: currentRoomId,
-          props: { direction, destination_id: newRoomId },
-        });
-
-        // Create exit from new to current
-        const opposites: Record<string, string> = {
-          north: "south",
-          south: "north",
-          east: "west",
-          west: "east",
-          up: "down",
-          down: "up",
-          in: "out",
-          out: "in",
-          northeast: "southwest",
-          southwest: "northeast",
-          northwest: "southeast",
-          southeast: "northwest",
-          ne: "sw",
-          sw: "ne",
-          nw: "se",
-          se: "nw",
-          n: "s",
-          s: "n",
-          e: "w",
-          w: "e",
-          u: "d",
-          d: "u",
-        };
-
-        const opposite = opposites[direction];
-
-        if (opposite) {
-          createEntity({
-            name: opposite,
-            kind: "EXIT",
-            location_id: newRoomId,
-            props: { direction: opposite, destination_id: currentRoomId },
-          });
-        }
-
-        ws.send(
-          JSON.stringify({
-            type: "message",
-            text: `You dug ${direction} to '${roomName}'.`,
-          }),
-        );
-
-        // Auto-move to new room
-        moveEntity(player.id, newRoomId);
-        sendRoom(newRoomId);
-      } else if (command === "create") {
-        // Zod validated args[0] exists
-        const name = args[0];
-        let props = {};
-        if (args.length > 1 && args[1]) {
-          try {
-            // args[1] is the JSON string if present
-            // But wait, our schema was tuple([string, optional string])
-            // If the user passed multiple words for props, it would fail or be truncated?
-            // The original code did: args.slice(1).join(" ")
-            // Our schema expects a single string for props_json.
-            // If the user types `create foo {"a": 1}`, args is ["foo", "{\"a\":", "1}"]
-            // This will fail the tuple schema if it expects 2 elements but got 3.
-            // We should probably use array(string).min(1) for create as well, similar to dig/set.
-            // Let's assume for now the user passes it as one arg or we need to fix the schema.
-            // Actually, let's fix the logic here to match what Zod gives us.
-            // If we used tuple, Zod parses strictly.
-            // If the user sends `["create", "foo", "{\"a\": 1}"]` (from JSON parse of message),
-            // then args is `["foo", "{\"a\": 1}"]`.
-            // So tuple is fine IF the client sends it as a single string.
-            // But the client sends `["create", "foo", "{\"a\": 1}"]`?
-            // The client sends a string message, which we parse as JSON.
-            // If the client sends `["create", "foo", "{\"a\": 1}"]`, then args is `["foo", "{\"a\": 1}"]`.
-            // If the client sends `["create", "foo", "{", "\"a\":", "1", "}"]` (e.g. space separated), then it fails.
-            // The original code handled space-separated JSON parts by joining.
-            // To support that, we should use array(string).min(1) and join the rest.
-            // But I defined CreateSchema as tuple.
-            // I should probably update CreateSchema to be array(string).min(1) to be safe and flexible.
-            // But let's proceed with what I have and see.
-            // If I use tuple, I'm enforcing that the client sends correctly tokenized args.
-            // If the client is a CLI that splits by space, JSON will be split.
-            // So `create foo {"a":1}` becomes `["create", "foo", "{\"a\":1}"]` only if the CLI is smart.
-            // If it's a simple split, it might be `["create", "foo", "{\"a\":1}"]` (no spaces in json).
-            // If `create foo { "a": 1 }`, it becomes `["create", "foo", "{", "\"a\":", "1", "}"]`.
-            // So tuple will fail.
-            // I should probably change CreateSchema to use array/rest.
-            // However, for this step, I'll implement assuming the schema is what it is, and maybe I'll update schema later if needed.
-            // Actually, I can join the args in the logic if I change the schema to array.
-            // Let's stick to the plan: use the schema I defined.
-            // But wait, if I use `safeParse(rawArgs)`, and `rawArgs` has extra elements, tuple schema might fail if strict?
-            // Zod tuples are strict by default? No, they allow extra? No, `z.tuple` is strict length by default.
-            // I should have used `.rest(z.unknown())` or similar if I wanted to allow extra.
-            // Or just `z.array(z.string())` for everything to be safe.
-            // Given the time, I'll assume the user inputs are simple or I'll fix it if it breaks.
-            // Actually, `create` with JSON is rare/advanced.
-
-            props = JSON.parse(args[1]);
-          } catch {
-            ws.send(
-              JSON.stringify({ type: "message", text: "Invalid props JSON." }),
-            );
-            return;
-          }
-        }
-
-        if (!player.location_id) {
-          ws.send(
-            JSON.stringify({ type: "message", text: "You are in the void." }),
-          );
-          return;
-        }
-
-        const currentRoom = getEntity(player.location_id);
-        if (!currentRoom) return;
-
-        if (!checkPermission(player, currentRoom, "edit")) {
-          ws.send(
-            JSON.stringify({
-              type: "error",
-              text: "You don't have permission to create items here.",
-            }),
-          );
-          return;
-        }
-
-        createEntity({
-          name,
-          kind: "ITEM",
-          location_id: player.location_id,
-          props,
-        });
-
-        ws.send(
-          JSON.stringify({
-            type: "message",
-            text: `Created '${name}'.`,
-          }),
-        );
-        sendRoom(player.location_id);
-      } else if (command === "set") {
-        // Zod validated args length >= 3
-        const targetName = args[0].toLowerCase();
-        const prop = args[1];
-        const value = args.slice(2).join(" ");
-
-        // Find target (recursive)
-        const findRecursive = (
-          containerId: number,
-          name: string,
-        ): { id: number; name: string; props: any } | null => {
-          const contents = getContents(containerId);
-          for (const item of contents) {
-            if (item.name.toLowerCase() === name) return item;
-            const found = findRecursive(item.id, name);
-            if (found) return found;
-          }
-          return null;
-        };
-
-        let target = null;
-        if (targetName === "here" || targetName === "room") {
-          target = player.location_id ? getEntity(player.location_id) : null;
-        } else if (targetName === "me" || targetName === "self") {
-          target = player;
-        } else {
-          if (player.location_id)
-            target = findRecursive(player.location_id, targetName);
-          if (!target) target = findRecursive(player.id, targetName);
-        }
-
-        if (!target) {
-          ws.send(
-            JSON.stringify({
-              type: "message",
-              text: `You don't see '${targetName}' here.`,
-            }),
-          );
-          return;
-        }
-
-        if (!checkPermission(player, getEntity(target.id)!, "edit")) {
-          ws.send(
-            JSON.stringify({
-              type: "error",
-              text: "You don't have permission to edit this.",
-            }),
-          );
-          return;
-        }
-
-        // Update props
-        let parsedValue = value;
-        try {
-          parsedValue = JSON.parse(value);
-        } catch {}
-
-        const newProps = { ...target.props, [prop]: parsedValue };
-        db.query("UPDATE entity_data SET props = ? WHERE entity_id = ?").run(
-          JSON.stringify(newProps),
-          target.id,
-        );
-
-        ws.send(
-          JSON.stringify({
-            type: "message",
-            text: `Set ${prop} of '${target.name}' to '${value}'.`,
-          }),
-        );
-
-        // If we updated the room, refresh it
-        if (player.location_id && target.id === player.location_id) {
-          sendRoom(player.location_id);
-        }
-      } else if (command === "login") {
+      // If no verb handled the command, try built-in commands
+      // These built-in commands will eventually be verbs on the player or room.
+      // For now, they are hardcoded.
+      // The `login` command is an exception as it changes the player's session.
+      if (command === "login") {
         const id = args[0]; // Zod coerced to number
         const player = getEntity(id);
         if (player) {

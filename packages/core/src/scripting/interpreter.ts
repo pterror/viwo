@@ -30,6 +30,10 @@ export type ScriptSystemContext = {
     args: unknown[],
     excludeEntityId?: number,
   ) => void | Promise<void>;
+  sendRoom?: (roomId: number) => void;
+  sendInventory?: (playerId: number) => void;
+  sendItem?: (itemId: number) => void;
+  canEdit?: (playerId: number, entityId: number) => boolean;
 };
 
 export type ScriptContext = {
@@ -57,6 +61,9 @@ const OPS: Record<string, (args: any[], ctx: ScriptContext) => Promise<any>> = {
       lastResult = await evaluate(step, ctx);
     }
     return lastResult;
+  },
+  do: async (args, ctx) => {
+    return OPS["seq"]!(args, ctx);
   },
   if: async (args, ctx) => {
     const [cond, thenBranch, elseBranch] = args;
@@ -387,11 +394,22 @@ const OPS: Record<string, (args: any[], ctx: ScriptContext) => Promise<any>> = {
     return true;
   },
   create: async (args, ctx) => {
-    const [dataExpr] = args;
-    const data = await evaluate(dataExpr, ctx);
+    if (args.length === 1) {
+      const [dataExpr] = args;
+      const data = await evaluate(dataExpr, ctx);
+      if (ctx.sys?.create) {
+        return ctx.sys.create(data);
+      }
+    } else {
+      const [kindExpr, nameExpr, propsExpr, locExpr] = args;
+      const kind = await evaluate(kindExpr, ctx);
+      const name = await evaluate(nameExpr, ctx);
+      const props = propsExpr ? await evaluate(propsExpr, ctx) : {};
+      const location_id = locExpr ? await evaluate(locExpr, ctx) : undefined;
 
-    if (ctx.sys?.create) {
-      return ctx.sys.create(data);
+      if (ctx.sys?.create) {
+        return ctx.sys.create({ kind, name, props, location_id });
+      }
     }
     return null;
   },
@@ -479,6 +497,71 @@ const OPS: Record<string, (args: any[], ctx: ScriptContext) => Promise<any>> = {
     }
     return true;
   },
+  "sys.send_room": async (args, ctx) => {
+    const [roomIdExpr] = args;
+    const roomId = roomIdExpr
+      ? await evaluate(roomIdExpr, ctx)
+      : ctx.caller.location_id;
+
+    if (typeof roomId !== "number") return null;
+
+    if (ctx.sys?.sendRoom) {
+      ctx.sys.sendRoom(roomId);
+    }
+    return true;
+  },
+  "sys.send_inventory": async (args, ctx) => {
+    const [playerIdExpr] = args;
+    const playerId = playerIdExpr
+      ? await evaluate(playerIdExpr, ctx)
+      : ctx.caller.id;
+
+    if (typeof playerId !== "number") return null;
+
+    if (ctx.sys?.sendInventory) {
+      ctx.sys.sendInventory(playerId);
+    }
+    return true;
+  },
+  "sys.send_item": async (args, ctx) => {
+    const [itemIdExpr] = args;
+    const itemId = itemIdExpr ? await evaluate(itemIdExpr, ctx) : undefined;
+
+    if (typeof itemId !== "number") return null;
+
+    if (ctx.sys?.sendItem) {
+      ctx.sys.sendItem(itemId);
+    }
+    return true;
+  },
+  "world.find": async (args, ctx) => {
+    const [nameExpr] = args;
+    const name = await evaluate(nameExpr, ctx);
+    if (typeof name !== "string") return null;
+
+    // evaluateTarget handles "me", "here", and name lookup in room/inventory
+    const target = await evaluateTarget(name, ctx);
+    return target ? target.id : null;
+  },
+  "sys.can_edit": async (args, ctx) => {
+    const [entityIdExpr] = args;
+    const entityId = await evaluate(entityIdExpr, ctx);
+    if (typeof entityId !== "number") return false;
+
+    if (ctx.sys?.canEdit) {
+      return ctx.sys.canEdit(ctx.caller.id, entityId);
+    }
+    return false;
+  },
+  print: async (args, ctx) => {
+    const [msgExpr] = args;
+    const msg = await evaluate(msgExpr, ctx);
+    if (typeof msg !== "string") return null;
+    if (ctx.sys?.send) {
+      ctx.sys.send({ type: "message", text: msg });
+    }
+    return true;
+  },
   say: async (args, ctx) => {
     const [msgExpr] = args;
     const msg = await evaluate(msgExpr, ctx);
@@ -553,17 +636,42 @@ export async function evaluateTarget(
     val = await evaluate(expr, ctx);
   }
 
+  // console.log(`evaluateTarget: ${val} (type: ${typeof val})`);
+
   if (val === "this") return ctx.this;
-  if (val === "caller") return ctx.caller;
+  if (val === "caller" || val === "me" || val === "self") return ctx.caller;
+
+  const { getEntity, getContents } = await import("../repo");
+
   if (typeof val === "number") {
-    // Resolve entity by ID
-    // We need a way to get entity by ID here.
-    // Since we can't import getEntity directly due to circular deps if we are not careful,
-    // but interpreter.ts is in scripting, and repo is in parent.
-    // We imported updateEntity from ../repo, so we can import getEntity too.
-    const { getEntity } = await import("../repo");
     return getEntity(val);
   }
+
+  if (typeof val === "string") {
+    const name = val.toLowerCase();
+
+    if (name === "here" || name === "room") {
+      return ctx.caller.location_id ? getEntity(ctx.caller.location_id) : null;
+    }
+
+    // Search in room
+    if (ctx.caller.location_id) {
+      const roomContents = getContents(ctx.caller.location_id);
+      console.log(
+        `Searching for ${name} in room ${
+          ctx.caller.location_id
+        }. Contents: ${roomContents.map((e) => e.name).join(", ")}`,
+      );
+      const found = roomContents.find((e) => e.name.toLowerCase() === name);
+      if (found) return found;
+    }
+
+    // Search in inventory
+    const inventory = getContents(ctx.caller.id);
+    const found = inventory.find((e) => e.name.toLowerCase() === name);
+    if (found) return found;
+  }
+
   return null;
 }
 

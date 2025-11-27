@@ -97,6 +97,211 @@ export function seed() {
     ],
   ]);
 
+  addVerb(playerBaseId, "look", [
+    "if",
+    ["list.empty", ["args"]],
+    ["sys.send_room", ["prop", "me", "location_id"]],
+    [
+      "do",
+      ["let", "targetId", ["world.find", ["arg", 0]]],
+      [
+        "if",
+        ["var", "targetId"],
+        ["sys.send_item", ["var", "targetId"]],
+        [
+          "print",
+          ["str.join", ["list", "You don't see", ["arg", 0], "here."], " "],
+        ],
+      ],
+    ],
+  ]);
+
+  addVerb(playerBaseId, "inventory", [
+    "sys.send_inventory",
+    ["prop", "me", "id"],
+  ]);
+  addVerb(playerBaseId, "i", ["sys.send_inventory", ["prop", "me", "id"]]);
+
+  addVerb(playerBaseId, "move", [
+    "seq",
+    ["let", "direction", ["arg", 0]],
+    [
+      "if",
+      ["not", ["var", "direction"]],
+      ["print", "Where do you want to go?"],
+      [
+        "do",
+        ["let", "exitId", ["world.find", ["var", "direction"]]],
+        [
+          "if",
+          ["var", "exitId"],
+          [
+            "do",
+            [
+              "move",
+              ["prop", "me", "id"],
+              ["prop", ["var", "exitId"], "destination_id"],
+            ],
+            ["sys.send_room", ["prop", "me", "location_id"]],
+            [
+              "print",
+              ["str.join", ["list", "You move", ["var", "direction"]], " "],
+            ],
+          ],
+          ["print", "You can't go that way."],
+        ],
+      ],
+    ],
+  ]);
+  addVerb(playerBaseId, "go", ["call", "me", "move", ["args"]]);
+  addVerb(playerBaseId, "n", ["call", "me", "move", ["list", "north"]]);
+  addVerb(playerBaseId, "s", ["call", "me", "move", ["list", "south"]]);
+  addVerb(playerBaseId, "e", ["call", "me", "move", ["list", "east"]]);
+  addVerb(playerBaseId, "w", ["call", "me", "move", ["list", "west"]]);
+
+  addVerb(playerBaseId, "dig", [
+    "seq",
+    ["let", "direction", ["arg", 0]],
+    ["let", "roomName", ["str.join", ["list.slice", ["args"], 1], " "]],
+    [
+      "if",
+      ["not", ["var", "direction"]],
+      ["print", "Where do you want to dig?"],
+      [
+        "do",
+        [
+          "if",
+          ["sys.can_edit", ["prop", "me", "location_id"]],
+          [
+            "do",
+            [
+              "let",
+              "newRoomId",
+              [
+                "create",
+                "ROOM",
+                ["var", "roomName"],
+                ["obj", "description", "A newly dug room."],
+              ],
+            ],
+            [
+              "create",
+              "EXIT",
+              ["var", "direction"],
+              [
+                "obj",
+                "direction",
+                ["var", "direction"],
+                "destination_id",
+                ["var", "newRoomId"],
+              ],
+              ["prop", "me", "location_id"],
+            ],
+            ["move", ["prop", "me", "id"], ["var", "newRoomId"]],
+            ["sys.send_room", ["var", "newRoomId"]],
+            [
+              "print",
+              [
+                "str.join",
+                [
+                  "list",
+                  "You dug",
+                  ["var", "direction"],
+                  "to",
+                  ["var", "roomName"],
+                ],
+                " ",
+              ],
+            ],
+          ],
+          ["print", "You can't dig here."],
+        ],
+      ],
+    ],
+  ]);
+
+  addVerb(playerBaseId, "create", [
+    "seq",
+    ["let", "name", ["arg", 0]],
+    [
+      "if",
+      ["not", ["var", "name"]],
+      ["print", "What do you want to create?"],
+      [
+        "do",
+        [
+          "if",
+          ["sys.can_edit", ["prop", "me", "location_id"]],
+          [
+            "do",
+            [
+              "create",
+              "ITEM",
+              ["var", "name"],
+              ["obj"],
+              ["prop", "me", "location_id"],
+            ],
+            ["sys.send_room", ["prop", "me", "location_id"]],
+            ["print", ["str.join", ["list", "Created", ["var", "name"]], " "]],
+          ],
+          ["print", "You can't create items here."],
+        ],
+      ],
+    ],
+  ]);
+
+  addVerb(playerBaseId, "set", [
+    "seq",
+    ["let", "targetName", ["arg", 0]],
+    ["let", "propName", ["arg", 1]],
+    ["let", "value", ["str.join", ["list.slice", ["args"], 2], " "]],
+    [
+      "if",
+      ["or", ["not", ["var", "targetName"]], ["not", ["var", "propName"]]],
+      ["print", "Usage: set <target> <prop> <value>"],
+      [
+        "do",
+        ["let", "targetId", ["world.find", ["var", "targetName"]]],
+        [
+          "if",
+          ["var", "targetId"],
+          [
+            "if",
+            ["sys.can_edit", ["var", "targetId"]],
+            [
+              "do",
+              [
+                "set",
+                ["var", "targetId"],
+                ["var", "propName"],
+                ["var", "value"],
+              ],
+              [
+                "print",
+                [
+                  "str.join",
+                  [
+                    "list",
+                    "Set",
+                    ["var", "propName"],
+                    "of",
+                    ["var", "targetName"],
+                    "to",
+                    ["var", "value"],
+                  ],
+                  " ",
+                ],
+              ],
+              ["sys.send_room", ["prop", "me", "location_id"]],
+            ],
+            ["print", "You can't edit that."],
+          ],
+          ["print", "You don't see that here."],
+        ],
+      ],
+    ],
+  ]);
+
   // 3. Create a Lobby Room
   const lobbyId = createEntity({
     name: "Lobby",

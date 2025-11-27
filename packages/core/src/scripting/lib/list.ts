@@ -7,6 +7,12 @@ export function registerListLibrary() {
     return list.length;
   });
 
+  registerOpcode("list.empty", async (args, ctx) => {
+    const list = await evaluate(args[0], ctx);
+    if (!Array.isArray(list)) return true;
+    return list.length === 0;
+  });
+
   registerOpcode("list.get", async (args, ctx) => {
     const list = await evaluate(args[0], ctx);
     const index = await evaluate(args[1], ctx);

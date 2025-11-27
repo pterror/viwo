@@ -15,6 +15,9 @@ export const WorldLibrary = {
     }
     return [];
   },
+  "world.contents": async (args: any[], ctx: ScriptContext) => {
+    return WorldLibrary["entity.contents"](args, ctx);
+  },
   "entity.contents": async (args: any[], ctx: ScriptContext) => {
     const [targetExpr] = args;
     const target = await evaluateTarget(targetExpr, ctx);
@@ -132,3 +135,10 @@ export const WorldLibrary = {
     return verbs;
   },
 };
+
+export function registerWorldLibrary() {
+  const { registerOpcode } = require("../interpreter");
+  for (const [name, handler] of Object.entries(WorldLibrary)) {
+    registerOpcode(name, handler);
+  }
+}

@@ -1,6 +1,18 @@
 import { evaluate, registerOpcode, executeLambda } from "../interpreter";
 
 export function registerObjectLibrary() {
+  registerOpcode("obj", async (args, ctx) => {
+    const result: Record<string, unknown> = {};
+    for (let i = 0; i < args.length; i += 2) {
+      const key = await evaluate(args[i], ctx);
+      const val = await evaluate(args[i + 1], ctx);
+      if (typeof key === "string") {
+        result[key] = val;
+      }
+    }
+    return result;
+  });
+
   registerOpcode("obj.keys", async (args, ctx) => {
     const obj = await evaluate(args[0], ctx);
     if (typeof obj !== "object" || obj === null || Array.isArray(obj))
