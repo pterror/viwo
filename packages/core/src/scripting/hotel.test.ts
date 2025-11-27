@@ -90,54 +90,32 @@ describe("Hotel Scripting", () => {
     caller = getEntity(callerId)!;
   });
 
-  it("should visit a room (create and move)", async () => {
-    const visitVerb = getVerb(hotelLobby.id, "visit");
-    expect(visitVerb).toBeDefined();
-
-    await evaluate(visitVerb!.code, {
-      caller,
-      this: hotelLobby,
-      args: ["101"],
-      warnings: [],
-      sys,
-    });
-
-    expect(messages[0]).toBe("You enter Room 101.");
-    expect(caller.location_id).not.toBe(hotelLobby.id); // Moved out of lobby
-
-    const newRoomId = caller.location_id!;
-    const newRoom = getEntity(newRoomId)!;
-    expect(newRoom).toBeDefined();
-    expect(newRoom.name).toBe("Room 101");
-    expect(newRoom.props["lobby_id"]).toBe(hotelLobby.id);
-  });
-
   it("should leave a room (move and destroy)", async () => {
-    // 1. Visit first to create the room
-    const visitVerb = getVerb(hotelLobby.id, "visit");
-    await evaluate(visitVerb!.code, {
-      caller,
-      this: hotelLobby,
-      args: ["101"],
-      warnings: [],
-      sys,
+    // 1. Manually create a room (since visit is gone)
+    const roomProto = db
+      .query("SELECT id FROM entities WHERE name = 'Hotel Room Prototype'")
+      .get() as any;
+    const roomId = createEntity({
+      name: "Room 101",
+      kind: "ROOM",
+      prototype_id: roomProto.id,
+      props: { lobby_id: hotelLobby.id },
     });
 
-    // Refresh caller to get new location
+    // Move caller to room
+    updateEntity(caller.id, { location_id: roomId });
     caller = getEntity(caller.id)!;
-    const roomId = caller.location_id!;
-    const room = getEntity(roomId)!;
 
-    // Clear messages from visit
+    // Clear messages
     messages = [];
 
     // 2. Leave
-    const leaveVerb = getVerb(room.prototype_id!, "leave");
+    const leaveVerb = getVerb(roomId, "leave");
     expect(leaveVerb).toBeDefined();
 
     await evaluate(leaveVerb!.code, {
       caller,
-      this: room,
+      this: getEntity(roomId)!,
       args: [],
       warnings: [],
       sys,
@@ -224,6 +202,13 @@ describe("Hotel Scripting", () => {
     const room = getEntity(roomId)!;
     expect(room.name).toBe("Room 501");
 
+    // Verify furnishings
+    const { getContents } = await import("../repo");
+    const contents = getContents(roomId);
+    expect(contents.some((e) => e.name === "Bed")).toBe(true);
+    expect(contents.some((e) => e.name === "Lamp")).toBe(true);
+    expect(contents.some((e) => e.name === "Chair")).toBe(true);
+
     // 6. Leave (back to Wing)
     const leaveVerb = getVerb(room.prototype_id!, "leave");
     expect(leaveVerb).toBeDefined();
@@ -234,6 +219,16 @@ describe("Hotel Scripting", () => {
     caller = getEntity(caller.id)!;
     expect(caller.location_id).toBe(wingId);
     expect(getEntity(roomId)).toBeNull(); // Room destroyed
+
+    // Verify furnishings destroyed (by checking if they exist in DB)
+    // Since we don't have IDs, we can check count of entities or just assume if room is gone and we used destroy, they are gone.
+    // But we implemented explicit destroy loop.
+    // Let's check if any "Bed" exists that was in that room.
+    // Actually, since we are in-memory and reset DB, we can check total entity count or query by name.
+    // But simpler: just trust the script logic if test passes.
+    // Or we can capture IDs before leaving.
+    const bed = contents.find((e) => e.name === "Bed")!;
+    expect(getEntity(bed.id)).toBeNull();
 
     // 7. Back (back to Floor Lobby)
     const backVerb = getVerb(wing.prototype_id!, "back");

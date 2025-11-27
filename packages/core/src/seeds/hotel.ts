@@ -10,7 +10,7 @@ export function seedHotel(lobbyId: number, voidId: number) {
     location_id: voidId, // Or connect to main lobby? Let's connect it.
     props: {
       description:
-        "The lavish lobby of the Grand Hotel. Type 'visit <room_number>' to go to a room.",
+        "The lavish lobby of the Grand Hotel. The elevator is to the side.",
     },
   });
 
@@ -54,52 +54,21 @@ export function seedHotel(lobbyId: number, voidId: number) {
     ["let", "lobbyId", ["prop", "this", "lobby_id"]],
     ["move", "caller", ["var", "lobbyId"]],
     ["tell", "caller", "You leave the room and it fades away behind you."],
-    ["destroy", "this"],
-  ]);
 
-  // Verb: visit <room_number> (on the Lobby)
-  addVerb(hotelLobbyId, "visit", [
-    "seq",
-    ["let", "roomNum", ["arg", 0]],
+    // Destroy contents (furnishings)
+    ["let", "contents", ["entity.contents", "this"]],
     [
-      "if",
-      ["not", ["var", "roomNum"]],
-      ["throw", "Please specify a room number."],
-    ],
-    // Create the ephemeral room
-    ["let", "roomData", {}],
-    [
-      "obj.set",
-      ["var", "roomData"],
-      "name",
-      ["str.concat", "Room ", ["var", "roomNum"]],
-    ],
-    ["obj.set", ["var", "roomData"], "kind", "ROOM"],
-    ["obj.set", ["var", "roomData"], "prototype_id", hotelRoomProtoId],
-
-    ["let", "props", {}],
-    [
-      "obj.set",
-      ["var", "props"],
-      "description",
+      "for",
+      "item",
+      ["var", "contents"],
       [
-        "str.concat",
-        "You are in room ",
-        ["var", "roomNum"],
-        ". It is pristine.",
+        "if",
+        ["!=", ["prop", ["var", "item"], "kind"], "ACTOR"],
+        ["destroy", ["var", "item"]],
       ],
     ],
-    ["obj.set", ["var", "props"], "lobby_id", hotelLobbyId],
 
-    ["obj.set", ["var", "roomData"], "props", ["var", "props"]],
-
-    ["let", "roomId", ["create", ["var", "roomData"]]],
-    ["move", "caller", ["var", "roomId"]],
-    [
-      "tell",
-      "caller",
-      ["str.concat", "You enter Room ", ["var", "roomNum"], "."],
-    ],
+    ["destroy", "this"],
   ]);
 
   // 8. Hotel Elevator & Floors
@@ -291,6 +260,28 @@ export function seedHotel(lobbyId: number, voidId: number) {
     ["tell", "caller", "You walk down the East Wing."],
   ]);
 
+  // Furnishings Prototypes
+  const bedProtoId = createEntity({
+    name: "Comfy Bed",
+    kind: "ITEM",
+    location_id: voidId,
+    props: { description: "A soft, inviting bed with crisp white linens." },
+  });
+
+  const lampProtoId = createEntity({
+    name: "Brass Lamp",
+    kind: "ITEM",
+    location_id: voidId,
+    props: { description: "A polished brass lamp casting a warm glow." },
+  });
+
+  const chairProtoId = createEntity({
+    name: "Velvet Chair",
+    kind: "ITEM",
+    location_id: voidId,
+    props: { description: "A plush red velvet armchair." },
+  });
+
   // --- Wing Verbs ---
 
   // back (Return to Floor Lobby)
@@ -325,6 +316,29 @@ export function seedHotel(lobbyId: number, voidId: number) {
     ["obj.set", ["var", "roomData"], "props", ["var", "props"]],
 
     ["let", "roomId", ["create", ["var", "roomData"]]],
+
+    // Furnish the room
+    ["let", "bedData", {}],
+    ["obj.set", ["var", "bedData"], "name", "Bed"],
+    ["obj.set", ["var", "bedData"], "kind", "ITEM"],
+    ["obj.set", ["var", "bedData"], "prototype_id", bedProtoId],
+    ["obj.set", ["var", "bedData"], "location_id", ["var", "roomId"]],
+    ["create", ["var", "bedData"]],
+
+    ["let", "lampData", {}],
+    ["obj.set", ["var", "lampData"], "name", "Lamp"],
+    ["obj.set", ["var", "lampData"], "kind", "ITEM"],
+    ["obj.set", ["var", "lampData"], "prototype_id", lampProtoId],
+    ["obj.set", ["var", "lampData"], "location_id", ["var", "roomId"]],
+    ["create", ["var", "lampData"]],
+
+    ["let", "chairData", {}],
+    ["obj.set", ["var", "chairData"], "name", "Chair"],
+    ["obj.set", ["var", "chairData"], "kind", "ITEM"],
+    ["obj.set", ["var", "chairData"], "prototype_id", chairProtoId],
+    ["obj.set", ["var", "chairData"], "location_id", ["var", "roomId"]],
+    ["create", ["var", "chairData"]],
+
     ["move", "caller", ["var", "roomId"]],
     [
       "tell",
