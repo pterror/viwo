@@ -84,7 +84,7 @@ interface ThemeState {
 }
 
 // Migration Logic
-const loadInitialState = (): ThemeState => {
+export const loadInitialState = (): ThemeState => {
   const savedThemes = localStorage.getItem("viwo_themes");
   const savedActiveId = localStorage.getItem("viwo_active_theme_id");
   const savedCustomCssPref = localStorage.getItem("viwo_allow_custom_css");
