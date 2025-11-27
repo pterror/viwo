@@ -14,6 +14,7 @@ export type ScriptContext = {
     destroy?: (id: number) => void;
     call?: (targetId: number, verb: string, args: any[]) => Promise<any>;
   };
+  warnings?: string[];
 };
 
 export class ScriptError extends Error {
@@ -39,6 +40,33 @@ const OPS: Record<string, (args: any[], ctx: ScriptContext) => Promise<any>> = {
       return await evaluate(thenBranch, ctx);
     } else if (elseBranch) {
       return await evaluate(elseBranch, ctx);
+    }
+    return null;
+  },
+  try: async (args, ctx) => {
+    const [tryBlock, errorVar, catchBlock] = args;
+    try {
+      return await evaluate(tryBlock, ctx);
+    } catch (e: any) {
+      if (catchBlock) {
+        if (errorVar && typeof errorVar === "string") {
+          if (!ctx.locals) ctx.locals = {};
+          ctx.locals[errorVar] = e.message || String(e);
+        }
+        return await evaluate(catchBlock, ctx);
+      }
+      return null;
+    }
+  },
+  throw: async (args, ctx) => {
+    const [msg] = args;
+    throw new ScriptError(await evaluate(msg, ctx));
+  },
+  warn: async (args, ctx) => {
+    const [msg] = args;
+    const text = await evaluate(msg, ctx);
+    if (ctx.warnings) {
+      ctx.warnings.push(String(text));
     }
     return null;
   },

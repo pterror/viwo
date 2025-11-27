@@ -193,58 +193,105 @@ export function startServer(port: number = 8080) {
       let verb = getVerb(player.id, command);
       let targetEntity = player;
 
-      // 2. Check verbs on 'here' (the room)
+      // 2. Check verbs on room
       if (!verb && player.location_id) {
         verb = getVerb(player.location_id, command);
-        if (verb) targetEntity = getEntity(player.location_id)!;
-      }
-
-      // 3. Check verbs on a target item (if args[0] is a name)
-      // This is tricky because we don't know if args[0] is meant to be a target.
-      // But if we follow MOO style: "verb target"
-      if (!verb && args.length > 0 && typeof args[0] === "string") {
-        const targetName = args[0].toLowerCase();
-        // Find target in room or inventory
-        const findTarget = (containerId: number) => {
-          const contents = getContents(containerId);
-          return contents.find((e) => e.name.toLowerCase() === targetName);
-        };
-
-        let target = null;
-        if (player.location_id) target = findTarget(player.location_id);
-        if (!target) target = findTarget(player.id);
-
-        if (target) {
-          verb = getVerb(target.id, command);
-          if (verb) targetEntity = target;
+        if (verb) {
+          const { getEntity } = await import("./repo");
+          targetEntity = getEntity(player.location_id)!;
         }
       }
 
-      if (verb && targetEntity) {
-        console.log(`Executing verb '${verb.name}' on ${targetEntity.id}`);
+      // 3. Check verbs on items in room (if command is "verb item")
+      // Simple parsing: "verb target"
+      if (!verb) {
+        const parts = command.split(" ");
+        if (parts.length > 1) {
+          // const verbName = parts[0];
+          // const targetName = parts.slice(1).join(" ");
+          // Find target in room or inventory
+          // ... (simplified for now)
+        }
+      }
+
+      if (verb) {
         try {
+          const warnings: string[] = [];
           await evaluate(verb.code, {
             caller: player,
             this: targetEntity,
-            args: args,
-            gas: 1000,
+            args: args || [],
+            gas: 1000, // TODO: Configurable gas
+            warnings,
             sys: {
-              move: moveEntity,
-              create: createEntity,
-              destroy: deleteEntity,
-              send: (msg) => ws.send(JSON.stringify(msg)),
+              move: (id, dest) => {
+                const { updateEntity } = require("./repo");
+                updateEntity(id, { location_id: dest });
+              },
+              create: (data) => {
+                const { createEntity } = require("./repo");
+                return createEntity(data);
+              },
+              send: (msg) => {
+                ws.send(JSON.stringify(msg));
+              },
+              destroy: (id) => {
+                const { deleteEntity } = require("./repo");
+                deleteEntity(id);
+              },
+              call: async (targetId, verbName, callArgs) => {
+                const { getVerb, getEntity } = require("./repo");
+                const targetVerb = getVerb(targetId, verbName);
+                const targetEnt = getEntity(targetId);
+                if (targetVerb && targetEnt) {
+                  return await evaluate(targetVerb.code, {
+                    caller: player, // Caller remains original player? Or the entity? Usually original caller for permissions.
+                    this: targetEnt,
+                    args: callArgs,
+                    gas: 500, // Sub-call gas limit?
+                    warnings, // Share warnings array
+                    sys: {
+                      move: (id, dest) => {
+                        const { updateEntity } = require("./repo");
+                        updateEntity(id, { location_id: dest });
+                      },
+                      create: (data) => {
+                        const { createEntity } = require("./repo");
+                        return createEntity(data);
+                      },
+                      send: (msg) => {
+                        ws.send(JSON.stringify(msg));
+                      },
+                      destroy: (id) => {
+                        const { deleteEntity } = require("./repo");
+                        deleteEntity(id);
+                      },
+                      // Recursive calls allowed?
+                    },
+                  });
+                }
+                return null;
+              },
             },
           });
-          return; // Stop processing if verb executed
+
+          if (warnings.length > 0) {
+            ws.send(
+              JSON.stringify({
+                type: "message",
+                text: `[Warnings]: ${warnings.join(", ")}`,
+              }),
+            );
+          }
         } catch (e: any) {
           ws.send(
             JSON.stringify({
               type: "error",
-              text: `Script Error: ${e.message}`,
+              text: `Script error: ${e.message}`,
             }),
           );
-          return;
         }
+        return;
       }
 
       if (command === "look") {
