@@ -1,68 +1,68 @@
-import { evaluate, registerOpcode } from "../interpreter";
+import { evaluate } from "../interpreter";
 
-export function registerStringLibrary() {
-  registerOpcode("str.len", async (args, ctx) => {
+export const StringLibrary = {
+  "str.len": async (args: any[], ctx: any) => {
     const val = await evaluate(args[0], ctx);
     if (typeof val !== "string") return 0;
     return val.length;
-  });
+  },
 
-  registerOpcode("str.split", async (args, ctx) => {
+  "str.split": async (args: any[], ctx: any) => {
     const val = await evaluate(args[0], ctx);
     const delim = await evaluate(args[1], ctx);
     if (typeof val !== "string" || typeof delim !== "string") return [];
     return val.split(delim);
-  });
+  },
 
-  registerOpcode("str.join", async (args, ctx) => {
+  "str.join": async (args: any[], ctx: any) => {
     const list = await evaluate(args[0], ctx);
     const delim = await evaluate(args[1], ctx);
     if (!Array.isArray(list) || typeof delim !== "string") return "";
     return list.join(delim);
-  });
+  },
 
-  registerOpcode("str.concat", async (args, ctx) => {
+  "str.concat": async (args: any[], ctx: any) => {
     let result = "";
     for (const arg of args) {
       result += String(await evaluate(arg, ctx));
     }
     return result;
-  });
+  },
 
-  registerOpcode("str.slice", async (args, ctx) => {
+  "str.slice": async (args: any[], ctx: any) => {
     const val = await evaluate(args[0], ctx);
     const start = await evaluate(args[1], ctx);
     const end = args.length > 2 ? await evaluate(args[2], ctx) : undefined;
     if (typeof val !== "string") return "";
     return val.slice(start, end);
-  });
+  },
 
-  registerOpcode("str.lower", async (args, ctx) => {
+  "str.lower": async (args: any[], ctx: any) => {
     const val = await evaluate(args[0], ctx);
     if (typeof val !== "string") return val;
     return val.toLowerCase();
-  });
+  },
 
-  registerOpcode("str.upper", async (args, ctx) => {
+  "str.upper": async (args: any[], ctx: any) => {
     const val = await evaluate(args[0], ctx);
     if (typeof val !== "string") return val;
     return val.toUpperCase();
-  });
+  },
 
-  registerOpcode("str.trim", async (args, ctx) => {
+  "str.trim": async (args: any[], ctx: any) => {
     const val = await evaluate(args[0], ctx);
     if (typeof val !== "string") return val;
     return val.trim();
-  });
+  },
 
-  registerOpcode("str.includes", async (args, ctx) => {
+  "str.includes": async (args: any[], ctx: any) => {
     const val = await evaluate(args[0], ctx);
     const sub = await evaluate(args[1], ctx);
     if (typeof val !== "string" || typeof sub !== "string") return false;
     return val.includes(sub);
-  });
+  },
 
-  registerOpcode("str.replace", async (args, ctx) => {
+  "str.replace": async (args: any[], ctx: any) => {
     const val = await evaluate(args[0], ctx);
     const search = await evaluate(args[1], ctx);
     const replace = await evaluate(args[2], ctx);
@@ -73,5 +73,5 @@ export function registerStringLibrary() {
     )
       return val;
     return val.replace(search, replace);
-  });
-}
+  },
+};

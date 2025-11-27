@@ -23,6 +23,8 @@ export type { Plugin, PluginContext } from "./plugin";
 
 export const pluginManager = new PluginManager();
 
+const GAS_LIMIT = 1000;
+
 export function startServer(port: number = 8080) {
   seed();
 
@@ -78,7 +80,7 @@ export function startServer(port: number = 8080) {
             caller, // Caller remains original player? Or the entity? Usually original caller for permissions.
             this: targetEnt,
             args: callArgs,
-            gas: 500, // Sub-call gas limit?
+            gas: GAS_LIMIT / 2, // Sub-call gas limit?
             warnings, // Share warnings array
             sys,
           });
@@ -106,7 +108,7 @@ export function startServer(port: number = 8080) {
                 caller: entity, // The entity running the script is the caller/agent
                 this: entity,
                 args: args,
-                gas: 500,
+                gas: GAS_LIMIT / 2,
                 sys,
                 warnings: [],
               });
@@ -420,7 +422,7 @@ export function startServer(port: number = 8080) {
             caller: player,
             this: targetEntity,
             args: args || [],
-            gas: 1000, // TODO: Configurable gas
+            gas: GAS_LIMIT,
             warnings,
             sys,
           });

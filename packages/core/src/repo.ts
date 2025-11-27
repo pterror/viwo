@@ -95,7 +95,18 @@ export function moveEntity(
   containerId: number,
   detail: string | null = null,
 ) {
-  // TODO: Add check to prevent circular containment (Box inside itself)
+  // Prevent circular containment
+  let currentId: number | null = containerId;
+  while (currentId) {
+    if (currentId === thingId) {
+      throw new Error("Circular containment detected");
+    }
+    const parent: { location_id: number | null } | null = db
+      .query("SELECT location_id FROM entities WHERE id = ?")
+      .get(currentId) as any;
+    currentId = parent ? parent.location_id : null;
+  }
+
   db.query(
     "UPDATE entities SET location_id = ?, location_detail = ? WHERE id = ?",
   ).run(containerId, detail, thingId);

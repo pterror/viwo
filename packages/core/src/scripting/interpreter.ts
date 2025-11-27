@@ -1,7 +1,9 @@
-import { Entity, getContents, updateEntity } from "../repo";
+import { Entity, getContents, getEntity, updateEntity } from "../repo";
 import { checkPermission } from "../permissions";
 import { TimeLibrary } from "./lib/time";
 import { WorldLibrary } from "./lib/world";
+import { StringLibrary } from "./lib/string";
+import { ObjectLibrary } from "./lib/object";
 
 export type ScriptSystemContext = {
   move: (id: number, dest: number) => void;
@@ -34,6 +36,7 @@ export type ScriptSystemContext = {
   sendInventory?: (playerId: number) => void;
   sendItem?: (itemId: number) => void;
   canEdit?: (playerId: number, entityId: number) => boolean;
+  sendTo?: (entityId: number, msg: unknown) => void;
 };
 
 export type ScriptContext = {
@@ -44,6 +47,7 @@ export type ScriptContext = {
   gas?: number; // Gas limit
   sys?: ScriptSystemContext;
   warnings: string[];
+  vars?: Record<string, unknown>; // New for local variables
 };
 
 export class ScriptError extends Error {
@@ -62,59 +66,25 @@ const OPS: Record<string, (args: any[], ctx: ScriptContext) => Promise<any>> = {
     }
     return lastResult;
   },
-  do: async (args, ctx) => {
-    return OPS["seq"]!(args, ctx);
-  },
   if: async (args, ctx) => {
     const [cond, thenBranch, elseBranch] = args;
-    const condResult = await evaluate(cond, ctx);
-    if (condResult) {
+    if (await evaluate(cond, ctx)) {
       return await evaluate(thenBranch, ctx);
     } else if (elseBranch) {
       return await evaluate(elseBranch, ctx);
     }
     return null;
   },
-  try: async (args, ctx) => {
-    const [tryBlock, errorVar, catchBlock] = args;
-    try {
-      return await evaluate(tryBlock, ctx);
-    } catch (e: any) {
-      if (catchBlock) {
-        if (errorVar && typeof errorVar === "string") {
-          if (!ctx.locals) ctx.locals = {};
-          ctx.locals[errorVar] = e.message || String(e);
-        }
-        return await evaluate(catchBlock, ctx);
-      }
-      return null;
+  while: async (args, ctx) => {
+    const [cond, body] = args;
+    let result = null;
+    while (await evaluate(cond, ctx)) {
+      result = await evaluate(body, ctx);
     }
+    return result;
   },
-  throw: async (args, ctx) => {
-    const [msg] = args;
-    throw new ScriptError(await evaluate(msg, ctx));
-  },
-  warn: async (args, ctx) => {
-    const [msg] = args;
-    const text = await evaluate(msg, ctx);
-    if (ctx.warnings) {
-      ctx.warnings.push(String(text));
-    }
-    return null;
-  },
-  for: async (args, ctx) => {
-    const [varName, listExpr, body] = args;
-    const list = await evaluate(listExpr, ctx);
-    if (!Array.isArray(list)) return null;
-
-    if (!ctx.locals) ctx.locals = {};
-
-    let lastResult = null;
-    for (const item of list) {
-      ctx.locals[varName] = item;
-      lastResult = await evaluate(body, ctx);
-    }
-    return lastResult;
+  return: async (args, ctx) => {
+    return await evaluate(args[0], ctx);
   },
   list: async (args, ctx) => {
     const result = [];
@@ -126,126 +96,143 @@ const OPS: Record<string, (args: any[], ctx: ScriptContext) => Promise<any>> = {
 
   // Variables
   let: async (args, ctx) => {
-    const [name, valExpr] = args;
-    const val = await evaluate(valExpr, ctx);
-    if (!ctx.locals) ctx.locals = {};
-    ctx.locals[name] = val;
-    return val;
+    const [name, val] = args;
+    const value = await evaluate(val, ctx);
+    ctx.vars = ctx.vars || {};
+    ctx.vars[name] = value;
+    return value;
   },
   var: async (args, ctx) => {
     const [name] = args;
-    if (ctx.locals && name in ctx.locals) {
-      return ctx.locals[name];
+    return ctx.vars?.[name] ?? null;
+  },
+  set: async (args, ctx) => {
+    const [name, val] = args;
+    const value = await evaluate(val, ctx);
+    if (ctx.vars && name in ctx.vars) {
+      ctx.vars[name] = value;
     }
-    return null;
-  },
-  arg: async (args, ctx) => {
-    const index = await evaluate(args[0], ctx);
-    if (typeof index !== "number") return null;
-    return ctx.args[index];
-  },
-  args: async (_args, ctx) => {
-    return ctx.args;
+    return value;
   },
 
   // Comparison
-  "==": async (args, ctx) =>
-    (await evaluate(args[0], ctx)) === (await evaluate(args[1], ctx)),
-  "!=": async (args, ctx) =>
-    (await evaluate(args[0], ctx)) !== (await evaluate(args[1], ctx)),
-  ">": async (args, ctx) =>
-    (await evaluate(args[0], ctx)) > (await evaluate(args[1], ctx)),
-  "<": async (args, ctx) =>
-    (await evaluate(args[0], ctx)) < (await evaluate(args[1], ctx)),
-  ">=": async (args, ctx) =>
-    (await evaluate(args[0], ctx)) >= (await evaluate(args[1], ctx)),
-  "<=": async (args, ctx) =>
-    (await evaluate(args[0], ctx)) <= (await evaluate(args[1], ctx)),
+  "==": async (args, ctx) => {
+    const [a, b] = args;
+    return (await evaluate(a, ctx)) === (await evaluate(b, ctx));
+  },
+  "!=": async (args, ctx) => {
+    const [a, b] = args;
+    return (await evaluate(a, ctx)) !== (await evaluate(b, ctx));
+  },
+  "<": async (args, ctx) => {
+    const [a, b] = args;
+    return (await evaluate(a, ctx)) < (await evaluate(b, ctx));
+  },
+  ">": async (args, ctx) => {
+    const [a, b] = args;
+    return (await evaluate(a, ctx)) > (await evaluate(b, ctx));
+  },
+  "<=": async (args, ctx) => {
+    const [a, b] = args;
+    return (await evaluate(a, ctx)) <= (await evaluate(b, ctx));
+  },
+  ">=": async (args, ctx) => {
+    const [a, b] = args;
+    return (await evaluate(a, ctx)) >= (await evaluate(b, ctx));
+  },
+
+  // Arithmetic
+  "+": async (args, ctx) => {
+    const [a, b] = args;
+    return (await evaluate(a, ctx)) + (await evaluate(b, ctx));
+  },
+  "-": async (args, ctx) => {
+    const [a, b] = args;
+    return (await evaluate(a, ctx)) - (await evaluate(b, ctx));
+  },
+  "*": async (args, ctx) => {
+    const [a, b] = args;
+    return (await evaluate(a, ctx)) * (await evaluate(b, ctx));
+  },
+  "/": async (args, ctx) => {
+    const [a, b] = args;
+    return (await evaluate(a, ctx)) / (await evaluate(b, ctx));
+  },
+  "%": async (args, ctx) => {
+    const [a, b] = args;
+    return (await evaluate(a, ctx)) % (await evaluate(b, ctx));
+  },
 
   // Logic
-  and: async (args, ctx) =>
-    (await evaluate(args[0], ctx)) && (await evaluate(args[1], ctx)),
-  or: async (args, ctx) =>
-    (await evaluate(args[0], ctx)) || (await evaluate(args[1], ctx)),
-  not: async (args, ctx) => !(await evaluate(args[0], ctx)),
-
-  // Math
-  "+": async (args, ctx) =>
-    (await evaluate(args[0], ctx)) + (await evaluate(args[1], ctx)),
-  "-": async (args, ctx) =>
-    (await evaluate(args[0], ctx)) - (await evaluate(args[1], ctx)),
-  "*": async (args, ctx) =>
-    (await evaluate(args[0], ctx)) * (await evaluate(args[1], ctx)),
-  "/": async (args, ctx) =>
-    (await evaluate(args[0], ctx)) / (await evaluate(args[1], ctx)),
-  "%": async (args, ctx) =>
-    (await evaluate(args[0], ctx)) % (await evaluate(args[1], ctx)),
-  "^": async (args, ctx) =>
-    Math.pow(await evaluate(args[0], ctx), await evaluate(args[1], ctx)),
-  random: async () => Math.random(),
-  floor: async (args, ctx) => Math.floor(await evaluate(args[0], ctx)),
-
-  // Capabilities
-  prop: async (args, ctx) => {
-    const [targetExpr, keyExpr] = args;
-    const target = await evaluateTarget(targetExpr, ctx);
-    const key = await evaluate(keyExpr, ctx);
-
-    if (!target || typeof key !== "string") return null;
-
-    // Check permission
-    if (!checkPermission(ctx.caller, target, "view")) {
-      throw new ScriptError(`Permission denied: cannot view ${target.id}`);
+  and: async (args, ctx) => {
+    for (const arg of args) {
+      if (!(await evaluate(arg, ctx))) return false;
     }
-
-    if (key in target) {
-      return (target as any)[key];
-    }
-    return target.props[key];
+    return true;
   },
-  set: async (args, ctx) => {
-    const [targetExpr, keyExpr, valExpr] = args;
-    const target = await evaluateTarget(targetExpr, ctx);
-    const key = await evaluate(keyExpr, ctx);
-    const val = await evaluate(valExpr, ctx);
-
-    if (!target || typeof key !== "string") return null;
-
-    if (!checkPermission(ctx.caller, target, "edit")) {
-      throw new ScriptError(`Permission denied: cannot edit ${target.id}`);
+  or: async (args, ctx) => {
+    for (const arg of args) {
+      if (await evaluate(arg, ctx)) return true;
     }
-
-    const newProps = { ...target.props, [key]: val };
-    updateEntity(target.id, { props: newProps });
-    return val;
+    return false;
   },
+  not: async (args, ctx) => {
+    return !(await evaluate(args[0], ctx));
+  },
+
+  // System
+  log: async (args, ctx) => {
+    const msg = await evaluate(args[0], ctx);
+    console.log(msg);
+    return null;
+  },
+  arg: async (args, ctx) => {
+    const [index] = args;
+    return ctx.args?.[index] ?? null;
+  },
+  random: async (args, ctx) => {
+    // random(min, max) or random() -> 0..1
+    if (args.length === 0) return Math.random();
+    const min = await evaluate(args[0], ctx);
+    const max = await evaluate(args[1], ctx);
+    if (typeof min === "number" && typeof max === "number") {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+    return Math.random();
+  },
+  warn: async (args, ctx) => {
+    const [msg] = args;
+    const text = await evaluate(msg, ctx);
+    if (ctx.warnings) {
+      ctx.warnings.push(String(text));
+    }
+    return null;
+  },
+  throw: async (args, ctx) => {
+    const [msg] = args;
+    throw new ScriptError(await evaluate(msg, ctx));
+  },
+  try: async (args, ctx) => {
+    const [tryBlock, errorVar, catchBlock] = args;
+    try {
+      return await evaluate(tryBlock, ctx);
+    } catch (e: any) {
+      if (catchBlock) {
+        if (errorVar && typeof errorVar === "string") {
+          if (!ctx.vars) ctx.vars = {};
+          ctx.vars[errorVar] = e.message || String(e);
+        }
+        return await evaluate(catchBlock, ctx);
+      }
+      return null;
+    }
+  },
+
+  // Entity Interaction
   tell: async (args, ctx) => {
     const [targetExpr, msgExpr] = args;
     const msg = await evaluate(msgExpr, ctx);
-
-    if (typeof msg !== "string") return null;
-
-    // Special case: 'caller'
-    if (targetExpr === "caller") {
-      if (ctx.sys?.send) {
-        ctx.sys.send({ type: "message", text: msg });
-      }
-      return true;
-    }
-
-    let target = await evaluateTarget(targetExpr, ctx);
-
-    // If target is a string (name), try to find it in the room
-    if (!target && typeof targetExpr !== "number") {
-      // evaluateTarget handles number/caller/this
-      const val = await evaluate(targetExpr, ctx);
-      if (typeof val === "string" && ctx.caller.location_id) {
-        const contents = getContents(ctx.caller.location_id);
-        target =
-          contents.find((e) => e.name.toLowerCase() === val.toLowerCase()) ||
-          null;
-      }
-    }
+    const target = await evaluateTarget(targetExpr, ctx);
 
     if (!target) return null;
 
@@ -268,31 +255,7 @@ const OPS: Record<string, (args: any[], ctx: ScriptContext) => Promise<any>> = {
       }
 
       // Trigger on_hear
-      await ctx.sys.triggerEvent(
-        "on_hear",
-        target.location_id || 0, // Location doesn't matter much for direct tell, but we need it for context?
-        // Actually triggerEvent takes locationId to find entities.
-        // But we want to trigger on a SPECIFIC entity.
-        // sys.triggerEvent iterates location.
-        // We need a way to trigger on a specific entity directly.
-        // sys.call?
-        // sys.call executes a verb.
-        // We can use sys.call if we know the verb exists.
-        // But triggerEvent handles "check if verb exists".
-
-        // Let's use sys.call if available, or we need to expose a way to trigger on entity.
-        // interpreter.ts doesn't have direct access to repo.getVerb (except via import).
-        // But we can use ctx.sys.call if we assume on_hear exists.
-        // Or we can modify triggerEvent to accept a specific entity ID instead of location?
-        // Or we can just use sys.triggerEvent with excludeEntityId? No, that excludes.
-
-        // Let's look at sys.call.
-        // call: (caller, targetId, verb, args, warnings)
-
-        // So we can try to call "on_hear".
-        [msg, ctx.caller.id, "tell"],
-      );
-
+      // We use sys.call if available to target the specific entity
       if (ctx.sys.call) {
         try {
           await ctx.sys.call(
@@ -303,15 +266,13 @@ const OPS: Record<string, (args: any[], ctx: ScriptContext) => Promise<any>> = {
             ctx.warnings,
           );
         } catch {
-          // Ignore if verb not found? sys.call might throw.
-          // We should probably check if verb exists first, but we can't easily.
-          // Actually sys.call implementation in index.ts (which we haven't seen fully) likely handles it.
-          // But wait, sys.call in index.ts (I recall) executes the verb.
+          // Ignore if verb not found
         }
       }
     }
     return true;
   },
+
   move: async (args, ctx) => {
     const [targetExpr, destExpr] = args;
     const target = await evaluateTarget(targetExpr, ctx);
@@ -332,67 +293,7 @@ const OPS: Record<string, (args: any[], ctx: ScriptContext) => Promise<any>> = {
     }
     return true;
   },
-  give: async (args, ctx) => {
-    const [targetExpr, destExpr] = args;
-    const target = await evaluateTarget(targetExpr, ctx);
-    const dest = await evaluateTarget(destExpr, ctx);
 
-    if (!target || !dest) return null;
-
-    // 1. Check if caller can edit the target (ownership/holding)
-    if (!checkPermission(ctx.caller, target, "edit")) {
-      throw new ScriptError(`Permission denied: cannot give ${target.id}`);
-    }
-
-    // 2. Transfer ownership
-    // If destination is an actor (player), they become the owner.
-    // If destination is a container (mailbox), the container's owner becomes the owner?
-    // Or we just set owner_id to dest.owner_id.
-    // Let's assume dest is the receiver.
-    let newOwnerId = dest.id;
-    if (dest.owner_id && dest.kind !== "ACTOR") {
-      newOwnerId = dest.owner_id;
-    }
-
-    // We need a way to update owner. sys.move only updates location.
-    // We might need sys.update or similar.
-    // Or we can assume 'give' implies moving to the destination and changing owner.
-    // Since we don't have sys.update exposed fully, we might need to add it or use a specific sys.give.
-    // Let's add sys.give or expand sys.move?
-    // Expanding sys is harder without changing interface.
-    // Let's use a direct repo call if possible? No, we should use sys.
-    // Let's assume we can add `give` to sys.
-    if (ctx.sys?.give) {
-      ctx.sys.give(target.id, dest.id, newOwnerId);
-    } else {
-      // Fallback if sys.give not available (should be added to index.ts)
-      // For now, just move, but that doesn't transfer ownership.
-      if (ctx.sys?.move) ctx.sys.move(target.id, dest.id);
-    }
-
-    return true;
-  },
-  destroy: async (args, ctx) => {
-    const [targetExpr] = args;
-    const target = await evaluateTarget(targetExpr, ctx);
-
-    if (!target) return null;
-
-    if (!checkPermission(ctx.caller, target, "edit")) {
-      throw new ScriptError(`Permission denied: cannot destroy ${target.id}`);
-    }
-
-    if (ctx.sys?.destroy) {
-      ctx.sys.destroy(target.id);
-    } else if (ctx.sys?.move) {
-      // Fallback: move to void (0 or null, but moveEntity expects number)
-      // Actually moveEntity expects number.
-      // We need a real destroy or move to 0 if 0 is void.
-      // Let's assume we can pass 0 for void or we need a destroy method.
-      // For now, let's assume the sys.destroy is provided.
-    }
-    return true;
-  },
   create: async (args, ctx) => {
     if (args.length === 1) {
       const [dataExpr] = args;
@@ -413,13 +314,67 @@ const OPS: Record<string, (args: any[], ctx: ScriptContext) => Promise<any>> = {
     }
     return null;
   },
+
+  destroy: async (args, ctx) => {
+    const [targetExpr] = args;
+    const target = await evaluateTarget(targetExpr, ctx);
+
+    if (!target) return null;
+
+    if (!checkPermission(ctx.caller, target, "edit")) {
+      throw new ScriptError(`Permission denied: cannot destroy ${target.id}`);
+    }
+
+    if (ctx.sys?.destroy) {
+      ctx.sys.destroy(target.id);
+    }
+    return true;
+  },
+
+  // Properties
+  prop: async (args, ctx) => {
+    const [targetExpr, keyExpr] = args;
+    const target = await evaluateTarget(targetExpr, ctx);
+    const key = await evaluate(keyExpr, ctx);
+
+    if (!target || typeof key !== "string") return null;
+
+    // Check permission
+    if (!checkPermission(ctx.caller, target, "view")) {
+      throw new ScriptError(`Permission denied: cannot view ${target.id}`);
+    }
+
+    if (key in target) {
+      return (target as any)[key];
+    }
+    return target.props[key];
+  },
+
+  "prop.set": async (args, ctx) => {
+    const [targetExpr, keyExpr, valExpr] = args;
+    const target = await evaluateTarget(targetExpr, ctx);
+    const key = await evaluate(keyExpr, ctx);
+    const val = await evaluate(valExpr, ctx);
+
+    if (!target || typeof key !== "string") return null;
+
+    // Check permission
+    if (!checkPermission(ctx.caller, target, "edit")) {
+      throw new ScriptError(`Permission denied: cannot edit ${target.id}`);
+    }
+
+    const newProps = { ...target.props, [key]: val };
+    updateEntity(target.id, { props: newProps });
+    return val;
+  },
+
   lambda: async (args, ctx) => {
     const [argNames, body] = args;
     return {
       type: "lambda",
       args: argNames,
       body,
-      closure: { ...ctx.locals },
+      closure: { ...ctx.vars },
     };
   },
   apply: async (args, ctx) => {
@@ -434,15 +389,15 @@ const OPS: Record<string, (args: any[], ctx: ScriptContext) => Promise<any>> = {
     }
 
     // Create new context
-    const newLocals = { ...func.closure };
+    const newVars = { ...func.closure };
     // Bind arguments
     for (let i = 0; i < func.args.length; i++) {
-      newLocals[func.args[i]] = evaluatedArgs[i];
+      newVars[func.args[i]] = evaluatedArgs[i];
     }
 
     return await evaluate(func.body, {
       ...ctx,
-      locals: newLocals,
+      vars: newVars,
     });
   },
   call: async (args, ctx) => {
@@ -581,13 +536,15 @@ const OPS: Record<string, (args: any[], ctx: ScriptContext) => Promise<any>> = {
         "on_hear",
         ctx.caller.location_id,
         [msg, ctx.caller.id, "say"],
-        ctx.caller.id, // Exclude speaker? Maybe not, they might want to hear themselves? Usually exclude.
+        ctx.caller.id, // Exclude speaker
       );
     }
     return true;
   },
   ...TimeLibrary,
   ...WorldLibrary,
+  ...StringLibrary,
+  ...ObjectLibrary,
 };
 
 export function registerOpcode(
@@ -601,89 +558,69 @@ export function getOpcode(name: string) {
   return OPS[name];
 }
 
-export async function evaluate(ast: any, ctx: ScriptContext): Promise<any> {
-  // Gas Check
-  if (ctx.gas !== undefined) {
-    if (ctx.gas <= 0) {
-      throw new ScriptError("Gas limit exceeded");
-    }
-    ctx.gas--;
-  }
-
-  if (!Array.isArray(ast)) {
-    // Literals
-    return ast;
-  }
-
-  if (ast.length === 0) return null;
-
-  const [op, ...args] = ast;
-
-  const handler = OPS[op];
-  if (handler) {
-    return await handler(args, ctx);
-  }
-
-  throw new ScriptError(`Unknown opcode: ${op}`);
-}
-
-export async function evaluateTarget(
-  expr: any,
-  ctx: ScriptContext,
-): Promise<Entity | null> {
-  let val = expr;
-  if (Array.isArray(expr)) {
-    val = await evaluate(expr, ctx);
-  }
-
-  // console.log(`evaluateTarget: ${val} (type: ${typeof val})`);
-
-  if (val === "this") return ctx.this;
-  if (val === "caller" || val === "me" || val === "self") return ctx.caller;
-
-  const { getEntity, getContents } = await import("../repo");
-
-  if (typeof val === "number") {
-    return getEntity(val);
-  }
-
-  if (typeof val === "string") {
-    const name = val.toLowerCase();
-
-    if (name === "here" || name === "room") {
-      return ctx.caller.location_id ? getEntity(ctx.caller.location_id) : null;
-    }
-
-    // Search in room
-    if (ctx.caller.location_id) {
-      const roomContents = getContents(ctx.caller.location_id);
-      console.log(
-        `Searching for ${name} in room ${
-          ctx.caller.location_id
-        }. Contents: ${roomContents.map((e) => e.name).join(", ")}`,
-      );
-      const found = roomContents.find((e) => e.name.toLowerCase() === name);
-      if (found) return found;
-    }
-
-    // Search in inventory
-    const inventory = getContents(ctx.caller.id);
-    const found = inventory.find((e) => e.name.toLowerCase() === name);
-    if (found) return found;
-  }
-
-  return null;
-}
-
 export async function executeLambda(
   lambda: any,
   args: any[],
   ctx: ScriptContext,
 ): Promise<any> {
   if (!lambda || lambda.type !== "lambda") return null;
-  const newLocals = { ...lambda.closure };
+
+  // Create new context
+  const newVars = { ...lambda.closure };
+  // Bind arguments
   for (let i = 0; i < lambda.args.length; i++) {
-    newLocals[lambda.args[i]] = args[i];
+    newVars[lambda.args[i]] = args[i];
   }
-  return await evaluate(lambda.body, { ...ctx, locals: newLocals });
+
+  return await evaluate(lambda.body, {
+    ...ctx,
+    vars: newVars,
+  });
+}
+
+export async function evaluate(ast: any, ctx: ScriptContext): Promise<any> {
+  if (ctx.gas !== undefined) {
+    ctx.gas--;
+    if (ctx.gas < 0) {
+      throw new ScriptError("Script ran out of gas!");
+    }
+  }
+
+  if (ast === null || typeof ast !== "object") {
+    return ast;
+  }
+
+  if (Array.isArray(ast)) {
+    const [op, ...args] = ast;
+    if (typeof op === "string" && OPS[op]) {
+      return OPS[op]!(args, ctx);
+    } else {
+      throw new ScriptError(`Unknown opcode: ${op}`);
+    }
+  }
+
+  return ast;
+}
+
+export async function evaluateTarget(
+  targetExpr: any,
+  ctx: ScriptContext,
+): Promise<Entity | null> {
+  const targetVal = await evaluate(targetExpr, ctx);
+
+  if (typeof targetVal === "number") {
+    return getEntity(targetVal);
+  } else if (targetVal === "caller") {
+    return ctx.caller;
+  } else if (targetVal === "this") {
+    return ctx.this;
+  } else if (typeof targetVal === "string" && ctx.caller.location_id) {
+    // If target is a string (name), try to find it in the room
+    const contents = getContents(ctx.caller.location_id);
+    const target =
+      contents.find((e) => e.name.toLowerCase() === targetVal.toLowerCase()) ||
+      null;
+    return target;
+  }
+  return null;
 }

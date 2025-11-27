@@ -1,7 +1,7 @@
-import { evaluate, registerOpcode, executeLambda } from "../interpreter";
+import { evaluate, executeLambda } from "../interpreter";
 
-export function registerObjectLibrary() {
-  registerOpcode("obj", async (args, ctx) => {
+export const ObjectLibrary = {
+  obj: async (args: any[], ctx: any) => {
     const result: Record<string, unknown> = {};
     for (let i = 0; i < args.length; i += 2) {
       const key = await evaluate(args[i], ctx);
@@ -11,38 +11,38 @@ export function registerObjectLibrary() {
       }
     }
     return result;
-  });
+  },
 
-  registerOpcode("obj.keys", async (args, ctx) => {
+  "obj.keys": async (args: any[], ctx: any) => {
     const obj = await evaluate(args[0], ctx);
     if (typeof obj !== "object" || obj === null || Array.isArray(obj))
       return [];
     return Object.keys(obj);
-  });
+  },
 
-  registerOpcode("obj.values", async (args, ctx) => {
+  "obj.values": async (args: any[], ctx: any) => {
     const obj = await evaluate(args[0], ctx);
     if (typeof obj !== "object" || obj === null || Array.isArray(obj))
       return [];
     return Object.values(obj);
-  });
+  },
 
-  registerOpcode("obj.entries", async (args, ctx) => {
+  "obj.entries": async (args: any[], ctx: any) => {
     const obj = await evaluate(args[0], ctx);
     if (typeof obj !== "object" || obj === null || Array.isArray(obj))
       return [];
     return Object.entries(obj);
-  });
+  },
 
-  registerOpcode("obj.get", async (args, ctx) => {
+  "obj.get": async (args: any[], ctx: any) => {
     const obj = await evaluate(args[0], ctx);
     const key = await evaluate(args[1], ctx);
     if (typeof obj !== "object" || obj === null || Array.isArray(obj))
       return null;
     return obj[key];
-  });
+  },
 
-  registerOpcode("obj.set", async (args, ctx) => {
+  "obj.set": async (args: any[], ctx: any) => {
     const obj = await evaluate(args[0], ctx);
     const key = await evaluate(args[1], ctx);
     const val = await evaluate(args[2], ctx);
@@ -50,17 +50,17 @@ export function registerObjectLibrary() {
       return null;
     obj[key] = val;
     return val;
-  });
+  },
 
-  registerOpcode("obj.has", async (args, ctx) => {
+  "obj.has": async (args: any[], ctx: any) => {
     const obj = await evaluate(args[0], ctx);
     const key = await evaluate(args[1], ctx);
     if (typeof obj !== "object" || obj === null || Array.isArray(obj))
       return false;
     return key in obj;
-  });
+  },
 
-  registerOpcode("obj.del", async (args, ctx) => {
+  "obj.del": async (args: any[], ctx: any) => {
     const obj = await evaluate(args[0], ctx);
     const key = await evaluate(args[1], ctx);
     if (typeof obj !== "object" || obj === null || Array.isArray(obj))
@@ -70,9 +70,9 @@ export function registerObjectLibrary() {
       return true;
     }
     return false;
-  });
+  },
 
-  registerOpcode("obj.merge", async (args, ctx) => {
+  "obj.merge": async (args: any[], ctx: any) => {
     const obj1 = await evaluate(args[0], ctx);
     const obj2 = await evaluate(args[1], ctx);
     if (typeof obj1 !== "object" || obj1 === null || Array.isArray(obj1))
@@ -80,9 +80,9 @@ export function registerObjectLibrary() {
     if (typeof obj2 !== "object" || obj2 === null || Array.isArray(obj2))
       return { ...obj1 };
     return { ...obj1, ...obj2 };
-  });
+  },
 
-  registerOpcode("obj.map", async (args, ctx) => {
+  "obj.map": async (args: any[], ctx: any) => {
     const obj = await evaluate(args[0], ctx);
     const func = await evaluate(args[1], ctx);
     if (typeof obj !== "object" || obj === null || Array.isArray(obj))
@@ -93,9 +93,9 @@ export function registerObjectLibrary() {
       result[key] = await executeLambda(func, [val, key], ctx);
     }
     return result;
-  });
+  },
 
-  registerOpcode("obj.filter", async (args, ctx) => {
+  "obj.filter": async (args: any[], ctx: any) => {
     const obj = await evaluate(args[0], ctx);
     const func = await evaluate(args[1], ctx);
     if (typeof obj !== "object" || obj === null || Array.isArray(obj))
@@ -108,9 +108,9 @@ export function registerObjectLibrary() {
       }
     }
     return result;
-  });
+  },
 
-  registerOpcode("obj.reduce", async (args, ctx) => {
+  "obj.reduce": async (args: any[], ctx: any) => {
     const obj = await evaluate(args[0], ctx);
     const func = await evaluate(args[1], ctx);
     let acc = await evaluate(args[2], ctx);
@@ -121,9 +121,9 @@ export function registerObjectLibrary() {
       acc = await executeLambda(func, [acc, val, key], ctx);
     }
     return acc;
-  });
+  },
 
-  registerOpcode("obj.flatMap", async (args, ctx) => {
+  "obj.flatMap": async (args: any[], ctx: any) => {
     const obj = await evaluate(args[0], ctx);
     const func = await evaluate(args[1], ctx);
     if (typeof obj !== "object" || obj === null || Array.isArray(obj))
@@ -141,5 +141,5 @@ export function registerObjectLibrary() {
       }
     }
     return result;
-  });
-}
+  },
+};

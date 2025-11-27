@@ -112,6 +112,19 @@ describe("Repo", () => {
     expect(fetched.location_detail).toBe("inside");
   });
 
+  test("moveEntity circular check", () => {
+    const box1 = createEntity({ name: "Box1", kind: "ITEM" });
+    const box2 = createEntity({ name: "Box2", kind: "ITEM" });
+
+    // box2 inside box1
+    moveEntity(box2, box1);
+
+    // Try to put box1 inside box2 (should fail)
+    expect(() => {
+      moveEntity(box1, box2);
+    }).toThrow("Circular containment detected");
+  });
+
   test("getContents", () => {
     const container = createEntity({ name: "Box", kind: "ITEM" });
     createEntity({ name: "Apple", kind: "ITEM", location_id: container });

@@ -297,53 +297,90 @@ export function seedHotel(lobbyId: number, voidId: number) {
   addVerb(wingProtoId, "enter", [
     "seq",
     ["let", "roomNum", ["arg", 0]],
-    // TODO: Validate room number matches wing side?
+    ["let", "valid", true],
 
-    ["let", "roomData", {}],
+    // Validate room number matches wing side
+    ["let", "side", ["prop", "this", "side"]],
     [
-      "obj.set",
-      ["var", "roomData"],
-      "name",
-      ["str.concat", "Room ", ["var", "roomNum"]],
+      "if",
+      ["==", ["var", "side"], "West"],
+      [
+        "if",
+        ["or", ["<", ["var", "roomNum"], 1], [">", ["var", "roomNum"], 50]],
+        [
+          "seq",
+          ["tell", "caller", "Room numbers in the West Wing are 1-50."],
+          ["set", "valid", false],
+        ],
+      ],
     ],
-    ["obj.set", ["var", "roomData"], "kind", "ROOM"],
-    ["obj.set", ["var", "roomData"], "prototype_id", hotelRoomProtoId],
-
-    ["let", "props", {}],
-    ["obj.set", ["var", "props"], "description", "A standard hotel room."],
-    ["obj.set", ["var", "props"], "lobby_id", ["prop", "this", "id"]], // Return to THIS wing
-
-    ["obj.set", ["var", "roomData"], "props", ["var", "props"]],
-
-    ["let", "roomId", ["create", ["var", "roomData"]]],
-
-    // Furnish the room
-    ["let", "bedData", {}],
-    ["obj.set", ["var", "bedData"], "name", "Bed"],
-    ["obj.set", ["var", "bedData"], "kind", "ITEM"],
-    ["obj.set", ["var", "bedData"], "prototype_id", bedProtoId],
-    ["obj.set", ["var", "bedData"], "location_id", ["var", "roomId"]],
-    ["create", ["var", "bedData"]],
-
-    ["let", "lampData", {}],
-    ["obj.set", ["var", "lampData"], "name", "Lamp"],
-    ["obj.set", ["var", "lampData"], "kind", "ITEM"],
-    ["obj.set", ["var", "lampData"], "prototype_id", lampProtoId],
-    ["obj.set", ["var", "lampData"], "location_id", ["var", "roomId"]],
-    ["create", ["var", "lampData"]],
-
-    ["let", "chairData", {}],
-    ["obj.set", ["var", "chairData"], "name", "Chair"],
-    ["obj.set", ["var", "chairData"], "kind", "ITEM"],
-    ["obj.set", ["var", "chairData"], "prototype_id", chairProtoId],
-    ["obj.set", ["var", "chairData"], "location_id", ["var", "roomId"]],
-    ["create", ["var", "chairData"]],
-
-    ["move", "caller", ["var", "roomId"]],
     [
-      "tell",
-      "caller",
-      ["str.concat", "You enter Room ", ["var", "roomNum"], "."],
+      "if",
+      ["==", ["var", "side"], "East"],
+      [
+        "if",
+        ["or", ["<", ["var", "roomNum"], 51], [">", ["var", "roomNum"], 99]],
+        [
+          "seq",
+          ["tell", "caller", "Room numbers in the East Wing are 51-99."],
+          ["set", "valid", false],
+        ],
+      ],
+    ],
+
+    // Execute if valid
+    [
+      "if",
+      ["var", "valid"],
+      [
+        "seq",
+        ["let", "roomData", {}],
+        [
+          "obj.set",
+          ["var", "roomData"],
+          "name",
+          ["str.concat", "Room ", ["var", "roomNum"]],
+        ],
+        ["obj.set", ["var", "roomData"], "kind", "ROOM"],
+        ["obj.set", ["var", "roomData"], "prototype_id", hotelRoomProtoId],
+
+        ["let", "props", {}],
+        ["obj.set", ["var", "props"], "description", "A standard hotel room."],
+        ["obj.set", ["var", "props"], "lobby_id", ["prop", "this", "id"]], // Return to THIS wing
+
+        ["obj.set", ["var", "roomData"], "props", ["var", "props"]],
+
+        ["let", "roomId", ["create", ["var", "roomData"]]],
+
+        // Furnish the room
+        ["let", "bedData", {}],
+        ["obj.set", ["var", "bedData"], "name", "Bed"],
+        ["obj.set", ["var", "bedData"], "kind", "ITEM"],
+        ["obj.set", ["var", "bedData"], "prototype_id", bedProtoId],
+        ["obj.set", ["var", "bedData"], "location_id", ["var", "roomId"]],
+        ["create", ["var", "bedData"]],
+
+        ["let", "lampData", {}],
+        ["obj.set", ["var", "lampData"], "name", "Lamp"],
+        ["obj.set", ["var", "lampData"], "kind", "ITEM"],
+        ["obj.set", ["var", "lampData"], "prototype_id", lampProtoId],
+        ["obj.set", ["var", "lampData"], "location_id", ["var", "roomId"]],
+        ["create", ["var", "lampData"]],
+
+        ["let", "chairData", {}],
+        ["obj.set", ["var", "chairData"], "name", "Chair"],
+        ["obj.set", ["var", "chairData"], "kind", "ITEM"],
+        ["obj.set", ["var", "chairData"], "prototype_id", chairProtoId],
+        ["obj.set", ["var", "chairData"], "location_id", ["var", "roomId"]],
+        ["create", ["var", "chairData"]],
+
+        ["move", "caller", ["var", "roomId"]],
+        [
+          "tell",
+          "caller",
+          ["str.concat", "You enter Room ", ["var", "roomNum"], "."],
+        ],
+      ],
     ],
   ]);
 
