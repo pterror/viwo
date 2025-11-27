@@ -14,7 +14,8 @@
     "dev:discord": "bun --filter @viwo/discord-bot dev",
     "dev:cli": "bun --filter @viwo/cli dev",
     "dev:tui": "bun --filter @viwo/tui dev",
-    "typecheck": "bun --filter '*' typecheck"
+    "typecheck": "bun --filter '*' typecheck",
+    "test": "bun --filter '*' test"
   },
   "devDependencies": {
     "@tsconfig/strictest": "^2.0.8",

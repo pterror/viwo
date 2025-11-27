@@ -53,19 +53,14 @@ const rl = readline.createInterface({
 
 rl.prompt();
 
+import { parseCommand } from "./parser";
+
+// ...
+
 rl.on("line", (line) => {
-  const input = line.trim();
-  if (input) {
-    // Simple command parsing: split by spaces, but respect quotes?
-    // For now, just split by spaces as the core expects [command, ...args]
-    // Actually, let's do a basic split for now.
-    // TODO: Better parsing if needed.
-    const parts = input.match(/(?:[^\s"]+|"[^"]*")+/g);
-    if (parts) {
-      const command = parts[0];
-      const args = parts.slice(1).map((arg) => arg.replace(/^"(.*)"$/, "$1"));
-      ws.send(JSON.stringify([command, ...args]));
-    }
+  const result = parseCommand(line);
+  if (result) {
+    ws.send(JSON.stringify([result.command, ...result.args]));
   }
   rl.prompt();
 });

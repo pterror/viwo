@@ -55,6 +55,13 @@ const OPS: Record<string, (args: any[], ctx: ScriptContext) => Promise<any>> = {
     }
     return lastResult;
   },
+  list: async (args, ctx) => {
+    const result = [];
+    for (const arg of args) {
+      result.push(await evaluate(arg, ctx));
+    }
+    return result;
+  },
 
   // Variables
   let: async (args, ctx) => {

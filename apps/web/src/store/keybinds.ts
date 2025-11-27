@@ -32,7 +32,7 @@ const DEFAULT_BINDINGS: Record<ActionType, string> = {
 
 const STORAGE_KEY = "viwo_keybinds";
 
-const loadBindings = (): Record<ActionType, string> => {
+export const loadBindings = (): Record<ActionType, string> => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
