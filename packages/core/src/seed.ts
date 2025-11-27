@@ -1,4 +1,4 @@
-import { createEntity, addVerb } from "./repo";
+import { createEntity, addVerb, updateVerb, getVerb } from "./repo";
 import { db } from "./db";
 
 export function seed() {
@@ -692,6 +692,113 @@ export function seed() {
           "\n",
         ],
       ],
+    ],
+  ]);
+
+  // 7. Hotel Implementation
+
+  // Hotel Lobby
+  const hotelLobbyId = createEntity({
+    name: "Grand Hotel Lobby",
+    kind: "ROOM",
+    location_id: voidId, // Or connect to main lobby? Let's connect it.
+    props: {
+      description:
+        "The lavish lobby of the Grand Hotel. Type 'visit <room_number>' to go to a room.",
+    },
+  });
+
+  // Connect Hotel Lobby to Main Lobby
+  createEntity({
+    name: "hotel",
+    kind: "EXIT",
+    location_id: lobbyId,
+    props: { direction: "hotel", destination_id: hotelLobbyId },
+  });
+
+  createEntity({
+    name: "out",
+    kind: "EXIT",
+    location_id: hotelLobbyId,
+    props: { direction: "out", destination_id: lobbyId },
+  });
+
+  // Hotel Room Prototype (Hidden)
+  const hotelRoomProtoId = createEntity({
+    name: "Hotel Room Prototype",
+    kind: "ROOM",
+    location_id: voidId,
+    props: {
+      description: "A generic hotel room.",
+    },
+  });
+
+  // Verb: leave (on the prototype)
+  // Moves player back to lobby and destroys the room
+  addVerb(hotelRoomProtoId, "leave", [
+    "seq",
+    ["move", "caller", ["var", "hotelLobbyId"]], // Move player out first
+    ["tell", "caller", "You leave the room and it fades away behind you."],
+    ["destroy", "this"], // Destroy the room
+  ]);
+
+  // We need to inject hotelLobbyId into the verb scope or look it up?
+  // Variables in `seed.ts` are not available in the script at runtime.
+  // We can hardcode the ID if we knew it, but it's dynamic.
+  // Better approach: Store `lobby_id` on the room props when creating it.
+  // Then `leave` can read `this.props.lobby_id`.
+
+  // Update 'leave' verb to use prop
+  updateVerb(getVerb(hotelRoomProtoId, "leave")!.id, [
+    "seq",
+    ["let", "lobbyId", ["prop", "this", "lobby_id"]],
+    ["move", "caller", ["var", "lobbyId"]],
+    ["tell", "caller", "You leave the room and it fades away behind you."],
+    ["destroy", "this"],
+  ]);
+
+  // Verb: visit <room_number> (on the Lobby)
+  addVerb(hotelLobbyId, "visit", [
+    "seq",
+    ["let", "roomNum", ["arg", 0]],
+    [
+      "if",
+      ["not", ["var", "roomNum"]],
+      ["throw", "Please specify a room number."],
+    ],
+    // Create the ephemeral room
+    ["let", "roomData", {}],
+    [
+      "obj.set",
+      ["var", "roomData"],
+      "name",
+      ["str.concat", "Room ", ["var", "roomNum"]],
+    ],
+    ["obj.set", ["var", "roomData"], "kind", "ROOM"],
+    ["obj.set", ["var", "roomData"], "prototype_id", hotelRoomProtoId],
+
+    ["let", "props", {}],
+    [
+      "obj.set",
+      ["var", "props"],
+      "description",
+      [
+        "str.concat",
+        "You are in room ",
+        ["var", "roomNum"],
+        ". It is pristine.",
+      ],
+    ],
+    ["obj.set", ["var", "props"], "lobby_id", hotelLobbyId],
+
+    ["obj.set", ["var", "roomData"], "props", ["var", "props"]],
+
+    ["let", "roomId", ["create", ["var", "roomData"]]],
+    ["move", "caller", ["var", "roomId"]],
+    [
+      "tell",
+      "caller",
+      ["str.concat", "You enter Room ", ["var", "roomNum"], "."],
     ],
   ]);
 }
