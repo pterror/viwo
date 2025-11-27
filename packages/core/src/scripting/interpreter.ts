@@ -12,6 +12,7 @@ export type ScriptContext = {
     create: (data: any) => number;
     send: (msg: any) => void;
     destroy?: (id: number) => void;
+    call?: (targetId: number, verb: string, args: any[]) => Promise<any>;
   };
 };
 
@@ -203,7 +204,32 @@ const OPS: Record<string, (args: any[], ctx: ScriptContext) => Promise<any>> = {
     }
     return null;
   },
+  call: async (args, ctx) => {
+    const [targetExpr, verbExpr, ...callArgs] = args;
+    const target = await evaluateTarget(targetExpr, ctx);
+    const verb = await evaluate(verbExpr, ctx);
+
+    // Evaluate arguments
+    const evaluatedArgs = [];
+    for (const arg of callArgs) {
+      evaluatedArgs.push(await evaluate(arg, ctx));
+    }
+
+    if (!target || typeof verb !== "string") return null;
+
+    if (ctx.sys?.call) {
+      return await ctx.sys.call(target.id, verb, evaluatedArgs);
+    }
+    return null;
+  },
 };
+
+export function registerOpcode(
+  name: string,
+  handler: (args: any[], ctx: ScriptContext) => Promise<any>,
+) {
+  OPS[name] = handler;
+}
 
 export async function evaluate(ast: any, ctx: ScriptContext): Promise<any> {
   // Gas Check
