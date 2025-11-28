@@ -1,5 +1,5 @@
 {
-  "name": "@viwo/cli",
+  "name": "@viwo/admin-cli",
   "version": "0.0.0",
   "module": "src/index.ts",
   "type": "module",

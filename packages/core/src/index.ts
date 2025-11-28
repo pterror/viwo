@@ -565,10 +565,6 @@ export function startServer(port: number = 8080) {
             id: newId,
           }),
         );
-      } else if (command === "look") {
-        sendRoom(player.location_id || 0);
-      } else if (command === "inventory") {
-        sendInventory(player.id);
       } else {
         ws.send(
           JSON.stringify({

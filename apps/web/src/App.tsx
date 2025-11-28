@@ -27,12 +27,16 @@ function App() {
       return;
     }
 
-    // Ignore if modifier keys are pressed
-    if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) {
-      return;
-    }
+    const modifiers = [];
+    if (e.ctrlKey) modifiers.push("Ctrl");
+    if (e.altKey) modifiers.push("Alt");
+    if (e.shiftKey) modifiers.push("Shift");
+    if (e.metaKey) modifiers.push("Meta");
 
-    const action = keybindsStore.getActionForKey(e.key);
+    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    const fullKey = [...modifiers, key].join("+");
+
+    const action = keybindsStore.getActionForKey(fullKey);
     if (action) {
       e.preventDefault();
       switch (action) {

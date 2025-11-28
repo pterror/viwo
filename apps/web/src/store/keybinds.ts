@@ -64,9 +64,11 @@ export const keybindsStore = {
   },
 
   getActionForKey: (key: string): ActionType | undefined => {
-    const lowerKey = key.toLowerCase();
-    return (Object.keys(state.bindings) as ActionType[]).find(
-      (action) => state.bindings[action].toLowerCase() === lowerKey,
-    );
+    // Key is expected to be in format "Ctrl+Shift+Key" or just "Key"
+    // We do case-insensitive comparison for the key part, but modifiers should be standard
+    return (Object.keys(state.bindings) as ActionType[]).find((action) => {
+      const binding = state.bindings[action];
+      return binding.toLowerCase() === key.toLowerCase();
+    });
   },
 };
