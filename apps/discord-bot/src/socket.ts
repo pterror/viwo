@@ -23,7 +23,7 @@ export class GameSocket extends EventEmitter {
       console.log(`Socket connected (Entity: ${this.entityId})`);
 
       if (this.entityId) {
-        this.send(["login", this.entityId]);
+        this.send("login " + this.entityId);
       }
 
       // Flush queue
@@ -36,7 +36,8 @@ export class GameSocket extends EventEmitter {
     this.ws.on("message", (data) => {
       try {
         const json = JSON.parse(data.toString());
-        this.emit("message", json);
+        this.handleMessage(json);
+        this.emit("message", json); // Keep original emit for external listeners
       } catch (e) {
         console.error("Failed to parse message", e);
       }
@@ -55,12 +56,34 @@ export class GameSocket extends EventEmitter {
     });
   }
 
-  send(data: any) {
-    const msg = JSON.stringify(data);
-    if (this.connected && this.ws) {
-      this.ws.send(msg);
+  send(command: string) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      const parts = command.split(" ");
+      const method = parts[0];
+      const params = parts.slice(1);
+
+      this.ws.send(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          method: "execute",
+          params: [method, ...params],
+          id: Date.now(),
+        }),
+      );
     } else {
-      this.queue.push(msg);
+      this.queue.push(command);
+    }
+  }
+
+  private handleMessage(data: any) {
+    // Handle JSON-RPC Notification
+    if (data.method === "message" && data.params && data.params.text) {
+      console.log("[Core Message]:", data.params.text);
+    }
+
+    // Handle JSON-RPC Response (Result)
+    if (data.result && data.result.message) {
+      console.log("[Core Result]:", data.result.message);
     }
   }
 

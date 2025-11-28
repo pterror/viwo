@@ -6,13 +6,13 @@ export type ScriptSystemContext = {
   create: (data: any) => number;
   send: (msg: unknown) => void;
   destroy?: (id: number) => void;
-  call?: (
-    caller: Entity,
+  call: (
+    caller: any,
     targetId: number,
     verb: string,
-    args: unknown[],
+    args: any[],
     warnings: string[],
-  ) => Promise<unknown>;
+  ) => Promise<any>;
   getAllEntities?: () => number[];
   schedule?: (
     entityId: number,
@@ -22,12 +22,15 @@ export type ScriptSystemContext = {
   ) => void;
   broadcast?: (msg: unknown, locationId?: number) => void;
   give?: (entityId: number, destId: number, newOwnerId: number) => void;
-  triggerEvent?: (
+  triggerEvent: (
     eventName: string,
     locationId: number,
     args: unknown[],
     excludeEntityId?: number,
   ) => void | Promise<void>;
+  getContents?: (containerId: number) => Promise<any[]>;
+  getVerbs?: (entityId: number) => Promise<any[]>;
+  getEntity?: (id: number) => Promise<any>;
   sendRoom?: (roomId: number) => void;
   sendInventory?: (playerId: number) => void;
   sendItem?: (itemId: number) => void;

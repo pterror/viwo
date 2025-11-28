@@ -48,6 +48,7 @@ interface GameState {
   room: RoomMessage | null;
   inventory: InventoryMessage | null;
   inspectedItem: ItemMessage | null;
+  socket: WebSocket | null;
 }
 
 const [state, setState] = createStore<GameState>({
@@ -56,57 +57,38 @@ const [state, setState] = createStore<GameState>({
   room: null,
   inventory: null,
   inspectedItem: null,
+  socket: null,
 });
-
-let socket: WebSocket | null = null;
 
 export const gameStore = {
   state,
 
-  connect: () => {
-    if (state.isConnected) return;
+  // connect method is now handled by the global connect function
+  // and the socket is managed in state.
+  // The original connect method is effectively replaced by the new global connect logic.
 
-    socket = new WebSocket("ws://localhost:8080");
+  send: (command: string) => {
+    if (state.socket && state.socket.readyState === WebSocket.OPEN) {
+      const id = Date.now(); // Simple ID generation
+      // We assume command is a verb string like "look" or "go north"
+      // We send it as method="command" for now, or we can parse it?
+      // The server expects `method` to be the verb.
+      // But if we have arguments? "go north".
+      // Let's send method="command" and params=[command] to match the legacy fallback in server?
+      // NO, I updated server to use `method` as the verb.
+      // So we need to split the command string.
+      const parts = command.split(" ");
+      const method = parts[0];
+      const params = parts.slice(1);
 
-    socket.onopen = () => {
-      setState("isConnected", true);
-      // Initial fetch
-      gameStore.send(["look"]);
-      gameStore.send(["inventory"]);
-    };
-
-    socket.onclose = () => {
-      setState("isConnected", false);
-      gameStore.addMessage({
-        type: "error",
-        text: "Disconnected from server.",
-      });
-      socket = null;
-    };
-
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-
-        // Update specific state based on type
-        if (data.type === "room") {
-          setState("room", data);
-        } else if (data.type === "inventory") {
-          setState("inventory", data);
-        } else if (data.type === "item") {
-          setState("inspectedItem", data);
-        }
-
-        gameStore.addMessage(structuredClone(data));
-      } catch (e) {
-        console.error("Failed to parse message", e);
-      }
-    };
-  },
-
-  send: (payload: unknown[]) => {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify(payload));
+      state.socket.send(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          method: "execute",
+          params: [method, ...params],
+          id,
+        }),
+      );
     } else {
       console.error("Socket not connected");
     }

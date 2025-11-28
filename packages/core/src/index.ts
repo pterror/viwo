@@ -74,7 +74,11 @@ export function startServer(port: number = 8080) {
     give: (entityId, destId, newOwnerId) => {
       updateEntity(entityId, { location_id: destId, owner_id: newOwnerId });
     },
-    // We can add `call` and `triggerEvent` here too if needed for background tasks
+    call: async () => null, // Scheduler doesn't support call yet? Or we can implement it.
+    triggerEvent: async () => {}, // Scheduler doesn't support triggerEvent yet?
+    getContents: async (id) => getContents(id),
+    getVerbs: async (id) => getVerbs(id),
+    getEntity: async (id) => getEntity(id),
   }));
 
   setInterval(() => {
@@ -88,10 +92,48 @@ export function startServer(port: number = 8080) {
   wss.on("connection", (ws: Client) => {
     console.log("New client connected");
 
+    // Helper to resolve dynamic properties (get_*)
+    const resolveEntityProps = async (entity: any) => {
+      const props = { ...entity.props };
+      const verbs = getVerbs(entity.id);
+
+      for (const verb of verbs) {
+        if (verb.name.startsWith("get_")) {
+          const propName = verb.name.substring(4); // remove "get_"
+          try {
+            const result = await evaluate(verb.code, {
+              caller: entity,
+              this: entity,
+              args: [],
+              gas: 500,
+              sys, // Use the sys object we created
+              warnings: [],
+            });
+            if (result !== undefined && result !== null) {
+              props[propName] = result;
+            }
+          } catch (e) {
+            console.error(
+              `Error resolving property ${propName} for ${entity.id}`,
+              e,
+            );
+          }
+        }
+      }
+      return props;
+    };
+
     const sys: ScriptSystemContext = {
       move: (id, dest) => updateEntity(id, { location_id: dest }),
       create: createEntity,
-      send: (msg) => ws.send(JSON.stringify(msg)),
+      send: (msg) =>
+        ws.send(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            method: "message",
+            params: { text: msg },
+          }),
+        ),
       destroy: deleteEntity,
       getAllEntities,
       schedule: scheduler.schedule.bind(scheduler),
@@ -101,12 +143,24 @@ export function startServer(port: number = 8080) {
           if (c.readyState === WebSocket.OPEN && c.playerId) {
             if (!locationId) {
               // Global
-              c.send(JSON.stringify({ type: "message", text: msg }));
+              c.send(
+                JSON.stringify({
+                  jsonrpc: "2.0",
+                  method: "message",
+                  params: { text: msg },
+                }),
+              );
             } else {
               // Local
               const p = getEntity(c.playerId);
               if (p && p.location_id === locationId) {
-                c.send(JSON.stringify({ type: "message", text: msg }));
+                c.send(
+                  JSON.stringify({
+                    jsonrpc: "2.0",
+                    method: "message",
+                    params: { text: msg },
+                  }),
+                );
               }
             }
           }
@@ -189,390 +243,211 @@ export function startServer(port: number = 8080) {
     }
 
     ws.on("message", async (message) => {
-      let data: unknown;
+      let request: any;
       try {
-        data = JSON.parse(message.toString());
+        request = JSON.parse(message.toString());
       } catch {
-        ws.send(JSON.stringify({ type: "error", text: "Invalid JSON." }));
-        return;
-      }
-
-      if (!Array.isArray(data) || typeof data[0] !== "string") {
         ws.send(
           JSON.stringify({
-            type: "error",
-            text: "Invalid S-expression format.",
+            jsonrpc: "2.0",
+            error: { code: -32700, message: "Parse error" },
+            id: null,
           }),
         );
         return;
       }
 
-      const [command, ...args] = data as [string, ...unknown[]];
+      // Validate JSON-RPC
+      if (request.jsonrpc !== "2.0" || !request.method) {
+        ws.send(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            error: { code: -32600, message: "Invalid Request" },
+            id: request.id || null,
+          }),
+        );
+        return;
+      }
+
+      const { method, params, id } = request;
+      const args = Array.isArray(params) ? params : [params]; // Support both array and object params (simplified)
 
       console.log(
-        `[Player ${ws.playerId}] Command: ${command}, Args: ${JSON.stringify(
-          args,
+        `[Player ${ws.playerId}] Method: ${method}, Params: ${JSON.stringify(
+          params,
         )}`,
       );
 
-      if (!ws.playerId) return;
-
-      const player = getEntity(ws.playerId);
-      if (!player) return;
-
-      // Helper to resolve dynamic properties (get_*)
-      const resolveEntityProps = async (entity: any) => {
-        const props = { ...entity.props };
-        const verbs = getVerbs(entity.id);
-
-        for (const verb of verbs) {
-          if (verb.name.startsWith("get_")) {
-            const propName = verb.name.substring(4); // remove "get_"
-            try {
-              const result = await evaluate(verb.code, {
-                caller: entity,
-                this: entity,
-                args: [],
-                gas: 500,
-                sys, // Use the sys object we created
-                warnings: [],
-              });
-              if (result !== undefined && result !== null) {
-                props[propName] = result;
-              }
-            } catch (e) {
-              console.error(
-                `Error resolving property ${propName} for ${entity.id}`,
-                e,
-              );
-            }
-          }
+      // Helper to send JSON-RPC Response
+      const sendResponse = (result: any) => {
+        if (id !== undefined && id !== null) {
+          ws.send(JSON.stringify({ jsonrpc: "2.0", result, id }));
         }
-        return props;
       };
 
-      // Helper to send room update
-      const sendRoom = async (roomId: number) => {
-        const room = getEntity(roomId);
-        if (!room) return;
-
-        // CSS Inheritance: Parent (Zone) -> Room
-        let customCss = room.props["custom_css"] || "";
-        if (room.location_id) {
-          const parent = getEntity(room.location_id);
-          if (parent && (parent.kind === "ZONE" || parent.kind === "ROOM")) {
-            const parentCss = parent.props["custom_css"];
-            if (parentCss) {
-              customCss = `${parentCss}\n${customCss}`;
-            }
-          }
-        }
-
-        const contents = getContents(room.id).filter((e) => e.id !== player.id);
-        const richContents = await Promise.all(
-          contents.map(async (item) => {
-            const props = await resolveEntityProps(item);
-
-            const richItem: any = {
-              id: item.id,
-              name: item.name,
-              kind: item.kind,
-              location_detail: item.location_detail,
-              description: props["description"],
-              adjectives: props["adjectives"],
-              custom_css: props["custom_css"],
-              contents: getContents(item.id).map((sub) => ({
-                id: sub.id,
-                name: sub.name,
-                kind: sub.kind,
-                contents: [],
-                custom_css: sub.props["custom_css"], // Should we resolve sub-items too? Maybe later.
-                verbs: getVerbs(sub.id).map((v) => v.name),
-              })),
-              verbs: getVerbs(item.id).map((v) => v.name),
-            };
-
-            if (item.kind === "EXIT" && item.props["destination_id"]) {
-              const dest = getEntity(item.props["destination_id"]);
-              if (dest) {
-                richItem.destination_name = dest.name;
-              }
-            }
-
-            return richItem;
-          }),
-        );
-
-        ws.send(
-          JSON.stringify({
-            type: "room",
-            name: room.name,
-            description: room.props["description"] || "Nothing special.",
-            custom_css: customCss,
-            image: room.props["image"],
-            contents: richContents,
-          }),
-        );
-      };
-
-      const sendInventory = async (playerId: number) => {
-        const items = getContents(playerId);
-        const richItems = await Promise.all(
-          items.map(async (item) => {
-            const props = await resolveEntityProps(item);
-            return {
-              id: item.id,
-              name: item.name,
-              kind: item.kind,
-              location_detail: item.location_detail,
-              adjectives: props["adjectives"],
-              custom_css: props["custom_css"],
-              contents: getContents(item.id).map((sub) => ({
-                id: sub.id,
-                name: sub.name,
-                kind: sub.kind,
-                contents: [],
-                custom_css: sub.props["custom_css"],
-                verbs: getVerbs(sub.id).map((v) => v.name),
-              })),
-              verbs: getVerbs(item.id).map((v) => v.name),
-            };
-          }),
-        );
-
-        const client = Array.from(wss.clients).find(
-          (c: any) => c.playerId === playerId,
-        );
-        if (client && client.readyState === WebSocket.OPEN) {
-          client.send(
+      const sendError = (code: number, message: string) => {
+        if (id !== undefined && id !== null) {
+          ws.send(
             JSON.stringify({
-              type: "inventory",
-              items: richItems,
+              jsonrpc: "2.0",
+              error: { code, message },
+              id,
             }),
           );
         }
       };
 
-      const sendItem = async (itemId: number) => {
-        const item = getEntity(itemId);
-        if (!item) return;
-
-        const richContents = await Promise.all(
-          getContents(item.id).map(async (sub) => {
-            const props = await resolveEntityProps(sub);
-            return {
-              id: sub.id,
-              name: sub.name,
-              kind: sub.kind,
-              contents: [],
-              location_detail: sub.location_detail,
-              description: props["description"],
-              adjectives: props["adjectives"],
-              custom_css: props["custom_css"],
-              verbs: getVerbs(sub.id).map((v) => v.name),
-            };
-          }),
-        );
-
-        const props = await resolveEntityProps(item);
-
-        // Send item details to the client who requested it (via ws)
-        // Note: `sendInventory` uses `wss.clients` because it takes a playerId,
-        // but `sendItem` is context-aware and sends to the current connection.
-
-        ws.send(
-          JSON.stringify({
-            type: "item",
-            name: item.name,
-            description: props["description"] || "It's just a thing.",
-            contents: richContents,
-            adjectives: props["adjectives"],
-            custom_css: props["custom_css"],
-            verbs: getVerbs(item.id).map((v) => v.name),
-          }),
-        );
-      };
-
-      // Plugin Hook
-      const ctx: CommandContext = {
-        player: { id: player.id, ws },
-        command,
-        args: args,
-        send: (msg) => ws.send(JSON.stringify(msg)),
-        core: {
-          getEntity,
-          getContents,
-          moveEntity,
-          createEntity,
-          updateEntity,
-          deleteEntity,
-          sendRoom,
-          sendInventory,
-          sendItem,
-          canEdit: (playerId, entityId) => {
-            const player = getEntity(playerId);
-            const entity = getEntity(entityId);
-            if (!player || !entity) return false;
-            return checkPermission(player, entity, "edit");
-          },
-        },
-      };
-
-      if (await pluginManager.handleCommand(ctx)) {
-        return;
-      }
-
-      // --- SCRIPTING ENGINE INTEGRATION ---
-
-      // 1. Check verbs on 'me' (the player)
-      let verb = getVerb(player.id, command);
-      let targetEntity = player;
-
-      // 2. Check verbs on room
-      if (!verb && player.location_id) {
-        verb = getVerb(player.location_id, command);
-        if (verb) {
-          const { getEntity } = await import("./repo");
-          targetEntity = getEntity(player.location_id)!;
-        }
-      }
-
-      // 3. Check verbs on items in room (if command is "verb item")
-      if (!verb) {
-        const parts = command.split(" ");
-        if (parts.length > 1) {
-          const verbName = parts[0];
-          const targetName = parts.slice(1).join(" ");
-
-          // Find target in room or inventory
-          const roomContents = player.location_id
-            ? getContents(player.location_id)
-            : [];
-          const inventory = getContents(player.id);
-          const allVisible = [...roomContents, ...inventory];
-
-          const target = allVisible.find(
-            (e) => e.name.toLowerCase() === targetName.toLowerCase(),
-          );
-
-          if (target && verbName) {
-            const targetVerb = getVerb(target.id, verbName);
-            if (targetVerb) {
-              verb = targetVerb;
-              targetEntity = target;
-              // Adjust args to exclude the target name if needed?
-              // Actually, the command was split. The original args are still passed.
-              // If the user typed "look apple", command is "look apple" (if sent as string)
-              // But here `command` is the first element of the S-expression list.
-              // If the client sends ["look apple"], then command is "look apple".
-              // If the client sends ["look", "apple"], then command is "look" and args is ["apple"].
-              // The current client implementation sends ["look apple"] for typed commands?
-              // Let's check the client code or assume standard behavior.
-              // The `ws.on("message")` parses JSON.
-              // If the client sends `["look apple"]`, then `command` is "look apple".
-              // If the client sends `["look", "apple"]`, then `command` is "look".
-
-              // If we are here, `command` was NOT a verb on player/room.
-              // So it might be "verb target".
-              // If we matched "verb target", we should probably pass the rest of the args?
-              // But `args` variable currently holds the rest of the S-expression.
-              // If `command` was "look apple", `args` is empty.
-              // So we don't need to adjust args.
-            }
-          }
-        }
-      }
-
-      if (verb) {
-        try {
-          const warnings: string[] = [];
-          await evaluate(verb.code, {
-            caller: player,
-            this: targetEntity,
-            args: args || [],
-            gas: GAS_LIMIT,
-            warnings,
-            sys,
-          });
-
-          if (warnings.length > 0) {
-            ws.send(
-              JSON.stringify({
-                type: "message",
-                text: `[Warnings]: ${warnings.join(", ")}`,
-              }),
-            );
-          }
-        } catch (e: any) {
-          ws.send(
-            JSON.stringify({
-              type: "error",
-              text: `Script error: ${e.message}`,
-            }),
-          );
-        }
-        return;
-      }
-
-      // If no verb handled the command, try built-in commands
-      // TODO: Move these to verbs on the player/room eventually.
-      if (command === "login") {
-        const id = args[0];
-        if (typeof id !== "number") {
-          ws.send(
-            JSON.stringify({ type: "error", text: "Invalid player ID." }),
-          );
+      if (method === "login") {
+        const playerId = args[0];
+        if (typeof playerId !== "number") {
+          sendError(-32602, "Invalid params: playerId must be a number");
           return;
         }
-        const player = getEntity(id);
+        const player = getEntity(playerId);
         if (player) {
-          ws.playerId = id;
-          ws.send(
-            JSON.stringify({
-              type: "message",
-              text: `Logged in as ${player.name} (ID: ${player.id}).`,
-            }),
-          );
+          ws.playerId = playerId;
+          sendResponse({
+            message: `Logged in as ${player.name} (ID: ${player.id}).`,
+            playerId: player.id,
+          });
         } else {
-          ws.send(JSON.stringify({ type: "error", text: "Player not found." }));
+          sendError(-32001, "Player not found");
         }
-      } else if (command === "create_player") {
+        return;
+      }
+
+      if (method === "create_player") {
         const name = args[0];
         if (typeof name !== "string") {
-          ws.send(
-            JSON.stringify({ type: "error", text: "Invalid player name." }),
-          );
+          sendError(-32602, "Invalid params: name must be a string");
           return;
         }
-        // Default start location (Void or Room 1)
-        // For now, let's try to find a "Start" room or just use 1
         const startRoom = db
           .query("SELECT id FROM entities WHERE kind = 'ROOM' LIMIT 1")
           .get() as { id: number };
         const locationId = startRoom ? startRoom.id : undefined;
 
+        const playerBase = db
+          .query("SELECT id FROM entities WHERE slug = 'sys:player_base'")
+          .get() as { id: number };
+        const prototypeId = playerBase ? playerBase.id : undefined;
+
         const newId = createEntity({
           name,
           kind: "ACTOR",
           ...(locationId !== undefined ? { location_id: locationId } : {}),
+          ...(prototypeId !== undefined ? { prototype_id: prototypeId } : {}),
           props: { description: "A new player." },
         });
 
-        ws.send(
-          JSON.stringify({
-            type: "player_created",
-            name,
-            id: newId,
-          }),
-        );
-      } else {
-        ws.send(
-          JSON.stringify({
-            type: "message",
-            text: `Unknown command: ${command}`,
-          }),
-        );
+        sendResponse({
+          message: "Player created",
+          player: { id: newId, name },
+        });
+        return;
       }
+
+      if (!ws.playerId) {
+        sendError(-32000, "Not logged in");
+        return;
+      }
+
+      const player = getEntity(ws.playerId);
+      if (!player) {
+        sendError(-32001, "Player entity not found");
+        return;
+      }
+
+      // Command Routing
+      if (method === "execute") {
+        const verbName = args[0];
+        const verbArgs = args.slice(1);
+
+        if (typeof verbName !== "string") {
+          sendError(
+            -32602,
+            "Invalid params: first argument must be a verb name (string)",
+          );
+          return;
+        }
+
+        // --- SCRIPTING ENGINE INTEGRATION ---
+
+        // 1. Check verbs on 'me' (the player)
+        let verb = getVerb(player.id, verbName);
+        let targetEntity = player;
+
+        // 2. Check verbs on room
+        if (!verb && player.location_id) {
+          verb = getVerb(player.location_id, verbName);
+          if (verb) {
+            const { getEntity } = await import("./repo");
+            targetEntity = getEntity(player.location_id)!;
+          }
+        }
+
+        // 3. Check verbs on items in room/inventory
+        if (!verb) {
+          // If we have "look apple", verbName is "look", verbArgs is ["apple"]
+          // We check if "look" is a verb on "apple".
+
+          if (verbArgs.length > 0) {
+            const targetName = String(verbArgs[0]);
+
+            const roomContents = player.location_id
+              ? getContents(player.location_id)
+              : [];
+            const inventory = getContents(player.id);
+            const allVisible = [...roomContents, ...inventory];
+
+            const target = allVisible.find(
+              (e) => e.name.toLowerCase() === targetName.toLowerCase(),
+            );
+
+            if (target) {
+              const targetVerb = getVerb(target.id, verbName);
+              if (targetVerb) {
+                verb = targetVerb;
+                targetEntity = target;
+              }
+            }
+          }
+        }
+
+        if (verb) {
+          try {
+            const warnings: string[] = [];
+            const result = await evaluate(verb.code, {
+              caller: player,
+              this: targetEntity,
+              args: verbArgs || [],
+              gas: GAS_LIMIT,
+              warnings,
+              sys,
+            });
+
+            if (warnings.length > 0) {
+              ws.send(
+                JSON.stringify({
+                  jsonrpc: "2.0",
+                  method: "message",
+                  params: { text: `[Warnings]: ${warnings.join(", ")}` },
+                }),
+              );
+            }
+
+            sendResponse({ status: "executed", result });
+          } catch (e: any) {
+            sendError(-32603, `Script error: ${e.message}`);
+          }
+          return;
+        }
+
+        sendError(-32601, `Verb not found: ${verbName}`);
+        return;
+      }
+
+      sendError(-32601, `Method not found: ${method}`);
     });
 
     ws.on("close", () => {
