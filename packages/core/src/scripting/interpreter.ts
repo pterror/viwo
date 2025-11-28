@@ -370,9 +370,7 @@ const OPS: Record<string, (args: any[], ctx: ScriptContext) => Promise<any>> = {
     if (ctx.sys?.give) {
       // Transfer ownership to destination's owner
       // If destination has no owner, it defaults to destination itself?
-      // Or maybe we should pass destination ID and let system handle it.
-      // But sys.give signature in interpreter.ts is:
-      // give?: (entityId: number, destId: number, newOwnerId: number) => void;
+      // TODO: Clarify `give` behavior when destination has no owner.
 
       const newOwnerId = dest.owner_id || dest.id;
       ctx.sys.give(target.id, dest.id, newOwnerId);

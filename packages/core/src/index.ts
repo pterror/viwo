@@ -346,21 +346,9 @@ export function startServer(port: number = 8080) {
 
         const props = await resolveEntityProps(item);
 
-        // Send to everyone? No, usually just the looker.
-        // But sendItem here is generic.
-        // The opcode `sys.send_item` takes an ID.
-        // But who do we send it to?
-        // `sendRoom` sends to the player in the room?
-        // No, `sendRoom` sends to `ws`?
-        // Wait, `sendRoom` in `index.ts` uses `ws.send` at the end?
-        // Let's check `sendRoom` implementation again.
-        // It uses `ws.send`. `ws` is the connection of the player executing the command.
-        // So `sendItem` should also use `ws.send`.
-        // But `sendInventory` uses `wss.clients.find` because it takes `playerId`.
-        // `sendRoom` takes `roomId` but sends to `ws`?
-        // If `sendRoom` is called by `sys.send_room(roomId)`, it should send to the caller.
-        // In `index.ts`, `sendRoom` is defined inside the connection handler, so `ws` is available.
-        // So `sendItem` should also use `ws`.
+        // Send item details to the client who requested it (via ws)
+        // Note: `sendInventory` uses `wss.clients` because it takes a playerId,
+        // but `sendItem` is context-aware and sends to the current connection.
 
         ws.send(
           JSON.stringify({
@@ -420,16 +408,7 @@ export function startServer(port: number = 8080) {
       }
 
       // 3. Check verbs on items in room (if command is "verb item")
-      // Simple parsing: "verb target"
-      if (!verb) {
-        const parts = command.split(" ");
-        if (parts.length > 1) {
-          // const verbName = parts[0];
-          // const targetName = parts.slice(1).join(" ");
-          // Find target in room or inventory
-          // ... (simplified for now)
-        }
-      }
+      // TODO: Implement parsing for "verb target" (e.g. "look apple")
 
       if (verb) {
         try {
@@ -463,9 +442,7 @@ export function startServer(port: number = 8080) {
       }
 
       // If no verb handled the command, try built-in commands
-      // These built-in commands will eventually be verbs on the player or room.
-      // For now, they are hardcoded.
-      // The `login` command is an exception as it changes the player's session.
+      // TODO: Move these to verbs on the player/room eventually.
       if (command === "login") {
         const id = args[0];
         if (typeof id !== "number") {

@@ -50,8 +50,7 @@ export class DiscordBot {
       }
 
       try {
-        // 1. Resolve Channel -> Room
-        // For DMs, we don't map to a room, we rely on the player's current location
+        // 1. Resolve Channel -> Room (DMs rely on player location)
         let roomId = null;
         if (message.channel.type !== ChannelType.DM) {
           roomId = db.getRoomForChannel(message.channelId);
@@ -71,11 +70,7 @@ export class DiscordBot {
         // 3. Get Socket
         const socket = socketManager.getSocket(entityId);
 
-        // 4. Send Message to Core
-        // We send it as a "say" command or just raw input?
-        // The Core expects ["command", ...args]
-        // If it's chat, maybe "say"? Or just interpret as command?
-        // Let's assume raw input for now.
+        // 4. Send Message to Core (assuming raw input for now)
         const parts = message.content.split(" ");
         socket.send(parts);
       } catch (error) {
