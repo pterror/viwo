@@ -121,12 +121,19 @@ export const gameStore = {
         }
 
         // Update specific state based on type
-        if (data.type === "room") {
-          setState("room", data);
-        } else if (data.type === "inventory") {
-          setState("inventory", data);
-        } else if (data.type === "item") {
-          setState("inspectedItem", data);
+        switch (data.type) {
+          case "room": {
+            setState("room", data.payload);
+            break;
+          }
+          case "inventory": {
+            setState("inventory", data.payload);
+            break;
+          }
+          case "item": {
+            setState("inspectedItem", data.payload);
+            break;
+          }
         }
 
         gameStore.addMessage(structuredClone(data));

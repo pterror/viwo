@@ -119,9 +119,15 @@ export function seed() {
       [
         "sys.send",
         [
-          "obj.merge",
-          ["var", "room"],
-          ["object", "contents", ["var", "richItems"]],
+          "object",
+          "type",
+          "room",
+          "payload",
+          [
+            "obj.merge",
+            ["var", "room"],
+            ["object", "contents", ["var", "richItems"]],
+          ],
         ],
       ],
     ],
@@ -131,7 +137,16 @@ export function seed() {
       [
         "if",
         ["var", "targetId"],
-        ["sys.send", ["resolve_props", ["entity", ["var", "targetId"]]]],
+        [
+          "sys.send",
+          [
+            "object",
+            "type",
+            "item",
+            "payload",
+            ["resolve_props", ["entity", ["var", "targetId"]]],
+          ],
+        ],
         [
           "tell",
           "me",
@@ -146,9 +161,15 @@ export function seed() {
     [
       "sys.send",
       [
-        "map",
-        ["contents", "me"],
-        ["lambda", ["item"], ["resolve_props", ["var", "item"]]],
+        "object",
+        "type",
+        "inventory",
+        "payload",
+        [
+          "map",
+          ["contents", "me"],
+          ["lambda", ["item"], ["resolve_props", ["var", "item"]]],
+        ],
       ],
     ],
   ]);

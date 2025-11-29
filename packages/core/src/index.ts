@@ -101,12 +101,12 @@ export function startServer(port: number = 8080) {
       getEntity: async (id) => getEntity(id),
       getContents: async (id) => getContents(id),
       getVerbs: async (id) => getVerbs(id),
-      send: (msg) => {
+      send: (payload) => {
         ws.send(
           JSON.stringify({
             jsonrpc: "2.0",
             method: "message",
-            params: { text: msg },
+            params: payload,
           }),
         );
       },
