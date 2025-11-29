@@ -21,6 +21,3 @@ export interface BlockDefinition {
     default?: any;
   }[];
 }
-
-// Hardcoded definitions removed in favor of dynamic fetching
-export const BLOCK_DEFINITIONS: BlockDefinition[] = [];

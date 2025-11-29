@@ -188,10 +188,9 @@ describe("Player Commands", () => {
     expect(id, "create should return item id").toBeDefined();
     const createdRock = getEntity(id);
     expect(createdRock, "created item should exist").toBeDefined();
-    expect(
-      sentMessages[0].name,
-      "created item should send room update",
-    ).toContain("Lobby");
+    expect(sentMessages[0]?.name, "created item should send room update").toBe(
+      "Lobby",
+    );
   });
 
   it("should set property", async () => {

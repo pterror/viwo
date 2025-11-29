@@ -7,12 +7,7 @@ import {
   OpcodeDefinition,
 } from "../interpreter";
 import { checkPermission } from "../../permissions";
-import {
-  Entity,
-  SPECIAL_PROPERTIES,
-  updateEntity,
-  getEntity,
-} from "../../repo";
+import { Entity, SPECIAL_PROPERTIES, updateEntity } from "../../repo";
 
 export const CoreLibrary: Record<string, OpcodeDefinition> = {
   // Control Flow
@@ -174,28 +169,23 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       if (args.length !== 2) {
         throw new ScriptError("get_prop: expected 2 arguments");
       }
-      const [entityId, propName] = args;
-      const entity = await evaluate(entityId, ctx);
-      const prop = await evaluate(propName, ctx);
-
-      // Check read permissions? For now, public properties are readable
-      // Maybe check "view" permission on entity
-
-      // Special properties
-      if (SPECIAL_PROPERTIES.has(String(prop))) {
-        // These are handled by repo/entity logic usually, but we might need direct access
-        // For now, let's assume we can read them from the entity object if we had it
-        // But we only have ID. We need to fetch entity?
-        // The evaluate(entityId) returns the ID string usually.
-        // We'll need a way to get the entity data.
-        // For now, let's use a helper or just return null if not implemented
-        return null; // TODO: Implement property reading
+      const [targetExpr, keyExpr] = args;
+      const target = await evaluateTarget(targetExpr, ctx);
+      const key = await evaluate(keyExpr, ctx);
+      if (!target) {
+        throw new ScriptError("prop: target not found");
       }
-
-      // For dynamic properties, we need to fetch the entity
-      // This requires repo access which we might not have directly here without importing
-      // Let's assume for now we can't easily get arbitrary props without a helper
-      return null;
+      if (typeof key !== "string") {
+        throw new ScriptError("prop: key must be a string");
+      }
+      if (!checkPermission(ctx.caller, target, "view")) {
+        throw new ScriptError(
+          `prop: permission denied: cannot view ${target.id}`,
+        );
+      }
+      return SPECIAL_PROPERTIES.has(key)
+        ? target[key as keyof Entity]
+        : target.props[key];
     },
   },
   set_prop: {
@@ -213,24 +203,22 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       if (args.length !== 3) {
         throw new ScriptError("set_prop: expected 3 arguments");
       }
-      const [entityId, propName, valExpr] = args;
-      const entity = await evaluate(entityId, ctx);
-      if (typeof entity !== "object") {
-        throw new ScriptError("set_prop: entity must be an object");
+      const [targetExpr, propExpr, valExpr] = args;
+      const target = await evaluateTarget(targetExpr, ctx);
+      if (!target) {
+        throw new ScriptError("set_prop: target not found");
       }
-      const prop = await evaluate(propName, ctx);
+      const prop = await evaluate(propExpr, ctx);
       if (typeof prop !== "string") {
         throw new ScriptError("set_prop: property name must be a string");
       }
       const val = await evaluate(valExpr, ctx);
-
-      if (!checkPermission(ctx.caller, entity, "edit")) {
+      if (!checkPermission(ctx.caller, target, "edit")) {
         throw new ScriptError(
           `set_prop: permission denied: cannot set property '${prop}'`,
         );
       }
-
-      updateEntity(entity, { [prop]: val });
+      updateEntity(target.id, { props: { ...target.props, [prop]: val } });
     },
   },
   has_prop: {
@@ -247,21 +235,21 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       if (args.length !== 2) {
         throw new ScriptError("has_prop: expected 2 arguments");
       }
-      const [entityId, propName] = args;
-      const entity = await evaluate(entityId, ctx);
-      if (typeof entity !== "object") {
-        throw new ScriptError("has_prop: entity must be an object");
+      const [targetExpr, propExpr] = args;
+      const target = await evaluateTarget(targetExpr, ctx);
+      if (!target) {
+        throw new ScriptError("has_prop: target not found");
       }
-      const prop = await evaluate(propName, ctx);
+      const prop = await evaluate(propExpr, ctx);
       if (typeof prop !== "string") {
         throw new ScriptError("has_prop: property name must be a string");
       }
-      if (!checkPermission(ctx.caller, entity, "edit")) {
+      if (!checkPermission(ctx.caller, target, "edit")) {
         throw new ScriptError(
           `has_prop: permission denied: cannot check property '${prop}'`,
         );
       }
-      return Object.hasOwnProperty.call(entity, prop);
+      return Object.hasOwnProperty.call(target, prop);
     },
   },
   delete_prop: {
@@ -278,21 +266,22 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       if (args.length !== 2) {
         throw new ScriptError("delete_prop: expected 2 arguments");
       }
-      const [entityId, propName] = args;
-      const entity = await evaluate(entityId, ctx);
-      if (typeof entity !== "object") {
-        throw new ScriptError("delete_prop: entity must be an object");
+      const [targetExpr, propExpr] = args;
+      const target = await evaluateTarget(targetExpr, ctx);
+      if (!target) {
+        throw new ScriptError("delete_prop: target not found");
       }
-      const prop = await evaluate(propName, ctx);
+      const prop = await evaluate(propExpr, ctx);
       if (typeof prop !== "string") {
         throw new ScriptError("delete_prop: property name must be a string");
       }
-      if (!checkPermission(ctx.caller, entity, "edit")) {
+      if (!checkPermission(ctx.caller, target, "edit")) {
         throw new ScriptError(
           `delete_prop: permission denied: cannot delete property '${prop}'`,
         );
       }
-      updateEntity(entity, { [prop]: undefined });
+      const { [prop]: _, ...newProps } = target.props;
+      updateEntity(target.id, { props: newProps });
     },
   },
 
@@ -880,383 +869,572 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
   },
 
   // Entity Interaction
-  tell: async (args, ctx) => {
-    const [targetExpr, msgExpr] = args;
-    const msg = await evaluate(msgExpr, ctx);
-    const target = await evaluateTarget(targetExpr, ctx);
+  tell: {
+    metadata: {
+      label: "Tell",
+      category: "action",
+      description: "Send a message to an entity",
+      slots: [
+        { name: "Target", type: "block", default: "me" },
+        { name: "Message", type: "string" },
+      ],
+    },
+    handler: async (args, ctx) => {
+      const [targetExpr, msgExpr] = args;
+      const msg = await evaluate(msgExpr, ctx);
+      const target = await evaluateTarget(targetExpr, ctx);
 
-    if (!target) {
-      throw new ScriptError("tell: target not found");
-    }
+      if (!target) {
+        throw new ScriptError("tell: target not found");
+      }
 
-    // If target is caller (resolved), send to socket
-    if (target.id === ctx.caller.id) {
-      if (ctx.sys?.send) {
-        ctx.sys.send({ type: "message", text: msg });
+      // If target is caller (resolved), send to socket
+      if (target.id === ctx.caller.id) {
+        if (ctx.sys?.send) {
+          ctx.sys.send({ type: "message", text: msg });
+        }
+        return true;
+      }
+
+      // Otherwise, trigger on_hear and notify caller
+      if (ctx.sys?.triggerEvent) {
+        // Notify caller
+        if (ctx.sys.send) {
+          ctx.sys.send({
+            type: "message",
+            text: `You tell ${target.name}: "${msg}"`,
+          });
+        }
+
+        // Trigger on_hear
+        // We use sys.call if available to target the specific entity
+        if (ctx.sys.call) {
+          try {
+            await ctx.sys.call(
+              ctx.caller,
+              target.id,
+              "on_hear",
+              [msg, ctx.caller.id, "tell"],
+              ctx.warnings,
+            );
+          } catch {
+            // Ignore if verb not found
+          }
+        }
       }
       return true;
-    }
-
-    // Otherwise, trigger on_hear and notify caller
-    if (ctx.sys?.triggerEvent) {
-      // Notify caller
-      if (ctx.sys.send) {
-        ctx.sys.send({
-          type: "message",
-          text: `You tell ${target.name}: "${msg}"`,
-        });
-      }
-
-      // Trigger on_hear
-      // We use sys.call if available to target the specific entity
-      if (ctx.sys.call) {
-        try {
-          await ctx.sys.call(
-            ctx.caller,
-            target.id,
-            "on_hear",
-            [msg, ctx.caller.id, "tell"],
-            ctx.warnings,
-          );
-        } catch {
-          // Ignore if verb not found
-        }
-      }
-    }
-    return true;
+    },
   },
 
-  move: async (args, ctx) => {
-    const [targetExpr, destExpr] = args;
-    const target = await evaluateTarget(targetExpr, ctx);
-    const dest = await evaluateTarget(destExpr, ctx);
+  move: {
+    metadata: {
+      label: "Move",
+      category: "action",
+      description: "Move an entity to a destination",
+      slots: [
+        { name: "Target", type: "block", default: "this" },
+        { name: "Destination", type: "block" },
+      ],
+    },
+    handler: async (args, ctx) => {
+      const [targetExpr, destExpr] = args;
+      const target = await evaluateTarget(targetExpr, ctx);
+      const dest = await evaluateTarget(destExpr, ctx);
 
-    if (!target) {
-      throw new ScriptError("move: target not found");
-    }
-    if (!dest) {
-      throw new ScriptError("move: destination not found");
-    }
+      if (!target) {
+        throw new ScriptError("move: target not found");
+      }
+      if (!dest) {
+        throw new ScriptError("move: destination not found");
+      }
 
-    if (!checkPermission(ctx.caller, target, "edit")) {
-      throw new ScriptError(
-        `move: permission denied: cannot move ${target.id}`,
-      );
-    }
-
-    if (ctx.sys?.move) {
-      // Check enter permission on destination
-      if (!checkPermission(ctx.caller, dest, "enter")) {
+      if (!checkPermission(ctx.caller, target, "edit")) {
         throw new ScriptError(
-          `move: permission denied: cannot enter ${dest.id}`,
+          `move: permission denied: cannot move ${target.id}`,
         );
       }
-      ctx.sys.move(target.id, dest.id);
-    }
-    return true;
-  },
 
-  create: async (args, ctx) => {
-    if (!ctx.sys) {
-      throw new ScriptError("create: no system available");
-    }
-    if (!ctx.sys.create) {
-      throw new ScriptError("create: no create function available");
-    }
-    if (args.length === 1) {
-      const [dataExpr] = args;
-      const data = await evaluate(dataExpr, ctx);
-      return ctx.sys.create(data);
-    } else {
-      if (args.length < 2 || args.length > 4) {
-        throw new ScriptError("create: expected 2, 3, or 4 arguments");
-      }
-      const [kindExpr, nameExpr, propsExpr, locExpr] = args;
-      const kind = await evaluate(kindExpr, ctx);
-      const name = await evaluate(nameExpr, ctx);
-      const props = propsExpr ? await evaluate(propsExpr, ctx) : {};
-      const location_id = locExpr ? await evaluate(locExpr, ctx) : undefined;
-      return ctx.sys.create({ kind, name, props, location_id });
-    }
-  },
-
-  destroy: async (args, ctx) => {
-    const [targetExpr] = args;
-    const target = await evaluateTarget(targetExpr, ctx);
-    if (!target) {
-      throw new ScriptError("destroy: target not found");
-    }
-    if (!checkPermission(ctx.caller, target, "edit")) {
-      throw new ScriptError(
-        `destroy: permission denied: cannot destroy ${target.id}`,
-      );
-    }
-    ctx.sys?.destroy?.(target.id);
-  },
-
-  give: async (args, ctx) => {
-    const [targetExpr, destExpr] = args;
-    const target = await evaluateTarget(targetExpr, ctx);
-    const dest = await evaluateTarget(destExpr, ctx);
-
-    if (!target) {
-      throw new ScriptError("give: target not found");
-    }
-    if (!dest) {
-      throw new ScriptError("give: destination not found");
-    }
-
-    // Check permission: caller must own target
-    if (target.owner_id !== ctx.caller.id) {
-      throw new ScriptError(
-        `give: permission denied: you do not own ${target.id}`,
-      );
-    }
-
-    if (ctx.sys?.give) {
-      // Transfer ownership to destination's owner
-      // If destination has no owner, check if destination is an ACTOR.
-      // If ACTOR, they become owner. If not, clear owner (public).
-      let newOwnerId = dest.owner_id;
-      if (!newOwnerId) {
-        if (dest.kind === "ACTOR") {
-          newOwnerId = dest.id;
-        } else {
-          newOwnerId = 0; // No owner
+      if (ctx.sys?.move) {
+        // Check enter permission on destination
+        if (!checkPermission(ctx.caller, dest, "enter")) {
+          throw new ScriptError(
+            `move: permission denied: cannot enter ${dest.id}`,
+          );
         }
+        ctx.sys.move(target.id, dest.id);
       }
-      ctx.sys.give(target.id, dest.id, newOwnerId);
-    }
+      return true;
+    },
   },
 
-  lambda: async (args, ctx) => {
-    const [argNames, body] = args;
-    return {
-      type: "lambda",
-      args: argNames,
-      body,
-      closure: { ...ctx.vars },
-    };
+  create: {
+    metadata: {
+      label: "Create",
+      category: "action",
+      description: "Create a new entity",
+      slots: [{ name: "Data", type: "block" }],
+    },
+    handler: async (args, ctx) => {
+      if (!ctx.sys) {
+        throw new ScriptError("create: no system available");
+      }
+      if (!ctx.sys.create) {
+        throw new ScriptError("create: no create function available");
+      }
+      if (args.length === 1) {
+        const [dataExpr] = args;
+        const data = await evaluate(dataExpr, ctx);
+        return ctx.sys.create(data);
+      } else {
+        if (args.length < 2 || args.length > 4) {
+          throw new ScriptError("create: expected 2, 3, or 4 arguments");
+        }
+        const [kindExpr, nameExpr, propsExpr, locExpr] = args;
+        const kind = await evaluate(kindExpr, ctx);
+        const name = await evaluate(nameExpr, ctx);
+        const props = propsExpr ? await evaluate(propsExpr, ctx) : {};
+        const location_id = locExpr ? await evaluate(locExpr, ctx) : undefined;
+        return ctx.sys.create({ kind, name, props, location_id });
+      }
+    },
   },
-  apply: async (args, ctx) => {
-    const [funcExpr, ...argExprs] = args;
-    const func = await evaluate(funcExpr, ctx);
 
-    if (!func) {
-      throw new ScriptError("apply: func not found");
-    }
-    if (func.type !== "lambda") {
-      throw new ScriptError("apply: func must be a lambda");
-    }
-
-    const evaluatedArgs = [];
-    for (const arg of argExprs) {
-      evaluatedArgs.push(await evaluate(arg, ctx));
-    }
-
-    // Create new context
-    const newVars = { ...func.closure };
-    // Bind arguments
-    for (let i = 0; i < func.args.length; i++) {
-      newVars[func.args[i]] = evaluatedArgs[i];
-    }
-
-    return await evaluate(func.body, {
-      ...ctx,
-      vars: newVars,
-    });
+  destroy: {
+    metadata: {
+      label: "Destroy",
+      category: "action",
+      description: "Destroy an entity",
+      slots: [{ name: "Target", type: "block", default: "this" }],
+    },
+    handler: async (args, ctx) => {
+      const [targetExpr] = args;
+      const target = await evaluateTarget(targetExpr, ctx);
+      if (!target) {
+        throw new ScriptError("destroy: target not found");
+      }
+      if (!checkPermission(ctx.caller, target, "edit")) {
+        throw new ScriptError(
+          `destroy: permission denied: cannot destroy ${target.id}`,
+        );
+      }
+      ctx.sys?.destroy?.(target.id);
+    },
   },
-  call: async (args, ctx) => {
-    const [targetExpr, verbExpr, ...callArgs] = args;
-    const target = await evaluateTarget(targetExpr, ctx);
-    const verb = await evaluate(verbExpr, ctx);
 
-    // Evaluate arguments
-    const evaluatedArgs = [];
-    for (const arg of callArgs) {
-      evaluatedArgs.push(await evaluate(arg, ctx));
-    }
+  give: {
+    metadata: {
+      label: "Give",
+      category: "action",
+      description: "Give an item to another entity",
+      slots: [
+        { name: "Item", type: "block" },
+        { name: "Receiver", type: "block" },
+      ],
+    },
+    handler: async (args, ctx) => {
+      const [targetExpr, destExpr] = args;
+      const target = await evaluateTarget(targetExpr, ctx);
+      const dest = await evaluateTarget(destExpr, ctx);
 
-    if (!target) {
-      throw new ScriptError("call: target not found");
-    }
-    if (typeof verb !== "string") {
-      throw new ScriptError("call: verb must be a string");
-    }
+      if (!target) {
+        throw new ScriptError("give: target not found");
+      }
+      if (!dest) {
+        throw new ScriptError("give: destination not found");
+      }
 
-    if (ctx.sys?.call) {
-      return await ctx.sys.call(
-        ctx.caller,
-        target.id,
-        verb,
-        evaluatedArgs,
-        ctx.warnings,
+      // Check permission: caller must own target
+      if (target.owner_id !== ctx.caller.id) {
+        throw new ScriptError(
+          `give: permission denied: you do not own ${target.id}`,
+        );
+      }
+
+      if (ctx.sys?.give) {
+        // Transfer ownership to destination's owner
+        // If destination has no owner, check if destination is an ACTOR.
+        // If ACTOR, they become owner. If not, clear owner (public).
+        let newOwnerId = dest.owner_id;
+        if (!newOwnerId) {
+          if (dest.kind === "ACTOR") {
+            newOwnerId = dest.id;
+          } else {
+            newOwnerId = 0; // No owner
+          }
+        }
+        ctx.sys.give(target.id, dest.id, newOwnerId);
+      }
+    },
+  },
+
+  lambda: {
+    metadata: {
+      label: "Lambda",
+      category: "func",
+      description: "Create a lambda function",
+      slots: [
+        { name: "Args", type: "block" },
+        { name: "Body", type: "block" },
+      ],
+    },
+    handler: async (args, ctx) => {
+      const [argNames, body] = args;
+      return {
+        type: "lambda",
+        args: argNames,
+        body,
+        closure: { ...ctx.vars },
+      };
+    },
+  },
+  apply: {
+    metadata: {
+      label: "Apply",
+      category: "func",
+      description: "Apply a lambda function",
+      slots: [
+        { name: "Func", type: "block" },
+        { name: "Args...", type: "block" },
+      ],
+    },
+    handler: async (args, ctx) => {
+      const [funcExpr, ...argExprs] = args;
+      const func = await evaluate(funcExpr, ctx);
+
+      if (!func) {
+        throw new ScriptError("apply: func not found");
+      }
+      if (func.type !== "lambda") {
+        throw new ScriptError("apply: func must be a lambda");
+      }
+
+      const evaluatedArgs = [];
+      for (const arg of argExprs) {
+        evaluatedArgs.push(await evaluate(arg, ctx));
+      }
+
+      // Create new context
+      const newVars = { ...func.closure };
+      // Bind arguments
+      for (let i = 0; i < func.args.length; i++) {
+        newVars[func.args[i]] = evaluatedArgs[i];
+      }
+
+      return await evaluate(func.body, {
+        ...ctx,
+        vars: newVars,
+      });
+    },
+  },
+  call: {
+    metadata: {
+      label: "Call",
+      category: "action",
+      description: "Call a verb on an entity",
+      slots: [
+        { name: "Target", type: "block" },
+        { name: "Verb", type: "string" },
+        { name: "Args...", type: "block" },
+      ],
+    },
+    handler: async (args, ctx) => {
+      const [targetExpr, verbExpr, ...callArgs] = args;
+      const target = await evaluateTarget(targetExpr, ctx);
+      const verb = await evaluate(verbExpr, ctx);
+
+      // Evaluate arguments
+      const evaluatedArgs = [];
+      for (const arg of callArgs) {
+        evaluatedArgs.push(await evaluate(arg, ctx));
+      }
+
+      if (!target) {
+        throw new ScriptError("call: target not found");
+      }
+      if (typeof verb !== "string") {
+        throw new ScriptError("call: verb must be a string");
+      }
+
+      if (ctx.sys?.call) {
+        return await ctx.sys.call(
+          ctx.caller,
+          target.id,
+          verb,
+          evaluatedArgs,
+          ctx.warnings,
+        );
+      }
+      return null;
+    },
+  },
+  schedule: {
+    metadata: {
+      label: "Schedule",
+      category: "action",
+      description: "Schedule a verb call",
+      slots: [
+        { name: "Verb", type: "string" },
+        { name: "Args", type: "block" },
+        { name: "Delay", type: "number" },
+      ],
+    },
+    handler: async (args, ctx) => {
+      const [verbExpr, argsExpr, delayExpr] = args;
+      const verb = await evaluate(verbExpr, ctx);
+      const callArgs = await evaluate(argsExpr, ctx);
+      const delay = await evaluate(delayExpr, ctx);
+
+      if (
+        typeof verb !== "string" ||
+        !Array.isArray(callArgs) ||
+        typeof delay !== "number"
+      ) {
+        throw new ScriptError(
+          "schedule: verb must be a string, args must be an array, delay must be a number",
+        );
+      }
+
+      ctx.sys?.schedule?.(ctx.this.id, verb, callArgs, delay);
+    },
+  },
+  broadcast: {
+    metadata: {
+      label: "Broadcast",
+      category: "action",
+      description: "Broadcast a message to a location",
+      slots: [
+        { name: "Message", type: "block" },
+        { name: "Location", type: "block", default: null },
+      ],
+    },
+    handler: async (args, ctx) => {
+      const [msgExpr, locExpr] = args;
+      const msg = await evaluate(msgExpr, ctx);
+      const loc = locExpr ? await evaluate(locExpr, ctx) : undefined;
+      if (typeof msg !== "string") {
+        throw new ScriptError(
+          `broadcast: message must be a string, got ${JSON.stringify(msg)}`,
+        );
+      }
+      ctx.sys?.broadcast?.(msg, loc);
+    },
+  },
+  "sys.send": {
+    metadata: {
+      label: "System Send",
+      category: "system",
+      description: "Send a system message",
+      slots: [{ name: "Msg", type: "block" }],
+    },
+    handler: async (args, ctx) => {
+      const [msgExpr] = args;
+      const msg = await evaluate(msgExpr, ctx);
+      ctx.sys?.send?.(msg);
+    },
+  },
+  "world.find": {
+    metadata: {
+      label: "Find Entity",
+      category: "world",
+      description: "Find an entity by name",
+      slots: [{ name: "Name", type: "string" }],
+    },
+    handler: async (args, ctx) => {
+      const [nameExpr] = args;
+      const name = await evaluate(nameExpr, ctx);
+      if (typeof name !== "string") {
+        throw new ScriptError(
+          `world.find: name must be a string, got ${JSON.stringify(name)}`,
+        );
+      }
+      // evaluateTarget handles "me", "here", and name lookup in room/inventory
+      const target = await evaluateTarget(name, ctx);
+      return target ? target.id : null;
+    },
+  },
+  "sys.can_edit": {
+    metadata: {
+      label: "Can Edit",
+      category: "system",
+      description: "Check if caller can edit entity",
+      slots: [{ name: "EntityId", type: "number" }],
+    },
+    handler: async (args, ctx) => {
+      const [entityIdExpr] = args;
+      const entityId = await evaluate(entityIdExpr, ctx);
+      if (typeof entityId !== "number") {
+        throw new ScriptError(
+          `sys.can_edit: entity ID must be a number, got ${JSON.stringify(
+            entityId,
+          )}`,
+        );
+      }
+      return ctx.sys?.canEdit?.(ctx.caller.id, entityId) ?? false;
+    },
+  },
+  print: {
+    metadata: {
+      label: "Print",
+      category: "action",
+      description: "Print a message to the client",
+      slots: [{ name: "Msg", type: "block" }],
+    },
+    handler: async (args, ctx) => {
+      const [msgExpr] = args;
+      const msg = await evaluate(msgExpr, ctx);
+      if (typeof msg !== "string") {
+        throw new ScriptError("print: message must be a string");
+      }
+      ctx.sys?.send?.({ type: "message", text: msg });
+    },
+  },
+  say: {
+    metadata: {
+      label: "Say",
+      category: "action",
+      description: "Say something to the room",
+      slots: [{ name: "Message", type: "string" }],
+    },
+    handler: async (args, ctx) => {
+      const [msgExpr] = args;
+      const msg = await evaluate(msgExpr, ctx);
+
+      if (typeof msg !== "string") {
+        throw new ScriptError("say: message must be a string");
+      }
+
+      ctx.sys?.broadcast?.(
+        `${ctx.caller.name} says: "${msg}"`,
+        ctx.caller.location_id || undefined,
       );
-    }
-    return null;
-  },
-  schedule: async (args, ctx) => {
-    const [verbExpr, argsExpr, delayExpr] = args;
-    const verb = await evaluate(verbExpr, ctx);
-    const callArgs = await evaluate(argsExpr, ctx);
-    const delay = await evaluate(delayExpr, ctx);
 
-    if (
-      typeof verb !== "string" ||
-      !Array.isArray(callArgs) ||
-      typeof delay !== "number"
-    ) {
-      throw new ScriptError(
-        "schedule: verb must be a string, args must be an array, delay must be a number",
-      );
-    }
-
-    ctx.sys?.schedule?.(ctx.this.id, verb, callArgs, delay);
-  },
-  broadcast: async (args, ctx) => {
-    const [msgExpr, locExpr] = args;
-    const msg = await evaluate(msgExpr, ctx);
-    const loc = locExpr ? await evaluate(locExpr, ctx) : undefined;
-    if (typeof msg !== "string") {
-      throw new ScriptError(
-        `broadcast: message must be a string, got ${JSON.stringify(msg)}`,
-      );
-    }
-    ctx.sys?.broadcast?.(msg, loc);
-  },
-  "sys.send": async (args, ctx) => {
-    const [msgExpr] = args;
-    const msg = await evaluate(msgExpr, ctx);
-    ctx.sys?.send?.(msg);
-  },
-  "world.find": async (args, ctx) => {
-    const [nameExpr] = args;
-    const name = await evaluate(nameExpr, ctx);
-    if (typeof name !== "string") {
-      throw new ScriptError(
-        `world.find: name must be a string, got ${JSON.stringify(name)}`,
-      );
-    }
-    // evaluateTarget handles "me", "here", and name lookup in room/inventory
-    const target = await evaluateTarget(name, ctx);
-    return target ? target.id : null;
-  },
-  "sys.can_edit": async (args, ctx) => {
-    const [entityIdExpr] = args;
-    const entityId = await evaluate(entityIdExpr, ctx);
-    if (typeof entityId !== "number") {
-      throw new ScriptError(
-        `sys.can_edit: entity ID must be a number, got ${JSON.stringify(
-          entityId,
-        )}`,
-      );
-    }
-    return ctx.sys?.canEdit?.(ctx.caller.id, entityId) ?? false;
-  },
-  print: async (args, ctx) => {
-    const [msgExpr] = args;
-    const msg = await evaluate(msgExpr, ctx);
-    if (typeof msg !== "string") {
-      throw new ScriptError("print: message must be a string");
-    }
-    ctx.sys?.send?.({ type: "message", text: msg });
-  },
-  say: async (args, ctx) => {
-    const [msgExpr] = args;
-    const msg = await evaluate(msgExpr, ctx);
-
-    if (typeof msg !== "string") {
-      throw new ScriptError("say: message must be a string");
-    }
-
-    ctx.sys?.broadcast?.(
-      `${ctx.caller.name} says: "${msg}"`,
-      ctx.caller.location_id || undefined,
-    );
-
-    if (ctx.caller.location_id) {
-      await ctx.sys?.triggerEvent?.(
-        "on_hear",
-        ctx.caller.location_id,
-        [msg, ctx.caller.id, "say"],
-        ctx.caller.id, // Exclude speaker
-      );
-    }
-    return;
+      if (ctx.caller.location_id) {
+        await ctx.sys?.triggerEvent?.(
+          "on_hear",
+          ctx.caller.location_id,
+          [msg, ctx.caller.id, "say"],
+          ctx.caller.id, // Exclude speaker
+        );
+      }
+      return;
+    },
   },
   // Data Structures
-  object: async (args, ctx) => {
-    // args: [key1, val1, key2, val2, ...]
-    const obj: Record<string, any> = {};
-    for (let i = 0; i < args.length; i += 2) {
-      const key = await evaluate(args[i], ctx);
-      const val = await evaluate(args[i + 1], ctx);
-      if (typeof key === "string") {
-        obj[key] = val;
+  object: {
+    metadata: {
+      label: "Object",
+      category: "data",
+      description: "Create an object",
+      slots: [{ name: "Key/Val...", type: "block" }],
+    },
+    handler: async (args, ctx) => {
+      // args: [key1, val1, key2, val2, ...]
+      const obj: Record<string, any> = {};
+      for (let i = 0; i < args.length; i += 2) {
+        const key = await evaluate(args[i], ctx);
+        const val = await evaluate(args[i + 1], ctx);
+        if (typeof key === "string") {
+          obj[key] = val;
+        }
       }
-    }
-    return obj;
+      return obj;
+    },
   },
-  map: async (args, ctx) => {
-    const [listExpr, funcExpr] = args;
-    const list = await evaluate(listExpr, ctx);
-    const func = await evaluate(funcExpr, ctx);
+  map: {
+    metadata: {
+      label: "Map",
+      category: "list",
+      description: "Map a list",
+      slots: [
+        { name: "List", type: "block" },
+        { name: "Func", type: "block" },
+      ],
+    },
+    handler: async (args, ctx) => {
+      const [listExpr, funcExpr] = args;
+      const list = await evaluate(listExpr, ctx);
+      const func = await evaluate(funcExpr, ctx);
 
-    if (!Array.isArray(list) || !func || func.type !== "lambda") return [];
+      if (!Array.isArray(list) || !func || func.type !== "lambda") return [];
 
-    const result = [];
-    for (const item of list) {
-      // Execute lambda for each item
-      const res = await executeLambda(func, [item], ctx);
-      result.push(res);
-    }
-    return result;
+      const result = [];
+      for (const item of list) {
+        // Execute lambda for each item
+        const res = await executeLambda(func, [item], ctx);
+        result.push(res);
+      }
+      return result;
+    },
   },
 
   // Entity Introspection
-  contents: async (args, ctx) => {
-    if (!ctx.sys) {
-      throw new ScriptError("contents: no system available");
-    }
-    if (!ctx.sys.getContents) {
-      throw new ScriptError("contents: no getContents function available");
-    }
-    const [containerExpr] = args;
-    const container = await evaluateTarget(containerExpr, ctx);
-    if (!container) return [];
-    return ctx.sys.getContents(container.id);
+  contents: {
+    metadata: {
+      label: "Contents",
+      category: "world",
+      description: "Get contents of a container",
+      slots: [{ name: "Target", type: "block" }],
+    },
+    handler: async (args, ctx) => {
+      if (!ctx.sys) {
+        throw new ScriptError("contents: no system available");
+      }
+      if (!ctx.sys.getContents) {
+        throw new ScriptError("contents: no getContents function available");
+      }
+      const [containerExpr] = args;
+      const container = await evaluateTarget(containerExpr, ctx);
+      if (!container) return [];
+      return ctx.sys.getContents(container.id);
+    },
   },
-  verbs: async (args, ctx) => {
-    if (!ctx.sys) {
-      throw new ScriptError("verbs: no system available");
-    }
-    if (!ctx.sys.getVerbs) {
-      throw new ScriptError("verbs: no getVerbs function available");
-    }
-    const [entityExpr] = args;
-    const entity = await evaluateTarget(entityExpr, ctx);
-    if (!entity) return [];
-    return ctx.sys.getVerbs(entity.id);
+  verbs: {
+    metadata: {
+      label: "Verbs",
+      category: "world",
+      description: "Get verbs of an entity",
+      slots: [{ name: "Target", type: "block" }],
+    },
+    handler: async (args, ctx) => {
+      if (!ctx.sys) {
+        throw new ScriptError("verbs: no system available");
+      }
+      if (!ctx.sys.getVerbs) {
+        throw new ScriptError("verbs: no getVerbs function available");
+      }
+      const [entityExpr] = args;
+      const entity = await evaluateTarget(entityExpr, ctx);
+      if (!entity) return [];
+      return ctx.sys.getVerbs(entity.id);
+    },
   },
-  entity: async (args, ctx) => {
-    if (!ctx.sys) {
-      throw new ScriptError("entity: no system available");
-    }
-    if (!ctx.sys.getEntity) {
-      throw new ScriptError("entity: no getEntity function available");
-    }
-    const [idExpr] = args;
-    const id = await evaluate(idExpr, ctx);
-    if (typeof id !== "number") {
-      throw new ScriptError(
-        `entity: expected number, got ${JSON.stringify(id)}`,
-      );
-    }
-    const entity = await ctx.sys.getEntity(id);
-    if (!entity) {
-      throw new ScriptError(`entity: entity ${id} not found`);
-    }
-    return entity;
+  entity: {
+    metadata: {
+      label: "Entity",
+      category: "world",
+      description: "Get entity by ID",
+      slots: [{ name: "ID", type: "number" }],
+    },
+    handler: async (args, ctx) => {
+      if (!ctx.sys) {
+        throw new ScriptError("entity: no system available");
+      }
+      if (!ctx.sys.getEntity) {
+        throw new ScriptError("entity: no getEntity function available");
+      }
+      const [idExpr] = args;
+      const id = await evaluate(idExpr, ctx);
+      if (typeof id !== "number") {
+        throw new ScriptError(
+          `entity: expected number, got ${JSON.stringify(id)}`,
+        );
+      }
+      const entity = await ctx.sys.getEntity(id);
+      if (!entity) {
+        throw new ScriptError(`entity: entity ${id} not found`);
+      }
+      return entity;
+    },
   },
   // Properties
   resolve_props: {
@@ -1271,9 +1449,12 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
         throw new ScriptError("resolve_props: expected 1 argument");
       }
       const [entityId] = args;
-      const id = await evaluate(entityId, ctx);
-      const entity = getEntity(Number(id));
-      if (!entity) return null;
+      const entity = await evaluate(entityId, ctx);
+      if (typeof entity !== "object") {
+        throw new ScriptError(
+          `resolve_props: expected object, got ${JSON.stringify(entity)}`,
+        );
+      }
       return resolveProps(entity, ctx);
     },
   },

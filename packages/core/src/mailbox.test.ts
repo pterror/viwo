@@ -16,14 +16,14 @@ import { checkPermission } from "./permissions";
 import { CoreLibrary } from "./scripting/lib/core";
 
 describe("Mailbox Verification", () => {
+  // Register libraries
+  registerLibrary(CoreLibrary);
+  registerLibrary(WorldLibrary);
+
   let senderId: number;
   let receiverId: number;
   let mailboxId: number;
   let itemId: number;
-
-  // Register libraries
-  registerLibrary(CoreLibrary);
-  registerLibrary(WorldLibrary);
 
   beforeAll(() => {
     // 1. Create Sender and Receiver
