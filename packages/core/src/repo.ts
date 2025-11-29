@@ -23,13 +23,12 @@ export interface Entity {
   kind: "ZONE" | "ROOM" | "ACTOR" | "ITEM" | "PART" | "EXIT";
   created_at: string;
   updated_at: string;
-  // Resolved properties
   /**
    * Resolved properties (merged from prototype and instance).
    * Contains arbitrary game data like description, adjectives, custom_css.
    */
   props: Record<string, any>;
-  // Raw prototype info
+  /** Raw prototype info */
   proto_slug?: string;
 }
 

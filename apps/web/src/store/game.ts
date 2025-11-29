@@ -10,12 +10,12 @@ export interface RichItem {
   kind: string;
   location_detail: string | null;
   contents: RichItem[];
-  destination_name?: string;
   props: Record<string, unknown> & {
     description?: string;
     adjectives?: string[];
     custom_css?: string;
     image?: string;
+    destination_name?: string;
   };
   verbs?: string[];
 }

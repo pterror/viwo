@@ -55,8 +55,6 @@ rl.prompt();
 
 import { parseCommand } from "./parser";
 
-// ...
-
 rl.on("line", (line) => {
   const result = parseCommand(line);
   if (result) {
@@ -70,6 +68,9 @@ rl.on("close", () => {
   process.exit(0);
 });
 
+// TODO: We are using JSON-RPC now.
+// We need type definitions for messages, and then change the below code to avoid
+// the removed `room`, `item` and `inventory` message types.
 function handleMessage(message: any) {
   switch (message.type) {
     case "message":
@@ -85,8 +86,8 @@ function handleMessage(message: any) {
         console.log(chalk.yellow("Contents:"));
         message.contents.forEach((item: any) => {
           let itemStr = `  - ${item.name} (${item.kind})`;
-          if (item.kind === "EXIT" && item.destination_name) {
-            itemStr += ` -> ${item.destination_name}`;
+          if (item.kind === "EXIT" && item.props.destination_name) {
+            itemStr += ` -> ${item.props.destination_name}`;
           }
           console.log(itemStr);
         });

@@ -70,8 +70,8 @@ export default function RoomPanel() {
                   class="room-panel__exit-tag"
                 >
                   {exit.name}
-                  {exit.destination_name
-                    ? ` (to ${exit.destination_name})`
+                  {exit.props.destination_name
+                    ? ` (to ${exit.props.destination_name})`
                     : ""}
                 </span>
               )}

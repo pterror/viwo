@@ -44,7 +44,7 @@ export default function Compass() {
                 "compass__cell-dest--active": !!exit(),
               }}
             >
-              {exit() ? exit()?.destination_name ?? exit()?.name : "+"}
+              {exit() ? exit()?.props.destination_name ?? exit()?.name : "+"}
             </div>
           </button>
         )}
