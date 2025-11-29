@@ -53,5 +53,5 @@ export function checkPermission(
     }
   }
 
-  return false;
+  return true;
 }

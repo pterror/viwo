@@ -2,10 +2,7 @@ import { createStore } from "solid-js/store";
 
 export type GameMessage =
   | { type: "message"; text: string }
-  | { type: "error"; text: string }
-  | RoomMessage
-  | InventoryMessage
-  | ItemMessage;
+  | { type: "error"; text: string };
 
 export interface RichItem {
   id: number;
@@ -130,12 +127,12 @@ export const gameStore = {
               return;
             }
             // Handle other RPC results if needed
+          } else if (data.method === "message" && data.params) {
+            gameStore.addMessage(structuredClone(data.params));
           }
           // Handle RPC errors?
           return;
         }
-
-        gameStore.addMessage(structuredClone(data));
       } catch (e) {
         console.error("Failed to parse message", e);
       }

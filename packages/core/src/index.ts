@@ -199,21 +199,30 @@ export function startServer(port: number = 8080) {
 
     // Auto-login as the Guest player for now
     const guest = db
-      .query("SELECT id FROM entities WHERE name = 'Guest'")
-      .get() as { id: number };
+      .query<{ id: number }, []>("SELECT id FROM entities WHERE name = 'Guest'")
+      .get();
     if (guest) {
       ws.playerId = guest.id;
       ws.send(
         JSON.stringify({
-          type: "message",
-          text: `Welcome to Viwo! You are logged in as Guest (ID: ${guest.id}).`,
+          jsonrpc: "2.0",
+          method: "message",
+          params: {
+            type: "message",
+            text: `Welcome to Viwo! You are logged in as Guest (ID: ${guest.id}).`,
+          },
         }),
       );
+      console.log("okay sent");
     } else {
       ws.send(
         JSON.stringify({
-          type: "error",
-          text: "Error: Guest player not found. Please re-seed.",
+          jsonrpc: "2.0",
+          error: {
+            code: -32601,
+            message: "Guest player not found. Please re-seed.",
+          },
+          id: null,
         }),
       );
     }

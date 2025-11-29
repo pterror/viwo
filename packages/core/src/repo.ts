@@ -75,12 +75,13 @@ export function getEntity(id: number): Entity | null {
 
   if (!raw) return null;
 
+  const { proto_props: basePropsRaw, props: propsRaw, ...rest } = raw;
   // Merge JSON props (Instance overrides Prototype)
-  const baseProps = raw.proto_props ? JSON.parse(raw.proto_props) : {};
-  const instanceProps = raw.props ? JSON.parse(raw.props) : {};
+  const baseProps = basePropsRaw ? JSON.parse(basePropsRaw) : {};
+  const instanceProps = propsRaw ? JSON.parse(propsRaw) : {};
 
   return {
-    ...raw,
+    ...rest,
     // The "Resolved" properties
     props: { ...baseProps, ...instanceProps },
   };
