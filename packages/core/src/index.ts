@@ -8,11 +8,11 @@ import {
   ScriptSystemContext,
   resolveProps,
 } from "./scripting/interpreter";
-import { CoreLibrary } from "./scripting/lib/core";
-import { ListLibrary } from "./scripting/lib/list";
-import { ObjectLibrary } from "./scripting/lib/object";
-import { StringLibrary } from "./scripting/lib/string";
-import { TimeLibrary } from "./scripting/lib/time";
+import * as CoreLibrary from "./scripting/lib/core";
+import * as ListLibrary from "./scripting/lib/list";
+import * as ObjectLibrary from "./scripting/lib/object";
+import * as StringLibrary from "./scripting/lib/string";
+import * as TimeLibrary from "./scripting/lib/time";
 import { seed } from "./seed";
 import { PluginManager, CommandContext } from "./plugin";
 
@@ -23,11 +23,11 @@ export type { Plugin, PluginContext } from "./plugin";
 export const pluginManager = new PluginManager();
 
 // Register libraries
-registerLibrary(CoreLibrary);
-registerLibrary(ListLibrary);
-registerLibrary(ObjectLibrary);
-registerLibrary(StringLibrary);
-registerLibrary(TimeLibrary);
+registerLibrary(CoreLibrary as any);
+registerLibrary(ListLibrary as any);
+registerLibrary(ObjectLibrary as any);
+registerLibrary(StringLibrary as any);
+registerLibrary(TimeLibrary as any);
 
 // Seed the database
 seed();

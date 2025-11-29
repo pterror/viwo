@@ -1,7 +1,9 @@
-import { evaluate, ScriptError, OpcodeDefinition } from "../interpreter";
+import { evaluate, ScriptError } from "../interpreter";
+import { defineOpcode, ScriptValue } from "../def";
 
-export const TimeLibrary: Record<string, OpcodeDefinition> = {
-  "time.now": {
+const timeNow = defineOpcode<[], string>(
+  "time.now",
+  {
     metadata: {
       label: "Now",
       category: "time",
@@ -14,8 +16,13 @@ export const TimeLibrary: Record<string, OpcodeDefinition> = {
       }
       return new Date().toISOString();
     },
-  },
-  "time.format": {
+  }
+);
+export { timeNow as "time.now" };
+
+const timeFormat = defineOpcode<[ScriptValue<string>, ScriptValue<string>?], string>(
+  "time.format",
+  {
     metadata: {
       label: "Format Time",
       category: "time",
@@ -36,8 +43,13 @@ export const TimeLibrary: Record<string, OpcodeDefinition> = {
       }
       return new Date(timestamp).toISOString();
     },
-  },
-  "time.parse": {
+  }
+);
+export { timeFormat as "time.format" };
+
+const timeParse = defineOpcode<[ScriptValue<string>], string>(
+  "time.parse",
+  {
     metadata: {
       label: "Parse Time",
       category: "time",
@@ -55,8 +67,13 @@ export const TimeLibrary: Record<string, OpcodeDefinition> = {
       }
       return new Date(datetime).toISOString();
     },
-  },
-  "time.from_timestamp": {
+  }
+);
+export { timeParse as "time.parse" };
+
+const timeFromTimestamp = defineOpcode<[ScriptValue<number>], string>(
+  "time.from_timestamp",
+  {
     metadata: {
       label: "From Timestamp",
       category: "time",
@@ -76,8 +93,13 @@ export const TimeLibrary: Record<string, OpcodeDefinition> = {
       }
       return new Date(timestamp).toISOString();
     },
-  },
-  "time.to_timestamp": {
+  }
+);
+export { timeFromTimestamp as "time.from_timestamp" };
+
+const timeToTimestamp = defineOpcode<[ScriptValue<string>], number>(
+  "time.to_timestamp",
+  {
     metadata: {
       label: "To Timestamp",
       category: "time",
@@ -97,8 +119,13 @@ export const TimeLibrary: Record<string, OpcodeDefinition> = {
       }
       return new Date(datetime).getTime();
     },
-  },
-  "time.offset": {
+  }
+);
+export { timeToTimestamp as "time.to_timestamp" };
+
+const timeOffset = defineOpcode<[ScriptValue<number>, ScriptValue<string>, ScriptValue<string>?], string>(
+  "time.offset",
+  {
     metadata: {
       label: "Offset Time",
       category: "time",
@@ -167,5 +194,6 @@ export const TimeLibrary: Record<string, OpcodeDefinition> = {
       }
       return date.toISOString();
     },
-  },
-};
+  }
+);
+export { timeOffset as "time.offset" };

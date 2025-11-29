@@ -2,16 +2,16 @@ import {
   evaluate,
   executeLambda,
   ScriptError,
-  OpcodeDefinition,
 } from "../interpreter";
+import { defineOpcode, ScriptValue } from "../def";
 
-export const ListLibrary: Record<string, OpcodeDefinition> = {
-  "list.new": {
+const listNew = defineOpcode<[...ScriptValue<any>[]], any[]>(
+  "list.new",
+  {
     metadata: {
       label: "List",
       category: "list",
       description: "Create a list",
-      // TODO: List of slots
       slots: [],
     },
     handler: async (args, ctx) => {
@@ -21,8 +21,13 @@ export const ListLibrary: Record<string, OpcodeDefinition> = {
       }
       return result;
     },
-  },
-  "list.len": {
+  }
+);
+export { listNew as "list.new" };
+
+const listLen = defineOpcode<[ScriptValue<any[]>], number>(
+  "list.len",
+  {
     metadata: {
       label: "List Length",
       category: "list",
@@ -34,9 +39,13 @@ export const ListLibrary: Record<string, OpcodeDefinition> = {
       if (!Array.isArray(list)) return 0;
       return list.length;
     },
-  },
+  }
+);
+export { listLen as "list.len" };
 
-  "list.empty": {
+const listEmpty = defineOpcode<[ScriptValue<any[]>], boolean>(
+  "list.empty",
+  {
     metadata: {
       label: "Is Empty",
       category: "list",
@@ -48,9 +57,13 @@ export const ListLibrary: Record<string, OpcodeDefinition> = {
       if (!Array.isArray(list)) return true;
       return list.length === 0;
     },
-  },
+  }
+);
+export { listEmpty as "list.empty" };
 
-  "list.get": {
+const listGet = defineOpcode<[ScriptValue<any[]>, ScriptValue<number>], any>(
+  "list.get",
+  {
     metadata: {
       label: "Get Item",
       category: "list",
@@ -66,9 +79,13 @@ export const ListLibrary: Record<string, OpcodeDefinition> = {
       if (!Array.isArray(list)) return null;
       return list[index];
     },
-  },
+  }
+);
+export { listGet as "list.get" };
 
-  "list.set": {
+const listSet = defineOpcode<[ScriptValue<any[]>, ScriptValue<number>, ScriptValue<any>], any>(
+  "list.set",
+  {
     metadata: {
       label: "Set Item",
       category: "list",
@@ -87,9 +104,13 @@ export const ListLibrary: Record<string, OpcodeDefinition> = {
       list[index] = val;
       return val;
     },
-  },
+  }
+);
+export { listSet as "list.set" };
 
-  "list.push": {
+const listPush = defineOpcode<[ScriptValue<any[]>, ScriptValue<any>], number>(
+  "list.push",
+  {
     metadata: {
       label: "Push",
       category: "list",
@@ -106,9 +127,13 @@ export const ListLibrary: Record<string, OpcodeDefinition> = {
       list.push(val);
       return list.length;
     },
-  },
+  }
+);
+export { listPush as "list.push" };
 
-  "list.pop": {
+const listPop = defineOpcode<[ScriptValue<any[]>], any>(
+  "list.pop",
+  {
     metadata: {
       label: "Pop",
       category: "list",
@@ -124,9 +149,13 @@ export const ListLibrary: Record<string, OpcodeDefinition> = {
       if (!Array.isArray(list)) return null;
       return list.pop();
     },
-  },
+  }
+);
+export { listPop as "list.pop" };
 
-  "list.unshift": {
+const listUnshift = defineOpcode<[ScriptValue<any[]>, ScriptValue<any>], number>(
+  "list.unshift",
+  {
     metadata: {
       label: "Unshift",
       category: "list",
@@ -143,9 +172,13 @@ export const ListLibrary: Record<string, OpcodeDefinition> = {
       list.unshift(val);
       return list.length;
     },
-  },
+  }
+);
+export { listUnshift as "list.unshift" };
 
-  "list.shift": {
+const listShift = defineOpcode<[ScriptValue<any[]>], any>(
+  "list.shift",
+  {
     metadata: {
       label: "Shift",
       category: "list",
@@ -157,9 +190,13 @@ export const ListLibrary: Record<string, OpcodeDefinition> = {
       if (!Array.isArray(list)) return null;
       return list.shift();
     },
-  },
+  }
+);
+export { listShift as "list.shift" };
 
-  "list.slice": {
+const listSlice = defineOpcode<[ScriptValue<any[]>, ScriptValue<number>, ScriptValue<number>?], any[]>(
+  "list.slice",
+  {
     metadata: {
       label: "Slice List",
       category: "list",
@@ -181,9 +218,13 @@ export const ListLibrary: Record<string, OpcodeDefinition> = {
       if (!Array.isArray(list) || typeof start !== "number") return [];
       return list.slice(start, end);
     },
-  },
+  }
+);
+export { listSlice as "list.slice" };
 
-  "list.splice": {
+const listSplice = defineOpcode<[ScriptValue<any[]>, ScriptValue<number>, ScriptValue<number>, ...ScriptValue<any>[]], any[]>(
+  "list.splice",
+  {
     metadata: {
       label: "Splice List",
       category: "list",
@@ -207,9 +248,13 @@ export const ListLibrary: Record<string, OpcodeDefinition> = {
       if (!Array.isArray(list)) return [];
       return list.splice(start, deleteCount, ...items);
     },
-  },
+  }
+);
+export { listSplice as "list.splice" };
 
-  "list.concat": {
+const listConcat = defineOpcode<[ScriptValue<any[]>, ScriptValue<any[]>], any[]>(
+  "list.concat",
+  {
     metadata: {
       label: "Concat Lists",
       category: "list",
@@ -229,9 +274,13 @@ export const ListLibrary: Record<string, OpcodeDefinition> = {
       if (!Array.isArray(list1) || !Array.isArray(list2)) return [];
       return list1.concat(list2);
     },
-  },
+  }
+);
+export { listConcat as "list.concat" };
 
-  "list.includes": {
+const listIncludes = defineOpcode<[ScriptValue<any[]>, ScriptValue<any>], boolean>(
+  "list.includes",
+  {
     metadata: {
       label: "List Includes",
       category: "list",
@@ -247,9 +296,13 @@ export const ListLibrary: Record<string, OpcodeDefinition> = {
       if (!Array.isArray(list)) return false;
       return list.includes(val);
     },
-  },
+  }
+);
+export { listIncludes as "list.includes" };
 
-  "list.reverse": {
+const listReverse = defineOpcode<[ScriptValue<any[]>], any[]>(
+  "list.reverse",
+  {
     metadata: {
       label: "Reverse List",
       category: "list",
@@ -261,9 +314,13 @@ export const ListLibrary: Record<string, OpcodeDefinition> = {
       if (!Array.isArray(list)) return list;
       return list.reverse();
     },
-  },
+  }
+);
+export { listReverse as "list.reverse" };
 
-  "list.sort": {
+const listSort = defineOpcode<[ScriptValue<any[]>], any[]>(
+  "list.sort",
+  {
     metadata: {
       label: "Sort List",
       category: "list",
@@ -275,9 +332,13 @@ export const ListLibrary: Record<string, OpcodeDefinition> = {
       if (!Array.isArray(list)) return list;
       return list.sort();
     },
-  },
+  }
+);
+export { listSort as "list.sort" };
 
-  "list.join": {
+const listJoin = defineOpcode<[ScriptValue<any[]>, ScriptValue<string>], string>(
+  "list.join",
+  {
     metadata: {
       label: "Join List",
       category: "list",
@@ -297,9 +358,13 @@ export const ListLibrary: Record<string, OpcodeDefinition> = {
       if (!Array.isArray(list) || typeof sep !== "string") return "";
       return list.join(sep);
     },
-  },
+  }
+);
+export { listJoin as "list.join" };
 
-  "list.find": {
+const listFind = defineOpcode<[ScriptValue<any[]>, ScriptValue<any>], any>(
+  "list.find",
+  {
     metadata: {
       label: "Find Item",
       category: "list",
@@ -326,9 +391,13 @@ export const ListLibrary: Record<string, OpcodeDefinition> = {
       }
       return null;
     },
-  },
+  }
+);
+export { listFind as "list.find" };
 
-  "list.map": {
+const listMap = defineOpcode<[ScriptValue<any[]>, ScriptValue<any>], any[]>(
+  "list.map",
+  {
     metadata: {
       label: "Map List",
       category: "list",
@@ -354,9 +423,13 @@ export const ListLibrary: Record<string, OpcodeDefinition> = {
       }
       return result;
     },
-  },
+  }
+);
+export { listMap as "list.map" };
 
-  "list.filter": {
+const listFilter = defineOpcode<[ScriptValue<any[]>, ScriptValue<any>], any[]>(
+  "list.filter",
+  {
     metadata: {
       label: "Filter List",
       category: "list",
@@ -384,9 +457,13 @@ export const ListLibrary: Record<string, OpcodeDefinition> = {
       }
       return result;
     },
-  },
+  }
+);
+export { listFilter as "list.filter" };
 
-  "list.reduce": {
+const listReduce = defineOpcode<[ScriptValue<any[]>, ScriptValue<any>, ScriptValue<any>], any>(
+  "list.reduce",
+  {
     metadata: {
       label: "Reduce List",
       category: "list",
@@ -413,9 +490,13 @@ export const ListLibrary: Record<string, OpcodeDefinition> = {
       }
       return acc;
     },
-  },
+  }
+);
+export { listReduce as "list.reduce" };
 
-  "list.flatMap": {
+const listFlatMap = defineOpcode<[ScriptValue<any[]>, ScriptValue<any>], any[]>(
+  "list.flatMap",
+  {
     metadata: {
       label: "FlatMap List",
       category: "list",
@@ -441,5 +522,6 @@ export const ListLibrary: Record<string, OpcodeDefinition> = {
       }
       return result;
     },
-  },
-};
+  }
+);
+export { listFlatMap as "list.flatMap" };

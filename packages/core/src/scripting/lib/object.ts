@@ -2,33 +2,28 @@ import {
   evaluate,
   executeLambda,
   ScriptError,
-  OpcodeDefinition,
 } from "../interpreter";
+import { defineOpcode, ScriptValue } from "../def";
 
 const DISALLOWED_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 
-export const ObjectLibrary: Record<string, OpcodeDefinition> = {
-  "obj.new": {
+const objNew = defineOpcode<[ScriptValue<string>, ScriptValue<any>, ...ScriptValue<any>[]], any>(
+  "obj.new",
+  {
     metadata: {
       label: "New Object",
       category: "data",
       description: "Create a new object",
-      // TODO: List of pairs of slots
       slots: [],
     },
     handler: async (args, ctx) => {
       // args: [key1, val1, key2, val2, ...]
       const obj: Record<string, any> = {};
-      for (let i = 0; i < args.length; i += 1) {
-        const kv = args[i];
-        if (!Array.isArray(kv) || kv.length !== 2) {
-          throw new ScriptError(
-            `obj.new: expected key-value pair at index ${i}, got ${JSON.stringify(
-              kv,
-            )}`,
-          );
-        }
-        const key = await evaluate(kv[0], ctx);
+      for (let i = 0; i < args.length; i += 2) {
+        const keyExpr = args[i];
+        const valExpr = args[i+1];
+        
+        const key = await evaluate(keyExpr, ctx);
         if (typeof key !== "string") {
           throw new ScriptError(
             `obj.new: expected string key at index ${i}, got ${JSON.stringify(
@@ -36,13 +31,18 @@ export const ObjectLibrary: Record<string, OpcodeDefinition> = {
             )}`,
           );
         }
-        const val = await evaluate(kv[1], ctx);
+        const val = await evaluate(valExpr, ctx);
         obj[key] = val;
       }
       return obj;
     },
-  },
-  "obj.keys": {
+  }
+);
+export { objNew as "obj.new" };
+
+const objKeys = defineOpcode<[ScriptValue<any>], string[]>(
+  "obj.keys",
+  {
     metadata: {
       label: "Keys",
       category: "object",
@@ -62,8 +62,13 @@ export const ObjectLibrary: Record<string, OpcodeDefinition> = {
       }
       return Object.getOwnPropertyNames(obj);
     },
-  },
-  "obj.values": {
+  }
+);
+export { objKeys as "obj.keys" };
+
+const objValues = defineOpcode<[ScriptValue<any>], any[]>(
+  "obj.values",
+  {
     metadata: {
       label: "Values",
       category: "object",
@@ -83,8 +88,13 @@ export const ObjectLibrary: Record<string, OpcodeDefinition> = {
       }
       return Object.getOwnPropertyNames(obj).map((key) => obj[key]);
     },
-  },
-  "obj.entries": {
+  }
+);
+export { objValues as "obj.values" };
+
+const objEntries = defineOpcode<[ScriptValue<any>], [string, any][]>(
+  "obj.entries",
+  {
     metadata: {
       label: "Entries",
       category: "object",
@@ -104,8 +114,13 @@ export const ObjectLibrary: Record<string, OpcodeDefinition> = {
       }
       return Object.getOwnPropertyNames(obj).map((key) => [key, obj[key]]);
     },
-  },
-  "obj.get": {
+  }
+);
+export { objEntries as "obj.entries" };
+
+const objGet = defineOpcode<[ScriptValue<any>, ScriptValue<string>], any>(
+  "obj.get",
+  {
     metadata: {
       label: "Get",
       category: "object",
@@ -137,8 +152,13 @@ export const ObjectLibrary: Record<string, OpcodeDefinition> = {
       }
       return obj[key];
     },
-  },
-  "obj.set": {
+  }
+);
+export { objGet as "obj.get" };
+
+const objSet = defineOpcode<[ScriptValue<any>, ScriptValue<string>, ScriptValue<any>], any>(
+  "obj.set",
+  {
     metadata: {
       label: "Set",
       category: "object",
@@ -173,8 +193,13 @@ export const ObjectLibrary: Record<string, OpcodeDefinition> = {
       obj[key] = val;
       return val;
     },
-  },
-  "obj.has": {
+  }
+);
+export { objSet as "obj.set" };
+
+const objHas = defineOpcode<[ScriptValue<any>, ScriptValue<string>], boolean>(
+  "obj.has",
+  {
     metadata: {
       label: "Has Key",
       category: "object",
@@ -203,8 +228,13 @@ export const ObjectLibrary: Record<string, OpcodeDefinition> = {
       }
       return Object.hasOwnProperty.call(obj, key);
     },
-  },
-  "obj.del": {
+  }
+);
+export { objHas as "obj.has" };
+
+const objDel = defineOpcode<[ScriptValue<any>, ScriptValue<string>], boolean>(
+  "obj.del",
+  {
     metadata: {
       label: "Delete Key",
       category: "object",
@@ -237,8 +267,13 @@ export const ObjectLibrary: Record<string, OpcodeDefinition> = {
       }
       return false;
     },
-  },
-  "obj.merge": {
+  }
+);
+export { objDel as "obj.del" };
+
+const objMerge = defineOpcode<[ScriptValue<any>, ScriptValue<any>, ...ScriptValue<any>[]], any>(
+  "obj.merge",
+  {
     metadata: {
       label: "Merge",
       category: "object",
@@ -261,8 +296,13 @@ export const ObjectLibrary: Record<string, OpcodeDefinition> = {
       }
       return Object.assign({}, ...objs);
     },
-  },
-  "obj.map": {
+  }
+);
+export { objMerge as "obj.merge" };
+
+const objMap = defineOpcode<[ScriptValue<any>, ScriptValue<any>], any>(
+  "obj.map",
+  {
     metadata: {
       label: "Map Object",
       category: "object",
@@ -297,8 +337,13 @@ export const ObjectLibrary: Record<string, OpcodeDefinition> = {
       }
       return result;
     },
-  },
-  "obj.filter": {
+  }
+);
+export { objMap as "obj.map" };
+
+const objFilter = defineOpcode<[ScriptValue<any>, ScriptValue<any>], any>(
+  "obj.filter",
+  {
     metadata: {
       label: "Filter Object",
       category: "object",
@@ -328,8 +373,13 @@ export const ObjectLibrary: Record<string, OpcodeDefinition> = {
       }
       return result;
     },
-  },
-  "obj.reduce": {
+  }
+);
+export { objFilter as "obj.filter" };
+
+const objReduce = defineOpcode<[ScriptValue<any>, ScriptValue<any>, ScriptValue<any>], any>(
+  "obj.reduce",
+  {
     metadata: {
       label: "Reduce Object",
       category: "object",
@@ -358,8 +408,13 @@ export const ObjectLibrary: Record<string, OpcodeDefinition> = {
       }
       return acc;
     },
-  },
-  "obj.flatMap": {
+  }
+);
+export { objReduce as "obj.reduce" };
+
+const objFlatMap = defineOpcode<[ScriptValue<any>, ScriptValue<any>], any>(
+  "obj.flatMap",
+  {
     metadata: {
       label: "FlatMap Object",
       category: "object",
@@ -393,5 +448,6 @@ export const ObjectLibrary: Record<string, OpcodeDefinition> = {
       }
       return result;
     },
-  },
-};
+  }
+);
+export { objFlatMap as "obj.flatMap" };

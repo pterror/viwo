@@ -3,13 +3,14 @@ import {
   evaluateTarget,
   resolveProps,
   ScriptError,
-  OpcodeDefinition,
 } from "../interpreter";
 import { updateEntity } from "../../repo";
+import { defineOpcode, ScriptValue } from "../def";
 
-export const CoreLibrary: Record<string, OpcodeDefinition> = {
-  // Control Flow
-  seq: {
+// Control Flow
+const seq = defineOpcode<[ScriptValue<any>[]], any>(
+  "seq",
+  {
     metadata: {
       label: "Sequence",
       category: "logic",
@@ -24,8 +25,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       }
       return lastResult;
     },
-  },
-  if: {
+  }
+);
+export { seq };
+
+const ifOp = defineOpcode<[ScriptValue<boolean>, ScriptValue<any>, ScriptValue<any>?], any>(
+  "if",
+  {
     metadata: {
       label: "If",
       category: "logic",
@@ -49,8 +55,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       }
       return null;
     },
-  },
-  while: {
+  }
+);
+export { ifOp as "if" };
+
+const whileOp = defineOpcode<[ScriptValue<boolean>, ScriptValue<any>], any>(
+  "while",
+  {
     metadata: {
       label: "While",
       category: "logic",
@@ -72,8 +83,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       }
       return result;
     },
-  },
-  for: {
+  }
+);
+export { whileOp as "while" };
+
+const forOp = defineOpcode<[string, ScriptValue<any[]>, ScriptValue<any>], any>(
+  "for",
+  {
     metadata: {
       label: "For Loop",
       category: "logic",
@@ -102,9 +118,14 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       }
       return lastResult;
     },
-  },
-  // Data Structures
-  "json.stringify": {
+  }
+);
+export { forOp as "for" };
+
+// Data Structures
+const jsonStringify = defineOpcode<[ScriptValue<unknown>], string>(
+  "json.stringify",
+  {
     metadata: {
       label: "JSON Stringify",
       category: "data",
@@ -116,8 +137,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       const val = await evaluate(valExpr, ctx);
       return JSON.stringify(val);
     },
-  },
-  "json.parse": {
+  }
+);
+export { jsonStringify as "json.stringify" };
+
+const jsonParse = defineOpcode<[ScriptValue<string>], unknown>(
+  "json.parse",
+  {
     metadata: {
       label: "JSON Parse",
       category: "data",
@@ -134,10 +160,14 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
         return null;
       }
     },
-  },
+  }
+);
+export { jsonParse as "json.parse" };
 
-  // Entity Introspection
-  prop: {
+// Entity Introspection
+const prop = defineOpcode<[ScriptValue<unknown>, ScriptValue<string>], unknown>(
+  "prop",
+  {
     metadata: {
       label: "Get Property",
       category: "data",
@@ -160,16 +190,15 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       if (typeof key !== "string") {
         throw new ScriptError("prop: key must be a string");
       }
-      // TODO: Restore permission check
-      // if (!checkPermission(ctx.caller, target, "view")) {
-      //   throw new ScriptError(
-      //     `prop: permission denied: cannot view ${target.id}`,
-      //   );
-      // }
       return target["props"][key];
     },
-  },
-  set_prop: {
+  }
+);
+export { prop };
+
+const setProp = defineOpcode<[ScriptValue<unknown>, ScriptValue<string>, ScriptValue<unknown>], void>(
+  "set_prop",
+  {
     metadata: {
       label: "Set Property",
       category: "action",
@@ -194,16 +223,15 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
         throw new ScriptError("set_prop: property name must be a string");
       }
       const val = await evaluate(valExpr, ctx);
-      // TODO: Restore permission check
-      // if (!checkPermission(ctx.caller, target, "edit")) {
-      //   throw new ScriptError(
-      //     `set_prop: permission denied: cannot set property '${prop}'`,
-      //   );
-      // }
       updateEntity(target.id, { props: { ...target["props"], [prop]: val } });
     },
-  },
-  has_prop: {
+  }
+);
+export { setProp as "set_prop" };
+
+const hasProp = defineOpcode<[ScriptValue<unknown>, ScriptValue<string>], boolean>(
+  "has_prop",
+  {
     metadata: {
       label: "Has Property",
       category: "data",
@@ -226,16 +254,15 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       if (typeof prop !== "string") {
         throw new ScriptError("has_prop: property name must be a string");
       }
-      // TODO: Restore permission check
-      // if (!checkPermission(ctx.caller, target, "edit")) {
-      //   throw new ScriptError(
-      //     `has_prop: permission denied: cannot check property '${prop}'`,
-      //   );
-      // }
       return Object.hasOwnProperty.call(target, prop);
     },
-  },
-  delete_prop: {
+  }
+);
+export { hasProp as "has_prop" };
+
+const deleteProp = defineOpcode<[ScriptValue<any>, ScriptValue<string>], void>(
+  "delete_prop",
+  {
     metadata: {
       label: "Delete Property",
       category: "action",
@@ -258,19 +285,17 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       if (typeof prop !== "string") {
         throw new ScriptError("delete_prop: property name must be a string");
       }
-      // TODO: Restore permission check
-      // if (!checkPermission(ctx.caller, target, "edit")) {
-      //   throw new ScriptError(
-      //     `delete_prop: permission denied: cannot delete property '${prop}'`,
-      //   );
-      // }
       const { [prop]: _, ...newProps } = target["props"];
       updateEntity(target.id, { props: newProps });
     },
-  },
+  }
+);
+export { deleteProp as "delete_prop" };
 
-  // Variables
-  let: {
+// Variables
+const letOp = defineOpcode<[string, ScriptValue<any>], any>(
+  "let",
+  {
     metadata: {
       label: "Let",
       category: "logic",
@@ -290,8 +315,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       ctx.vars[name] = value;
       return value;
     },
-  },
-  var: {
+  }
+);
+export { letOp as "let" };
+
+const varOp = defineOpcode<[string], any>(
+  "var",
+  {
     metadata: {
       label: "Get Var",
       category: "data",
@@ -306,8 +336,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       const [name] = args;
       return ctx.vars?.[name] ?? null;
     },
-  },
-  set: {
+  }
+);
+export { varOp as "var" };
+
+const setOp = defineOpcode<[string, ScriptValue<any>], any>(
+  "set",
+  {
     metadata: {
       label: "Set",
       category: "action",
@@ -328,10 +363,14 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       }
       return value;
     },
-  },
+  }
+);
+export { setOp as "set" };
 
-  // Comparison
-  "==": {
+// Comparison
+const eq = defineOpcode<[ScriptValue<any>, ScriptValue<any>, ...ScriptValue<any>[]], boolean>(
+  "==",
+  {
     metadata: {
       label: "==",
       category: "logic",
@@ -356,8 +395,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       }
       return true;
     },
-  },
-  "!=": {
+  }
+);
+export { eq as "==" };
+
+const neq = defineOpcode<[ScriptValue<any>, ScriptValue<any>, ...ScriptValue<any>[]], boolean>(
+  "!=",
+  {
     metadata: {
       label: "!=",
       category: "logic",
@@ -382,8 +426,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       }
       return true;
     },
-  },
-  "<": {
+  }
+);
+export { neq as "!=" };
+
+const lt = defineOpcode<[ScriptValue<number>, ScriptValue<number>, ...ScriptValue<number>[]], boolean>(
+  "<",
+  {
     metadata: {
       label: "<",
       category: "logic",
@@ -408,8 +457,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       }
       return true;
     },
-  },
-  ">": {
+  }
+);
+export { lt as "<" };
+
+const gt = defineOpcode<[ScriptValue<number>, ScriptValue<number>, ...ScriptValue<number>[]], boolean>(
+  ">",
+  {
     metadata: {
       label: ">",
       category: "logic",
@@ -434,8 +488,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       }
       return true;
     },
-  },
-  "<=": {
+  }
+);
+export { gt as ">" };
+
+const lte = defineOpcode<[ScriptValue<number>, ScriptValue<number>, ...ScriptValue<number>[]], boolean>(
+  "<=",
+  {
     metadata: {
       label: "<=",
       category: "logic",
@@ -460,8 +519,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       }
       return true;
     },
-  },
-  ">=": {
+  }
+);
+export { lte as "<=" };
+
+const gte = defineOpcode<[ScriptValue<number>, ScriptValue<number>, ...ScriptValue<number>[]], boolean>(
+  ">=",
+  {
     metadata: {
       label: ">=",
       category: "logic",
@@ -486,11 +550,14 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       }
       return true;
     },
-  },
+  }
+);
+export { gte as ">=" };
 
-  // Arithmetic
-  // Arithmetic
-  "+": {
+// Arithmetic
+const add = defineOpcode<[ScriptValue<number>, ScriptValue<number>, ...ScriptValue<number>[]], number>(
+  "+",
+  {
     metadata: {
       label: "+",
       category: "math",
@@ -508,22 +575,27 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       let sum = await evaluate(args[0], ctx);
       if (typeof sum !== "number") {
         throw new ScriptError(
-          `+: expected a number at index 0, got ${JSON.stringify(sum)}`,
+          `+: expected a number at index 0, got ${JSON.stringify(sum)}`
         );
       }
       for (let i = 1; i < args.length; i++) {
         const next = await evaluate(args[i], ctx);
         if (typeof next !== "number") {
           throw new ScriptError(
-            `+: expected a number at index ${i}, got ${JSON.stringify(next)}`,
+            `+: expected a number at index ${i}, got ${JSON.stringify(next)}`
           );
         }
         sum += next;
       }
       return sum;
     },
-  },
-  "-": {
+  }
+);
+export { add as "+" };
+
+const sub = defineOpcode<[ScriptValue<number>, ScriptValue<number>, ...ScriptValue<number>[]], number>(
+  "-",
+  {
     metadata: {
       label: "-",
       category: "math",
@@ -541,22 +613,27 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       let diff = await evaluate(args[0], ctx);
       if (typeof diff !== "number") {
         throw new ScriptError(
-          `-: expected a number at index 0, got ${JSON.stringify(diff)}`,
+          `-: expected a number at index 0, got ${JSON.stringify(diff)}`
         );
       }
       for (let i = 1; i < args.length; i++) {
         const next = await evaluate(args[i], ctx);
         if (typeof next !== "number") {
           throw new ScriptError(
-            `-: expected a number at index ${i}, got ${JSON.stringify(next)}`,
+            `-: expected a number at index ${i}, got ${JSON.stringify(next)}`
           );
         }
         diff -= next;
       }
       return diff;
     },
-  },
-  "*": {
+  }
+);
+export { sub as "-" };
+
+const mul = defineOpcode<[ScriptValue<number>, ScriptValue<number>, ...ScriptValue<number>[]], number>(
+  "*",
+  {
     metadata: {
       label: "*",
       category: "math",
@@ -574,22 +651,27 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       let prod = await evaluate(args[0], ctx);
       if (typeof prod !== "number") {
         throw new ScriptError(
-          `*: expected a number at index 0, got ${JSON.stringify(prod)}`,
+          `*: expected a number at index 0, got ${JSON.stringify(prod)}`
         );
       }
       for (let i = 1; i < args.length; i++) {
         const next = await evaluate(args[i], ctx);
         if (typeof next !== "number") {
           throw new ScriptError(
-            `*: expected a number at index ${i}, got ${JSON.stringify(next)}`,
+            `*: expected a number at index ${i}, got ${JSON.stringify(next)}`
           );
         }
         prod *= next;
       }
       return prod;
     },
-  },
-  "/": {
+  }
+);
+export { mul as "*" };
+
+const div = defineOpcode<[ScriptValue<number>, ScriptValue<number>, ...ScriptValue<number>[]], number>(
+  "/",
+  {
     metadata: {
       label: "/",
       category: "math",
@@ -607,22 +689,27 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       let quot = await evaluate(args[0], ctx);
       if (typeof quot !== "number") {
         throw new ScriptError(
-          `/: expected a number at index 0, got ${JSON.stringify(quot)}`,
+          `/: expected a number at index 0, got ${JSON.stringify(quot)}`
         );
       }
       for (let i = 1; i < args.length; i++) {
         const next = await evaluate(args[i], ctx);
         if (typeof next !== "number") {
           throw new ScriptError(
-            `/: expected a number at index ${i}, got ${JSON.stringify(next)}`,
+            `/: expected a number at index ${i}, got ${JSON.stringify(next)}`
           );
         }
         quot /= next;
       }
       return quot;
     },
-  },
-  "%": {
+  }
+);
+export { div as "/" };
+
+const mod = defineOpcode<[ScriptValue<number>, ScriptValue<number>], number>(
+  "%",
+  {
     metadata: {
       label: "%",
       category: "math",
@@ -640,19 +727,24 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       const aEval = await evaluate(args[0], ctx);
       if (typeof aEval !== "number") {
         throw new ScriptError(
-          `%: expected a number at index 0, got ${JSON.stringify(aEval)}`,
+          `%: expected a number at index 0, got ${JSON.stringify(aEval)}`
         );
       }
       const bEval = await evaluate(args[1], ctx);
       if (typeof bEval !== "number") {
         throw new ScriptError(
-          `%: expected a number at index 1, got ${JSON.stringify(bEval)}`,
+          `%: expected a number at index 1, got ${JSON.stringify(bEval)}`
         );
       }
       return aEval % bEval;
     },
-  },
-  "^": {
+  }
+);
+export { mod as "%" };
+
+const pow = defineOpcode<[ScriptValue<number>, ScriptValue<number>, ...ScriptValue<number>[]], number>(
+  "^",
+  {
     metadata: {
       label: "^",
       category: "math",
@@ -673,24 +765,28 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
         throw new ScriptError(
           `^: expected a number at index ${
             args.length - 1
-          }, got ${JSON.stringify(pow)}`,
+          }, got ${JSON.stringify(pow)}`
         );
       }
       for (let i = args.length - 2; i >= 0; i--) {
         const next = await evaluate(args[i], ctx);
         if (typeof next !== "number") {
           throw new ScriptError(
-            `^: expected a number at index ${i}, got ${JSON.stringify(next)}`,
+            `^: expected a number at index ${i}, got ${JSON.stringify(next)}`
           );
         }
         pow = next ** pow;
       }
       return pow;
     },
-  },
+  }
+);
+export { pow as "^" };
 
-  // Logic
-  and: {
+// Logic
+const and = defineOpcode<[ScriptValue<any>, ScriptValue<any>, ...ScriptValue<any>[]], boolean>(
+  "and",
+  {
     metadata: {
       label: "And",
       category: "logic",
@@ -710,8 +806,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       }
       return true;
     },
-  },
-  or: {
+  }
+);
+export { and };
+
+const or = defineOpcode<[ScriptValue<any>, ScriptValue<any>, ...ScriptValue<any>[]], boolean>(
+  "or",
+  {
     metadata: {
       label: "Or",
       category: "logic",
@@ -731,8 +832,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       }
       return false;
     },
-  },
-  not: {
+  }
+);
+export { or };
+
+const not = defineOpcode<[ScriptValue<any>], boolean>(
+  "not",
+  {
     metadata: {
       label: "Not",
       category: "logic",
@@ -745,10 +851,14 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       }
       return !(await evaluate(args[0], ctx));
     },
-  },
+  }
+);
+export { not };
 
-  // System
-  log: {
+// System
+const log = defineOpcode<[ScriptValue<any>, ...ScriptValue<any>[]], void>(
+  "log",
+  {
     metadata: {
       label: "Log",
       category: "action",
@@ -766,8 +876,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       console.log(...messages);
       return null;
     },
-  },
-  arg: {
+  }
+);
+export { log };
+
+const arg = defineOpcode<[ScriptValue<number>], any>(
+  "arg",
+  {
     metadata: {
       label: "Get Arg",
       category: "data",
@@ -779,8 +894,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       const [index] = args;
       return ctx.args?.[index] ?? null;
     },
-  },
-  args: {
+  }
+);
+export { arg };
+
+const args = defineOpcode<[], any[]>(
+  "args",
+  {
     metadata: {
       label: "Get Args",
       category: "data",
@@ -790,8 +910,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
     handler: async (_args, ctx) => {
       return ctx.args ?? [];
     },
-  },
-  random: {
+  }
+);
+export { args };
+
+const random = defineOpcode<[ScriptValue<number>?, ScriptValue<number>?], number>(
+  "random",
+  {
     metadata: {
       label: "Random",
       category: "math",
@@ -822,8 +947,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       const roll = Math.random() * (max - min + 1) + min;
       return shouldFloor ? Math.floor(roll) : roll;
     },
-  },
-  warn: {
+  }
+);
+export { random };
+
+const warn = defineOpcode<[ScriptValue<any>], void>(
+  "warn",
+  {
     metadata: {
       label: "Warn",
       category: "action",
@@ -835,8 +965,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       const text = await evaluate(msg, ctx);
       ctx.warnings.push(String(text));
     },
-  },
-  throw: {
+  }
+);
+export { warn };
+
+const throwOp = defineOpcode<[ScriptValue<any>], never>(
+  "throw",
+  {
     metadata: {
       label: "Throw",
       category: "action",
@@ -847,8 +982,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       const [msg] = args;
       throw new ScriptError(await evaluate(msg, ctx));
     },
-  },
-  try: {
+  }
+);
+export { throwOp as "throw" };
+
+const tryOp = defineOpcode<[ScriptValue<any>, string, ScriptValue<any>], any>(
+  "try",
+  {
     metadata: {
       label: "Try/Catch",
       category: "logic",
@@ -874,11 +1014,15 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
         }
       }
     },
-  },
+  }
+);
+export { tryOp as "try" };
 
-  // Entity Interaction
+// Entity Interaction
 
-  create: {
+const create = defineOpcode<[ScriptValue<any>, ScriptValue<string>?, ScriptValue<any>?, ScriptValue<number>?], number>(
+  "create",
+  {
     metadata: {
       label: "Create",
       category: "action",
@@ -908,9 +1052,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
         return ctx.sys.create({ kind, name, props, location_id });
       }
     },
-  },
+  }
+);
+export { create };
 
-  destroy: {
+const destroy = defineOpcode<[ScriptValue<any>], void>(
+  "destroy",
+  {
     metadata: {
       label: "Destroy",
       category: "action",
@@ -923,17 +1071,15 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       if (!target) {
         throw new ScriptError("destroy: target not found");
       }
-      // TODO: Restore permission check
-      // if (!checkPermission(ctx.caller, target, "edit")) {
-      //   throw new ScriptError(
-      //     `destroy: permission denied: cannot destroy ${target.id}`,
-      //   );
-      // }
       ctx.sys?.destroy?.(target.id);
     },
-  },
+  }
+);
+export { destroy };
 
-  lambda: {
+const lambda = defineOpcode<[string[], ScriptValue<any>], any>(
+  "lambda",
+  {
     metadata: {
       label: "Lambda",
       category: "func",
@@ -952,8 +1098,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
         closure: { ...ctx.vars },
       };
     },
-  },
-  apply: {
+  }
+);
+export { lambda };
+
+const apply = defineOpcode<[ScriptValue<any>, ...ScriptValue<any>[]], any>(
+  "apply",
+  {
     metadata: {
       label: "Apply",
       category: "func",
@@ -991,8 +1142,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
         vars: newVars,
       });
     },
-  },
-  call: {
+  }
+);
+export { apply };
+
+const call = defineOpcode<[ScriptValue<any>, ScriptValue<string>, ...ScriptValue<any>[]], any>(
+  "call",
+  {
     metadata: {
       label: "Call",
       category: "action",
@@ -1032,8 +1188,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       }
       return null;
     },
-  },
-  get: {
+  }
+);
+export { call };
+
+const get = defineOpcode<[ScriptValue<any>, ScriptValue<string>], any>(
+  "get",
+  {
     metadata: {
       label: "Get",
       category: "world",
@@ -1065,8 +1226,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       }
       return null;
     },
-  },
-  schedule: {
+  }
+);
+export { get };
+
+const schedule = defineOpcode<[ScriptValue<string>, ScriptValue<any[]>, ScriptValue<number>], void>(
+  "schedule",
+  {
     metadata: {
       label: "Schedule",
       category: "action",
@@ -1089,14 +1255,19 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
         typeof delay !== "number"
       ) {
         throw new ScriptError(
-          "schedule: verb must be a string, args must be an array, delay must be a number",
+          "schedule: verb must be a string, args must be an array, delay must be a number"
         );
       }
 
       ctx.sys?.schedule?.(ctx.this.id, verb, callArgs, delay);
     },
-  },
-  "sys.send": {
+  }
+);
+export { schedule };
+
+const sysSend = defineOpcode<[ScriptValue<any>], void>(
+  "sys.send",
+  {
     metadata: {
       label: "System Send",
       category: "system",
@@ -1108,10 +1279,14 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       const msg = await evaluate(msgExpr, ctx);
       ctx.sys?.send?.(msg);
     },
-  },
+  }
+);
+export { sysSend as "sys.send" };
 
-  // Entity Introspection
-  verbs: {
+// Entity Introspection
+const verbs = defineOpcode<[ScriptValue<any>], any[]>(
+  "verbs",
+  {
     metadata: {
       label: "Verbs",
       category: "world",
@@ -1130,8 +1305,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       if (!entity) return [];
       return ctx.sys.getVerbs(entity.id);
     },
-  },
-  entity: {
+  }
+);
+export { verbs };
+
+const entity = defineOpcode<[ScriptValue<number>], any>(
+  "entity",
+  {
     metadata: {
       label: "Entity",
       category: "world",
@@ -1149,7 +1329,7 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       const id = await evaluate(idExpr, ctx);
       if (typeof id !== "number") {
         throw new ScriptError(
-          `entity: expected number, got ${JSON.stringify(id)}`,
+          `entity: expected number, got ${JSON.stringify(id)}`
         );
       }
       const entity = await ctx.sys.getEntity(id);
@@ -1158,9 +1338,13 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       }
       return entity["props"];
     },
-  },
-  // Properties
-  resolve_props: {
+  }
+);
+export { entity };
+
+const resolvePropsOp = defineOpcode<[ScriptValue<any>], any>(
+  "resolve_props",
+  {
     metadata: {
       label: "Resolve Props",
       category: "data",
@@ -1175,10 +1359,11 @@ export const CoreLibrary: Record<string, OpcodeDefinition> = {
       const entity = await evaluate(entityId, ctx);
       if (typeof entity !== "object") {
         throw new ScriptError(
-          `resolve_props: expected object, got ${JSON.stringify(entity)}`,
+          `resolve_props: expected object, got ${JSON.stringify(entity)}`
         );
       }
       return resolveProps(entity, ctx);
     },
-  },
-};
+  }
+);
+export { resolvePropsOp as "resolve_props" };

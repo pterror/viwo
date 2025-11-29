@@ -1,7 +1,9 @@
-import { evaluate, ScriptError, OpcodeDefinition } from "../interpreter";
+import { evaluate, ScriptError } from "../interpreter";
+import { defineOpcode, ScriptValue } from "../def";
 
-export const StringLibrary: Record<string, OpcodeDefinition> = {
-  "str.len": {
+const strLen = defineOpcode<[ScriptValue<string>], number>(
+  "str.len",
+  {
     metadata: {
       label: "Length",
       category: "string",
@@ -19,8 +21,13 @@ export const StringLibrary: Record<string, OpcodeDefinition> = {
       }
       return str.length;
     },
-  },
-  "str.concat": {
+  }
+);
+export { strLen as "str.len" };
+
+const strConcat = defineOpcode<[...ScriptValue<any>[]], string>(
+  "str.concat",
+  {
     metadata: {
       label: "Concat",
       category: "string",
@@ -38,8 +45,13 @@ export const StringLibrary: Record<string, OpcodeDefinition> = {
       }
       return strings.join("");
     },
-  },
-  "str.split": {
+  }
+);
+export { strConcat as "str.concat" };
+
+const strSplit = defineOpcode<[ScriptValue<string>, ScriptValue<string>], string[]>(
+  "str.split",
+  {
     metadata: {
       label: "Split",
       category: "string",
@@ -64,8 +76,13 @@ export const StringLibrary: Record<string, OpcodeDefinition> = {
       }
       return str.split(sep);
     },
-  },
-  "str.slice": {
+  }
+);
+export { strSplit as "str.split" };
+
+const strSlice = defineOpcode<[ScriptValue<string>, ScriptValue<number>, ScriptValue<number>?], string>(
+  "str.slice",
+  {
     metadata: {
       label: "Slice",
       category: "string",
@@ -95,8 +112,13 @@ export const StringLibrary: Record<string, OpcodeDefinition> = {
       }
       return str.slice(start, end);
     },
-  },
-  "str.upper": {
+  }
+);
+export { strSlice as "str.slice" };
+
+const strUpper = defineOpcode<[ScriptValue<string>], string>(
+  "str.upper",
+  {
     metadata: {
       label: "To Upper",
       category: "string",
@@ -114,8 +136,13 @@ export const StringLibrary: Record<string, OpcodeDefinition> = {
       }
       return str.toUpperCase();
     },
-  },
-  "str.lower": {
+  }
+);
+export { strUpper as "str.upper" };
+
+const strLower = defineOpcode<[ScriptValue<string>], string>(
+  "str.lower",
+  {
     metadata: {
       label: "To Lower",
       category: "string",
@@ -133,8 +160,13 @@ export const StringLibrary: Record<string, OpcodeDefinition> = {
       }
       return str.toLowerCase();
     },
-  },
-  "str.trim": {
+  }
+);
+export { strLower as "str.lower" };
+
+const strTrim = defineOpcode<[ScriptValue<string>], string>(
+  "str.trim",
+  {
     metadata: {
       label: "Trim",
       category: "string",
@@ -152,8 +184,13 @@ export const StringLibrary: Record<string, OpcodeDefinition> = {
       }
       return str.trim();
     },
-  },
-  "str.replace": {
+  }
+);
+export { strTrim as "str.trim" };
+
+const strReplace = defineOpcode<[ScriptValue<string>, ScriptValue<string>, ScriptValue<string>], string>(
+  "str.replace",
+  {
     metadata: {
       label: "Replace",
       category: "string",
@@ -183,8 +220,13 @@ export const StringLibrary: Record<string, OpcodeDefinition> = {
       }
       return str.replace(search, replace);
     },
-  },
-  "str.includes": {
+  }
+);
+export { strReplace as "str.replace" };
+
+const strIncludes = defineOpcode<[ScriptValue<string>, ScriptValue<string>], boolean>(
+  "str.includes",
+  {
     metadata: {
       label: "Includes",
       category: "string",
@@ -209,8 +251,13 @@ export const StringLibrary: Record<string, OpcodeDefinition> = {
       }
       return str.includes(search);
     },
-  },
-  "str.join": {
+  }
+);
+export { strIncludes as "str.includes" };
+
+const strJoin = defineOpcode<[ScriptValue<any[]>, ScriptValue<string>], string>(
+  "str.join",
+  {
     metadata: {
       label: "Join",
       category: "string",
@@ -242,5 +289,6 @@ export const StringLibrary: Record<string, OpcodeDefinition> = {
       }
       return list.join(separator);
     },
-  },
-};
+  }
+);
+export { strJoin as "str.join" };
