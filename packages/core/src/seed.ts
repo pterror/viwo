@@ -537,9 +537,51 @@ export function seed() {
   addVerb(
     teleporterId,
     "teleport",
-    Core["move"](
-      Core["caller"](),
-      Object["obj.get"](Core["this"](), "destination"),
+    Core["seq"](
+      Core["let"]("mover", Core["caller"]()),
+      Core["let"]("destId", Object["obj.get"](Core["this"](), "destination")),
+      Core["let"](
+        "oldLocId",
+        Object["obj.get"](Core["var"]("mover"), "location"),
+      ),
+      Core["let"]("oldLoc", Core["entity"](Core["var"]("oldLocId"))),
+      Core["let"]("newLoc", Core["entity"](Core["var"]("destId"))),
+      Core["set_entity"](
+        // Update mover
+        Object["obj.merge"](
+          Core["var"]("mover"),
+          Object["obj.new"]("location", Core["var"]("destId")),
+        ),
+        // Update old location
+        Object["obj.merge"](
+          Core["var"]("oldLoc"),
+          Object["obj.new"](
+            "contents",
+            List["list.filter"](
+              Object["obj.get"](Core["var"]("oldLoc"), "contents"),
+              Core["lambda"](
+                ["id"],
+                Core["!="](
+                  Core["var"]("id"),
+                  Object["obj.get"](Core["var"]("mover"), "id"),
+                ),
+              ),
+            ),
+          ),
+        ),
+        // Update new location
+        Object["obj.merge"](
+          Core["var"]("newLoc"),
+          Object["obj.new"](
+            "contents",
+            List["list.concat"](
+              Object["obj.get"](Core["var"]("newLoc"), "contents"),
+              List["list.new"](Object["obj.get"](Core["var"]("mover"), "id")),
+            ),
+          ),
+        ),
+      ),
+      Core["send"]("Whoosh! You have been teleported."),
     ),
   );
 
