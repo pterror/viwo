@@ -1,10 +1,8 @@
-import { Entity, Verb } from "../repo";
+import { Entity, getVerbs } from "../repo";
 import { ScriptValue } from "./def";
 
 export type ScriptSystemContext = {
-  create: (data: any) => number;
   send: (msg: unknown) => void;
-  destroy?: (id: number) => void;
   call: (
     caller: Entity,
     targetId: number,
@@ -18,8 +16,6 @@ export type ScriptSystemContext = {
     args: readonly unknown[],
     delay: number,
   ) => void;
-  getVerbs?: (entityId: number) => Promise<readonly Verb[]>;
-  getEntity?: (id: number) => Promise<Entity | null>;
 };
 
 export type ScriptContext = {
@@ -146,7 +142,7 @@ export async function resolveProps(
   entity: Entity,
   ctx: ScriptContext,
 ): Promise<Entity> {
-  if (!ctx.sys?.getVerbs) {
+  if (!ctx.sys) {
     return entity;
   }
 
@@ -154,7 +150,7 @@ export async function resolveProps(
   // entity is already a bag of props, so we clone it entirely
   const resolved = { ...entity };
 
-  const verbs = await ctx.sys.getVerbs(entity.id);
+  const verbs = getVerbs(entity.id);
   for (const verb of verbs) {
     const match = verb.name.match(/^get_(.+)/);
     if (!match?.[1]) continue;

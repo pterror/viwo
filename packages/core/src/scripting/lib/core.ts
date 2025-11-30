@@ -1,7 +1,11 @@
 import { evaluate, resolveProps, ScriptError } from "../interpreter";
 import {
+  createEntity,
+  deleteEntity,
   Entity,
+  getEntity,
   getPrototypeId,
+  getVerbs,
   setPrototypeId,
   updateEntity,
   Verb,
@@ -1037,50 +1041,25 @@ export { tryOp as try };
 
 // Entity Interaction
 
-export const create = defineOpcode<
-  [
-    ScriptValue<unknown>,
-    ScriptValue<string>?,
-    ScriptValue<unknown>?,
-    ScriptValue<number>?,
-  ],
-  number
->("create", {
+export const create = defineOpcode<[ScriptValue<object>], number>("create", {
   metadata: {
     label: "Create",
     category: "action",
     description: "Create a new entity",
     slots: [{ name: "Data", type: "block" }],
-    parameters: [
-      { name: "kindOrProps", type: "unknown" },
-      { name: "name", type: "string" },
-      { name: "props", type: "unknown" },
-      { name: "location", type: "number" },
-    ],
+    parameters: [{ name: "data", type: "object" }],
     returnType: "number",
   },
   handler: async (args, ctx) => {
-    if (!ctx.sys) {
-      throw new ScriptError("create: no system available");
+    if (args.length !== 1) {
+      throw new ScriptError("create: expected `data``");
     }
-    if (!ctx.sys.create) {
-      throw new ScriptError("create: no create function available");
+    const [dataExpr] = args;
+    const data = await evaluate(dataExpr, ctx);
+    if (typeof data !== "object") {
+      throw new ScriptError(`create: expected object, got ${JSON.stringify(data)}`);
     }
-    if (args.length === 1) {
-      const [dataExpr] = args;
-      const data = await evaluate(dataExpr, ctx);
-      return ctx.sys.create(data);
-    } else {
-      if (args.length < 2 || args.length > 4) {
-        throw new ScriptError("create: expected 2, 3, or 4 arguments");
-      }
-      const [kindExpr, nameExpr, propsExpr, locExpr] = args;
-      const kind = await evaluate(kindExpr, ctx);
-      const name = await evaluate(nameExpr, ctx);
-      const props = propsExpr ? await evaluate(propsExpr, ctx) : {};
-      const location_id = locExpr ? await evaluate(locExpr, ctx) : undefined;
-      return ctx.sys.create({ kind, name, props, location_id });
-    }
+    return createEntity(data);
   },
 });
 
@@ -1105,7 +1084,7 @@ export const destroy = defineOpcode<[ScriptValue<Entity>], null>("destroy", {
         `destroy: target must be an entity, got ${JSON.stringify(target)}`,
       );
     }
-    ctx.sys?.destroy?.(target.id);
+    deleteEntity(target.id);
     return null;
   },
 });
@@ -1318,12 +1297,6 @@ export const verbs = defineOpcode<[ScriptValue<unknown>], readonly Verb[]>("verb
     returnType: "readonly Verb[]",
   },
   handler: async (args, ctx) => {
-    if (!ctx.sys) {
-      throw new ScriptError("verbs: no system available");
-    }
-    if (!ctx.sys.getVerbs) {
-      throw new ScriptError("verbs: no getVerbs function available");
-    }
     const [entityExpr] = args;
     const entity = await evaluate(entityExpr, ctx);
     if (typeof entity !== "object") {
@@ -1331,7 +1304,7 @@ export const verbs = defineOpcode<[ScriptValue<unknown>], readonly Verb[]>("verb
         `verbs: entity must be an object, got ${JSON.stringify(entity)}`,
       );
     }
-    return ctx.sys.getVerbs(entity.id);
+    return getVerbs(entity.id);
   },
 });
 
@@ -1345,12 +1318,6 @@ export const entity = defineOpcode<[ScriptValue<number>], Entity>("entity", {
     returnType: "Entity",
   },
   handler: async (args, ctx) => {
-    if (!ctx.sys) {
-      throw new ScriptError("entity: no system available");
-    }
-    if (!ctx.sys.getEntity) {
-      throw new ScriptError("entity: no getEntity function available");
-    }
     const [idExpr] = args;
     const id = await evaluate(idExpr, ctx);
     if (typeof id !== "number") {
@@ -1358,7 +1325,7 @@ export const entity = defineOpcode<[ScriptValue<number>], Entity>("entity", {
         `entity: expected number, got ${JSON.stringify(id)}`,
       );
     }
-    const entity = await ctx.sys.getEntity(id);
+    const entity = getEntity(id);
     if (!entity) {
       throw new ScriptError(`entity: entity ${id} not found`);
     }

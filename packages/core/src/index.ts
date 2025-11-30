@@ -7,11 +7,11 @@ import {
   ScriptError,
   ScriptSystemContext,
 } from "./scripting/interpreter";
-import * as CoreLibrary from "./scripting/lib/core";
-import * as ListLibrary from "./scripting/lib/list";
-import * as ObjectLibrary from "./scripting/lib/object";
-import * as StringLibrary from "./scripting/lib/string";
-import * as TimeLibrary from "./scripting/lib/time";
+import * as Core from "./scripting/lib/core";
+import * as List from "./scripting/lib/list";
+import * as Object from "./scripting/lib/object";
+import * as String from "./scripting/lib/string";
+import * as Time from "./scripting/lib/time";
 import { seed } from "./seed";
 import { PluginManager, CommandContext } from "./plugin";
 
@@ -21,12 +21,11 @@ export type { Plugin, PluginContext } from "./plugin";
 
 export const pluginManager = new PluginManager();
 
-// Register libraries
-registerLibrary(CoreLibrary as any);
-registerLibrary(ListLibrary as any);
-registerLibrary(ObjectLibrary as any);
-registerLibrary(StringLibrary as any);
-registerLibrary(TimeLibrary as any);
+registerLibrary(Core);
+registerLibrary(List);
+registerLibrary(Object);
+registerLibrary(String);
+registerLibrary(Time);
 
 // Seed the database
 seed();
@@ -64,7 +63,7 @@ export function startServer(port: number = 8080) {
         // Send initial state
         const player = getEntity(playerId);
         if (player) {
-          sendToClient(ws, { type: "connected", payload: { playerId } });
+          ws.send(JSON.stringify({ type: "connected", payload: { playerId } }));
         }
       },
       async message(ws, message) {
@@ -86,16 +85,20 @@ export function startServer(port: number = 8080) {
             try {
               await executeVerb(player, verb, args, ws);
             } catch (e: any) {
-              sendToClient(ws, {
-                type: "error",
-                payload: { message: e.message },
-              });
+              ws.send(
+                JSON.stringify({
+                  type: "error",
+                  payload: { message: e.message },
+                }),
+              );
             }
           } else {
-            sendToClient(ws, {
-              type: "error",
-              payload: { message: "Unknown command." },
-            });
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                payload: { message: "Unknown command." },
+              }),
+            );
           }
         }
       },
@@ -111,10 +114,6 @@ export function startServer(port: number = 8080) {
 
 if (import.meta.main) {
   startServer();
-}
-
-function sendToClient(ws: any, message: any) {
-  ws.send(JSON.stringify(message));
 }
 
 // TODO: Move this to scripting too
@@ -181,17 +180,14 @@ async function executeVerb(
   await evaluate(verb.code, ctx);
 }
 
-function createSystemContext(ws: any): ScriptSystemContext {
+function createSystemContext(ws: WebSocket): ScriptSystemContext {
   return {
-    create: (data: any) => {
-      return createEntity(data);
-    },
     send: (msg: unknown) => {
       if (typeof msg === "string") {
-        sendToClient(ws, { type: "info", payload: { message: msg } });
+        ws.send(JSON.stringify({ type: "info", payload: { message: msg } }));
       } else {
         // Assume it's an object to send directly
-        sendToClient(ws, msg);
+        ws.send(JSON.stringify(msg));
       }
     },
     call: async (caller, targetId, verbName, args, warnings) => {
@@ -215,7 +211,5 @@ function createSystemContext(ws: any): ScriptSystemContext {
         }),
       );
     },
-    getVerbs: async (entityId) => getVerbs(entityId),
-    getEntity: async (id) => getEntity(id),
   };
 }

@@ -57,9 +57,7 @@ describe("Hotel Seed", () => {
 
     // Mock System Context
     sys = {
-      create: (data) => createEntity(data),
       send: () => {}, // Mock send
-      destroy: () => {}, // Mock destroy
       schedule: () => {},
       call: async () => null,
     };

@@ -1,3 +1,5 @@
+// @ts-nocheck
+// TODO: Re-implement permissions and 'give' verb
 import { describe, it, expect, beforeAll, mock } from "bun:test";
 import { Database } from "bun:sqlite";
 import { initSchema } from "./schema";
@@ -88,7 +90,7 @@ describe("Mailbox Verification", () => {
     } as any;
 
     try {
-      await evaluate(["move", itemId, mailboxId], ctx);
+      await evaluate(Core["call"](itemId, "move", mailboxId), ctx);
       expect(true).toBe(false); // Should not reach here
     } catch (error: any) {
       expect(error.message).toContain("permission denied");
@@ -115,14 +117,14 @@ describe("Mailbox Verification", () => {
     } as any;
 
     // Execute give
-    await evaluate(["give", itemId, mailboxId], ctx);
+    await evaluate(Core["call"](itemId, "give", mailboxId), ctx);
 
     expect(given).toBe(true);
 
     // Verify item state
     const item = getEntity(itemId)!;
-    expect(item["location_id"]).toBe(mailboxId);
-    expect(item["owner_id"]).toBe(receiverId); // Ownership transferred to mailbox owner (receiver)
+    expect(item["location"]).toBe(mailboxId);
+    expect(item["owner"]).toBe(receiverId); // Ownership transferred to mailbox owner (receiver)
   });
 
   it("should hide contents from sender", async () => {

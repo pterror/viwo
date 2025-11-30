@@ -35,7 +35,7 @@ describe("Interpreter", () => {
 
   const caller = mockEntity(1);
   const target = mockEntity(2);
-  target.owner_id = 1;
+  target["owner"] = 1;
   const sys = {
     move: mock(() => {}),
     create: mock(() => 3),
@@ -93,20 +93,20 @@ describe("Interpreter", () => {
   });
 
   test("actions", async () => {
-    await evaluate(Core["tell"]("me", "hello"), ctx);
+    await evaluate(Core["call"](Core["caller"](), "tell", "hello"), ctx);
     expect(sys.send).toHaveBeenCalledWith({ type: "message", text: "hello" });
 
-    await evaluate(Core["move"]("this", "me"), ctx);
+    await evaluate(Core["call"](Core["this"](), "move", Core["caller"]()), ctx);
     expect(sys.move).toHaveBeenCalledWith(target.id, caller.id);
 
-    await evaluate(Core["destroy"]("this"), ctx);
+    await evaluate(Core["destroy"](Core["this"]()), ctx);
     expect(sys.destroy).toHaveBeenCalledWith(target.id);
   });
 
   test("gas limit", async () => {
     const lowGasCtx = { ...ctx, gas: 2 };
     // seq (1) + let (1) + let (1) = 3 ops -> should fail
-    const script = ["seq", ["let", "a", 1], ["let", "b", 2]];
+    const script = Core["seq"](Core["let"]("a", 1), Core["let"]("b", 2));
 
     // We expect it to throw
     let error;
@@ -230,7 +230,7 @@ describe("Interpreter", () => {
 
     // move
     try {
-      await evaluate(Core["move"](Core["this"](), Core["this"]()), ctx);
+      await evaluate(Core["call"](Core["this"](), "move", Core["this"]()), ctx);
       throw new Error();
     } catch (e: any) {
       expect(e.message).toContain("permission denied");
@@ -251,7 +251,8 @@ describe("Interpreter", () => {
     // Should return null if target is not visible to the player
     expect(
       // TODO: get entity for `other`
-      await evaluate(Core["tell"]("other", "msg"), ctx).catch((e) => e),
+      // @ts-expect-error
+      await evaluate(Core["call"]("other", "tell", "msg"), ctx).catch((e) => e),
     ).toBeInstanceOf(ScriptError);
   });
 

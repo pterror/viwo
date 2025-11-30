@@ -9,11 +9,6 @@ initSchema(db);
 // Mock the db module
 mock.module("../db", () => ({ db }));
 
-// Mock permissions
-mock.module("../permissions", () => ({
-  checkPermission: () => true,
-}));
-
 import {
   evaluate,
   ScriptSystemContext,
@@ -29,7 +24,6 @@ import {
   createEntity,
   getEntity,
   updateEntity,
-  deleteEntity,
   Entity,
   getVerb,
 } from "../repo";
@@ -56,9 +50,6 @@ describe("Player Commands", () => {
 
     // Setup Sys Context
     sys = {
-      create: createEntity,
-      destroy: deleteEntity,
-      getEntity: async (id) => getEntity(id),
       send: (msg) => {
         sentMessages.push(msg);
       },
@@ -86,7 +77,7 @@ describe("Player Commands", () => {
       .query("SELECT * FROM entities WHERE name = 'Guest'")
       .get() as any;
     player = getEntity(guest.id)!;
-    room = getEntity(player.location_id!)!;
+    room = getEntity(player["location"] as number)!;
   });
 
   const runCommand = async (command: string, args: readonly unknown[]) => {
@@ -105,7 +96,7 @@ describe("Player Commands", () => {
 
   it("should look at room", async () => {
     await runCommand("look", []);
-    expect(sentMessages[0]?.name).toEqual(room.name);
+    expect(sentMessages[0]?.name).toEqual(room["name"]);
   });
 
   it("should inspect item", async () => {
@@ -129,8 +120,8 @@ describe("Player Commands", () => {
     // Create start room
     const startRoomId = createEntity({ name: "Start Room", kind: "ROOM" });
     // Move player to start room
-    updateEntity(player.id, { location_id: startRoomId });
-    player.location_id = startRoomId;
+    updateEntity({ ...player, location: startRoomId });
+    player["location"] = startRoomId;
     room = getEntity(startRoomId)!;
 
     // Create another room
@@ -146,7 +137,7 @@ describe("Player Commands", () => {
     await runCommand("move", ["north"]);
 
     const updatedPlayer = getEntity(player.id)!;
-    expect(updatedPlayer.location_id).toBe(otherRoomId);
+    expect(updatedPlayer["location"]).toBe(otherRoomId);
     expect(sentMessages[0]?.name).toBe("Other Room");
   });
 
@@ -162,13 +153,13 @@ describe("Player Commands", () => {
 
     // Check if player moved
     const updatedPlayer = getEntity(player.id)!;
-    expect(updatedPlayer.location_id).toBe(newRoom.id);
+    expect(updatedPlayer["location"]).toBe(newRoom.id);
   });
 
   it("should create item", async () => {
     const id = await runCommand("create", ["Rock"]);
     expect(id, "create should return item id").toBeDefined();
-    const createdRock = getEntity(id);
+    const createdRock = getEntity(id as number);
     expect(createdRock, "created item should exist").toBeDefined();
     expect(sentMessages[0]?.name, "created item should send room update").toBe(
       "Lobby",
@@ -186,6 +177,6 @@ describe("Player Commands", () => {
     await runCommand("set", ["Stone", "weight", 20]);
 
     const updatedItem = getEntity(itemId)!;
-    expect(updatedItem.props["weight"]).toBe(20);
+    expect(updatedItem["weight"]).toBe(20);
   });
 });
