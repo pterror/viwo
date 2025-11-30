@@ -22,10 +22,43 @@ export function seed() {
     description: "An endless expanse of nothingness.",
   });
 
-  // 2. Create Player Prototype
-  const playerBaseId = createEntity({
-    name: "Player Base",
-    description: "A generic adventurer.",
+  // 2. Create Entity Base
+  const entityBaseId = createEntity({
+    name: "Entity Base",
+    description: "The base of all things.",
+  });
+
+  // Add verbs to Entity Base
+  addVerb(
+    entityBaseId,
+    "move",
+    Core["seq"](
+      Core["let"]("direction", Core["arg"](0)),
+      Core["if"](
+        Core["not"](Core["var"]("direction")),
+        Core["sys.send"]("Where do you want to go?"),
+        Core["seq"](
+          // world.find missing
+          // Core["letOp"]("exitId", ["world.find", ["var", "direction"]]),
+          Core["sys.send"]("Movement logic disabled due to missing world.find"),
+        ),
+      ),
+    ),
+  );
+
+  addVerb(entityBaseId, "say", Core["sys.send"]("Say is not yet implemented."));
+
+  addVerb(
+    entityBaseId,
+    "tell",
+    Core["sys.send"]("Tell is not yet implemented."),
+  );
+
+  // 3. Create Humanoid Base
+  const humanoidBaseId = createEntity({
+    name: "Humanoid Base",
+    description: "A humanoid creature.",
+    prototype_id: entityBaseId,
     body_type: "humanoid",
     // Slots are just definitions of where things can go
     slots: [
@@ -70,77 +103,22 @@ export function seed() {
     ],
   });
 
+  // 4. Create Player Prototype
+  const playerBaseId = createEntity({
+    name: "Player Base",
+    description: "A generic adventurer.",
+    prototype_id: humanoidBaseId,
+  });
+
   // Add verbs to Player Base
-  // DEPRECATED: say
-  // addVerb(playerBaseId, "say", ["say", ["str.join", ["args"], " "]]);
-
-  // DEPRECATED: tell
-  /*
-  addVerb(playerBaseId, "tell", [
-    "tell",
-    ["arg", 0],
-    ["str.join", ["list.slice", ["args"], 1], " "],
-  ]);
-  */
-
-  // DEPRECATED: on_hear
-  /*
-  addVerb(playerBaseId, "on_hear", [
-    "tell",
-    Core["caller"](),
-    [
-      "str.concat",
-      ["prop", ["arg", 1], "name"],
-      " ",
-      ["arg", 2], // type (say/tell)
-      "s: ",
-      ["arg", 0], // msg
-    ],
-  ]);
-  */
 
   addVerb(
     playerBaseId,
     "look",
     Core["if"](
       List["list.empty"](Core["args"]()),
-      Core["seq"](
-        Core["let"](
-          "room",
-          Core["resolve_props"](
-            Core["entity"](Object["obj.get"](Core["caller"](), "location_id")),
-          ),
-        ),
-        Core["let"](
-          "richItems",
-          List["list.map"](
-            // Assuming 'contents' opcode is replaced by prop access + mapping
-            // But since 'contents' opcode was used, and it's missing, I'll use a workaround or comment.
-            // Workaround: Get IDs from prop, then map entity() over them?
-            // But resolve_props expects entity.
-            // If 'contents' prop is IDs, we need to fetch entities.
-            // Let's assume for now we can't easily fix the missing 'contents' opcode logic perfectly without it.
-            // I'll try to replicate: map(prop(room, contents), lambda(id, resolve_props(entity(id))))
-            // But map expects a list. prop(room, contents) is a list of IDs.
-            // So:
-            List["list.map"](
-              Object["obj.get"](Core["var"]("room"), "contents"),
-              Core["lambda"](
-                ["id"],
-                Core["resolve_props"](Core["entity"](Core["var"]("id"))),
-              ),
-            ),
-            Core["lambda"](["item"], Core["var"]("item")), // Identity map? No, the original code mapped resolve_props over contents.
-            // Original: map(contents(room), lambda(item, resolve_props(item)))
-            // If contents(room) returned entities, then item is entity.
-            // If contents(room) is gone, we use prop(room, contents) -> IDs.
-            // So we map ID -> resolve_props(entity(ID)).
-          ),
-        ),
-        Object["obj.merge"](
-          Core["var"]("room"),
-          Object["obj.new"]("contents", Core["var"]("richItems")),
-        ),
+      Core["resolve_props"](
+        Core["entity"](Object["obj.get"](Core["caller"](), "location_id")),
       ),
       Core["seq"](
         // world.find is missing.
@@ -160,23 +138,6 @@ export function seed() {
         Core["lambda"](
           ["id"],
           Core["resolve_props"](Core["entity"](Core["var"]("id"))),
-        ),
-      ),
-    ),
-  );
-
-  addVerb(
-    playerBaseId,
-    "move",
-    Core["seq"](
-      Core["let"]("direction", Core["arg"](0)),
-      Core["if"](
-        Core["not"](Core["var"]("direction")),
-        Core["sys.send"]("Where do you want to go?"),
-        Core["seq"](
-          // world.find missing
-          // Core["letOp"]("exitId", ["world.find", ["var", "direction"]]),
-          Core["sys.send"]("Movement logic disabled due to missing world.find"),
         ),
       ),
     ),
