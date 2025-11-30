@@ -1,7 +1,7 @@
 import { For, Show, createSignal } from "solid-js";
-import { gameStore, RichItem } from "../store/game";
+import { gameStore, Entity } from "../store/game";
 
-const ItemView = (props: { item: RichItem }) => {
+const ItemView = (props: { item: Entity }) => {
   const [isExpanded, setIsExpanded] = createSignal(false);
   const hasContents = () =>
     props.item.contents && props.item.contents.length > 0;

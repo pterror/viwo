@@ -1,7 +1,7 @@
 import { Show, For } from "solid-js";
-import { gameStore, RichItem } from "../store/game";
+import { gameStore, Entity } from "../store/game";
 
-const ItemView = (props: { item: RichItem }) => (
+const ItemView = (props: { item: Entity }) => (
   <div class="inspector-panel__item">
     <span
       onClick={() => gameStore.execute(["look", props.item.name])}

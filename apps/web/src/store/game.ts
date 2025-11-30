@@ -4,40 +4,35 @@ export type GameMessage =
   | { type: "message"; text: string }
   | { type: "error"; text: string };
 
-export interface RichItem {
+export interface Entity {
+  /** Unique ID of the entity */
   id: number;
-  kind: string;
-  contents: RichItem[];
-  props: Record<string, unknown> & {
-    name?: string;
-    description?: string;
-    adjectives?: string[];
-    custom_css?: string;
-    image?: string;
-    destination_name?: string;
-  };
-  verbs?: string[];
+  /**
+   * Resolved properties (merged from prototype and instance).
+   * Contains arbitrary game data like description, adjectives, custom_css.
+   */
+  [key: string]: unknown;
 }
 
 export interface RoomMessage {
   type: "room";
   name: string;
   description: string;
-  contents: RichItem[];
+  contents: Entity[];
   custom_css?: string;
   image?: string;
 }
 
 export interface InventoryMessage {
   type: "inventory";
-  items: RichItem[];
+  items: Entity[];
 }
 
 export interface ItemMessage {
   type: "item";
   name: string;
   description: string;
-  contents: RichItem[];
+  contents: Entity[];
   custom_css?: string;
 }
 

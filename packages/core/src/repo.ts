@@ -6,17 +6,15 @@ import { ScriptValue } from "./scripting/def";
  * Represents a game entity.
  * Everything in the game is an Entity (Room, Player, Item, Exit, etc.).
  */
-export type Entity = {
+export interface Entity {
   /** Unique ID of the entity */
   id: number;
-  /** ID of the prototype this entity inherits from (hidden from public interface mostly) */
-  // prototype_id: number | null;
   /**
    * Resolved properties (merged from prototype and instance).
    * Contains arbitrary game data like description, adjectives, custom_css.
    */
   [key: string]: unknown;
-};
+}
 
 /**
  * Fetches an entity by ID, resolving its properties against its prototype.

@@ -7,20 +7,52 @@ export interface OpcodeMetadata {
   returnType?: string;
 }
 
+const RESERVED_TYPESCRIPT_KEYWORDS = new Set([
+  "if",
+  "else",
+  "while",
+  "for",
+  "return",
+  "break",
+  "continue",
+  "switch",
+  "case",
+  "default",
+  "var",
+  "let",
+  "const",
+  "function",
+  "class",
+  "new",
+  "this",
+  "super",
+  "return",
+  "throw",
+  "try",
+  "catch",
+  "finally",
+  "import",
+  "export",
+  "default",
+  "from",
+  "as",
+  "type",
+  "interface",
+  "enum",
+  "namespace",
+]);
+
 export function generateTypeDefinitions(opcodes: OpcodeMetadata[]): string {
   let definitions = `\
-declare const me: Entity;
-declare const this: Entity;
-declare const here: Entity | null;
-
 interface Entity {
+  /** Unique ID of the entity */
   id: number;
-  name: string;
-  kind: string;
-  location_id?: number;
-  owner_id?: number;
-  props: Record<string, any>;
-}
+  /**
+   * Resolved properties (merged from prototype and instance).
+   * Contains arbitrary game data like description, adjectives, custom_css.
+   */
+  [key: string]: unknown;
+};
 
 // Standard library functions
 `;
@@ -36,16 +68,22 @@ interface Entity {
       if (!namespaces[ns]) namespaces[ns] = [];
 
       const params =
-        op.parameters?.map((p) => `${p.name}: ${p.type}`).join(", ") || "";
-      const ret = op.returnType || "any";
+        op.parameters?.map((p) => `${p.name}: ${p.type}`).join(", ") ?? "";
+      const ret = op.returnType ?? "any";
 
-      namespaces[ns].push(`function ${name}(${params}): ${ret};`);
+      const sanitizedName = RESERVED_TYPESCRIPT_KEYWORDS.has(name)
+        ? `${name}_`
+        : name;
+      namespaces[ns].push(`function ${sanitizedName}(${params}): ${ret};`);
     } else {
       // Global function
       const params =
-        op.parameters?.map((p) => `${p.name}: ${p.type}`).join(", ") || "";
-      const ret = op.returnType || "any";
-      definitions += `declare function ${op.opcode}(${params}): ${ret};\n`;
+        op.parameters?.map((p) => `${p.name}: ${p.type}`).join(", ") ?? "";
+      const ret = op.returnType ?? "any";
+      const sanitizedOpcode = RESERVED_TYPESCRIPT_KEYWORDS.has(op.opcode)
+        ? `${op.opcode}_`
+        : op.opcode;
+      definitions += `declare function ${sanitizedOpcode}(${params}): ${ret};\n`;
     }
   }
 
