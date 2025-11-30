@@ -28,7 +28,47 @@ export function seed() {
     description: "The base of all things.",
   });
 
-  // Add verbs to Entity Base
+  addVerb(
+    entityBaseId,
+    "find",
+    Core["seq"](
+      Core["let"]("query", Core["arg"](0)),
+      Core["let"](
+        "locationId",
+        Object["obj.get"](Core["caller"](), "location_id"),
+      ),
+      Core["let"](
+        "contents",
+        Object["obj.get"](
+          Core["entity"](Core["var"]("locationId")),
+          "contents",
+        ),
+      ),
+      List["list.find"](
+        Core["var"]("contents"),
+        Core["lambda"](
+          ["id"],
+          Core["seq"](
+            Core["let"](
+              "props",
+              Core["resolve_props"](Core["entity"](Core["var"]("id"))),
+            ),
+            Core["or"](
+              Core["=="](
+                Object["obj.get"](Core["var"]("props"), "name"),
+                Core["var"]("query"),
+              ),
+              Core["=="](
+                Object["obj.get"](Core["var"]("props"), "direction"),
+                Core["var"]("query"),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+
   addVerb(
     entityBaseId,
     "move",
@@ -38,9 +78,28 @@ export function seed() {
         Core["not"](Core["var"]("direction")),
         Core["sys.send"]("Where do you want to go?"),
         Core["seq"](
-          // world.find missing
-          // Core["letOp"]("exitId", ["world.find", ["var", "direction"]]),
-          Core["sys.send"]("Movement logic disabled due to missing world.find"),
+          Core["let"](
+            "exitId",
+            Core["call"](Core["this"](), "find", Core["var"]("direction")),
+          ),
+          Core["if"](
+            Core["var"]("exitId"),
+            Core["seq"](
+              Core["let"](
+                "dest",
+                Object["obj.get"](
+                  Core["resolve_props"](Core["entity"](Core["var"]("exitId"))),
+                  "destination_id",
+                ),
+              ),
+              Core["if"](
+                Core["var"]("dest"),
+                Core["move"](Core["caller"](), Core["var"]("dest")),
+                Core["sys.send"]("That way leads nowhere."),
+              ),
+            ),
+            Core["sys.send"]("You can't go that way."),
+          ),
         ),
       ),
     ),
