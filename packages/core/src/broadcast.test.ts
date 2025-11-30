@@ -18,10 +18,12 @@ import {
   registerLibrary,
 } from "./scripting/interpreter";
 import { createEntity, addVerb, getVerb } from "./repo";
-import { CoreLibrary } from "./scripting/lib/core";
+import * as Core from "./scripting/lib/core";
+import * as List from "./scripting/lib/list";
 
 describe("Advanced Items Verification", () => {
-  registerLibrary(CoreLibrary);
+  registerLibrary(Core);
+  registerLibrary(List);
 
   it("should broadcast message", async () => {
     const broadcastMock = mock(() => {});
@@ -50,11 +52,11 @@ describe("Advanced Items Verification", () => {
       props: {},
     });
 
-    addVerb(itemId, "get_adjectives", [
-      "list.new",
-      "color:red",
-      "material:wood",
-    ]);
+    addVerb(
+      itemId,
+      "get_adjectives",
+      List["list.new"]("color:red", "material:wood"),
+    );
 
     const verb = getVerb(itemId, "get_adjectives");
     expect(verb).toBeDefined();

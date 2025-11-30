@@ -44,9 +44,10 @@ describe("Book Item Scripting", () => {
 
   it("should list chapters", async () => {
     const script = Core["seq"](
-      Core["let"]("chapters", Object["obj.get"]("this", "chapters")),
-      Core["tell"](
+      Core["let"]("chapters", Object["obj.get"](Core["this"](), "chapters")),
+      Core["call"](
         Core["caller"](),
+        "tell",
         String["str.join"](
           List["list.map"](
             Core["var"]("chapters"),
@@ -71,8 +72,9 @@ describe("Book Item Scripting", () => {
       ),
       Core["if"](
         Core["var"]("chapter"),
-        Core["tell"](
+        Core["call"](
           Core["caller"](),
+          "tell",
           String["str.concat"](
             "Chapter: ",
             Object["obj.get"](Core["var"]("chapter"), "title"),
@@ -80,7 +82,7 @@ describe("Book Item Scripting", () => {
             Object["obj.get"](Core["var"]("chapter"), "content"),
           ),
         ),
-        Core["tell"](Core["caller"](), "Chapter not found."),
+        Core["call"](Core["caller"](), "tell", "Chapter not found."),
       ),
     );
 
@@ -103,9 +105,9 @@ describe("Book Item Scripting", () => {
 
   it("should add a chapter", async () => {
     const script = Core["seq"](
-      Core["let"]("title", Core["arg"]([0])),
-      Core["let"]("content", Core["arg"]([1])),
-      Core["let"]("chapters", Object["obj.get"]("this", "chapters")),
+      Core["let"]("title", Core["arg"](0)),
+      Core["let"]("content", Core["arg"](1)),
+      Core["let"]("chapters", Object["obj.get"](Core["this"](), "chapters")),
       Core["let"]("newChapter", {}),
       Object["obj.set"](
         Core["var"]("newChapter"),
@@ -121,7 +123,7 @@ describe("Book Item Scripting", () => {
       Core["set_entity"](
         Object["obj.set"](Core["this"](), "chapters", Core["var"]("chapters")),
       ),
-      Core["tell"](Core["caller"](), "Chapter added."),
+      Core["call"](Core["caller"](), "tell", "Chapter added."),
     );
 
     await evaluate(
@@ -164,13 +166,14 @@ describe("Book Item Scripting", () => {
           ),
         ),
       ),
-      Core["tell"](
+      Core["call"](
         Core["caller"](),
+        "tell",
         String["str.concat"](
           "Found ",
           List["list.len"](Core["var"]("results")),
           " matches:\n",
-          List["list.join"](
+          String["str.join"](
             List["list.map"](
               Core["var"]("results"),
               Core["lambda"](

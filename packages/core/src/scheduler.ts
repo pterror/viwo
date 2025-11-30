@@ -57,6 +57,7 @@ export class TaskScheduler {
             gas: 1000,
             sys,
             warnings: [],
+            vars: {},
           });
         }
       } catch (e) {

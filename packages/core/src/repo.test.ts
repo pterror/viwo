@@ -76,11 +76,12 @@ describe("Repo", () => {
 
   test("updateEntity", () => {
     const id = createEntity({ name: "Old Name" });
-    updateEntity(id, {
+    updateEntity({
+      id,
       name: "New Name",
       location_id: 100,
       location_detail: "worn",
-      props: { foo: "bar" },
+      foo: "bar",
     });
     const updated = getEntity(id);
     expect(updated?.["name"]).toBe("New Name");
@@ -113,7 +114,11 @@ describe("Repo", () => {
 
   test("getVerb", () => {
     const entity = createEntity({ name: "Scripted" });
-    addVerb(entity, "jump", Core["tell"]("You jumped"));
+    addVerb(
+      entity,
+      "jump",
+      Core["call"](Core["caller"](), "tell", "You jumped"),
+    );
 
     const verb = getVerb(entity, "jump");
     expect(verb).not.toBeNull();
@@ -125,7 +130,7 @@ describe("Repo", () => {
 
   test("getVerb Inheritance", () => {
     const proto = createEntity({ name: "Proto" });
-    addVerb(proto, "fly", Core["tell"]("You flew"));
+    addVerb(proto, "fly", Core["call"](Core["caller"](), "tell", "You flew"));
 
     const instance = createEntity({ name: "Instance", prototype_id: proto });
 
