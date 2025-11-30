@@ -16,6 +16,8 @@ const this_ = defineOpcode<[], Entity>("this", {
     description: "Current entity",
     layout: "standard",
     slots: [],
+    parameters: [],
+    returnType: "Entity",
   },
   handler: async (args, ctx) => {
     if (args.length !== 0) {
@@ -33,6 +35,8 @@ export const caller = defineOpcode<[], Entity>("caller", {
     description: "Current caller",
     layout: "standard",
     slots: [],
+    parameters: [],
+    returnType: "Entity",
   },
   handler: async (args, ctx) => {
     if (args.length !== 0) {
@@ -50,6 +54,8 @@ export const seq = defineOpcode<ScriptValue<unknown>[], any>("seq", {
     description: "Execute a sequence of steps",
     layout: "control-flow",
     slots: [],
+    parameters: [{ name: "...args", type: "unknown[]" }],
+    returnType: "any",
   },
   handler: async (args, ctx) => {
     if (args.length === 0) {
@@ -77,6 +83,12 @@ const ifOp = defineOpcode<
       { name: "Then", type: "block" },
       { name: "Else", type: "block" },
     ],
+    parameters: [
+      { name: "condition", type: "boolean" },
+      { name: "then", type: "unknown" },
+      { name: "else", type: "unknown" },
+    ],
+    returnType: "any",
   },
   handler: async (args, ctx) => {
     if (args.length < 2 || args.length > 3) {
@@ -135,6 +147,12 @@ const forOp = defineOpcode<
       { name: "List", type: "block" },
       { name: "Do", type: "block" },
     ],
+    parameters: [
+      { name: "variableName", type: "string" },
+      { name: "list", type: "readonly unknown[]" },
+      { name: "body", type: "unknown" },
+    ],
+    returnType: "any",
   },
   handler: async (args, ctx) => {
     if (args.length !== 3) {
@@ -165,6 +183,8 @@ const jsonStringify = defineOpcode<[ScriptValue<unknown>], string>(
       category: "data",
       description: "Convert to JSON string",
       slots: [{ name: "Value", type: "block" }],
+      parameters: [{ name: "value", type: "unknown" }],
+      returnType: "string",
     },
     handler: async (args, ctx) => {
       if (args.length !== 1) {
@@ -184,6 +204,8 @@ const jsonParse = defineOpcode<[ScriptValue<string>], unknown>("json.parse", {
     category: "data",
     description: "Parse JSON string",
     slots: [{ name: "String", type: "string" }],
+    parameters: [{ name: "string", type: "string" }],
+    returnType: "unknown",
   },
   handler: async (args, ctx) => {
     const [strExpr] = args;
@@ -208,6 +230,11 @@ const letOp = defineOpcode<[string, ScriptValue<unknown>], any>("let", {
       { name: "Name", type: "string" },
       { name: "Value", type: "block" },
     ],
+    parameters: [
+      { name: "name", type: "string" },
+      { name: "value", type: "unknown" },
+    ],
+    returnType: "any",
   },
   handler: async (args, ctx) => {
     if (args.length !== 2) {
@@ -222,13 +249,15 @@ const letOp = defineOpcode<[string, ScriptValue<unknown>], any>("let", {
 });
 export { letOp as "let" };
 
-const varOp = defineOpcode<[string], any>("var", {
+const var_ = defineOpcode<[string], any>("var", {
   metadata: {
     label: "Get Var",
     category: "data",
     description: "Get variable value",
     layout: "primitive",
     slots: [{ name: "Name", type: "string" }],
+    parameters: [{ name: "name", type: "string" }],
+    returnType: "any",
   },
   handler: async (args, ctx) => {
     if (args.length !== 1) {
@@ -238,9 +267,9 @@ const varOp = defineOpcode<[string], any>("var", {
     return ctx.vars?.[name] ?? null;
   },
 });
-export { varOp as "var" };
+export { var_ as var };
 
-export const set = defineOpcode<[string, ScriptValue<unknown>], any>("set", {
+const set_ = defineOpcode<[string, ScriptValue<unknown>], any>("set", {
   metadata: {
     label: "Set",
     category: "action",
@@ -249,6 +278,11 @@ export const set = defineOpcode<[string, ScriptValue<unknown>], any>("set", {
       { name: "Name", type: "string" },
       { name: "Value", type: "block" },
     ],
+    parameters: [
+      { name: "name", type: "string" },
+      { name: "value", type: "unknown" },
+    ],
+    returnType: "any",
   },
   handler: async (args, ctx) => {
     if (args.length !== 2) {
@@ -262,6 +296,7 @@ export const set = defineOpcode<[string, ScriptValue<unknown>], any>("set", {
     return value;
   },
 });
+export { set_ as set }
 
 // Comparison
 const eq = defineOpcode<
@@ -277,6 +312,12 @@ const eq = defineOpcode<
       { name: "A", type: "block" },
       { name: "B", type: "block" },
     ],
+    parameters: [
+      { name: "a", type: "unknown" },
+      { name: "b", type: "unknown" },
+      { name: "...args", type: "unknown[]" },
+    ],
+    returnType: "boolean",
   },
   handler: async (args, ctx) => {
     if (args.length < 2) {
@@ -308,6 +349,12 @@ const neq = defineOpcode<
       { name: "A", type: "block" },
       { name: "B", type: "block" },
     ],
+    parameters: [
+      { name: "a", type: "unknown" },
+      { name: "b", type: "unknown" },
+      { name: "...args", type: "unknown[]" },
+    ],
+    returnType: "boolean",
   },
   handler: async (args, ctx) => {
     if (args.length < 2) {
@@ -339,6 +386,12 @@ const lt = defineOpcode<
       { name: "A", type: "block" },
       { name: "B", type: "block" },
     ],
+    parameters: [
+      { name: "a", type: "number" },
+      { name: "b", type: "number" },
+      { name: "...args", type: "number[]" },
+    ],
+    returnType: "boolean",
   },
   handler: async (args, ctx) => {
     if (args.length < 2) {
@@ -370,6 +423,12 @@ const gt = defineOpcode<
       { name: "A", type: "block" },
       { name: "B", type: "block" },
     ],
+    parameters: [
+      { name: "a", type: "number" },
+      { name: "b", type: "number" },
+      { name: "...args", type: "number[]" },
+    ],
+    returnType: "boolean",
   },
   handler: async (args, ctx) => {
     if (args.length < 2) {
@@ -401,6 +460,12 @@ const lte = defineOpcode<
       { name: "A", type: "block" },
       { name: "B", type: "block" },
     ],
+    parameters: [
+      { name: "a", type: "number" },
+      { name: "b", type: "number" },
+      { name: "...args", type: "number[]" },
+    ],
+    returnType: "boolean",
   },
   handler: async (args, ctx) => {
     if (args.length < 2) {
@@ -432,6 +497,12 @@ const gte = defineOpcode<
       { name: "A", type: "block" },
       { name: "B", type: "block" },
     ],
+    parameters: [
+      { name: "a", type: "number" },
+      { name: "b", type: "number" },
+      { name: "...args", type: "number[]" },
+    ],
+    returnType: "boolean",
   },
   handler: async (args, ctx) => {
     if (args.length < 2) {
@@ -464,6 +535,12 @@ const add = defineOpcode<
       { name: "A", type: "block" },
       { name: "B", type: "block" },
     ],
+    parameters: [
+      { name: "a", type: "number" },
+      { name: "b", type: "number" },
+      { name: "...args", type: "number[]" },
+    ],
+    returnType: "number",
   },
   handler: async (args, ctx) => {
     if (args.length < 2) {
@@ -502,6 +579,12 @@ const sub = defineOpcode<
       { name: "A", type: "block" },
       { name: "B", type: "block" },
     ],
+    parameters: [
+      { name: "a", type: "number" },
+      { name: "b", type: "number" },
+      { name: "...args", type: "number[]" },
+    ],
+    returnType: "number",
   },
   handler: async (args, ctx) => {
     if (args.length < 2) {
@@ -540,6 +623,12 @@ const mul = defineOpcode<
       { name: "A", type: "block" },
       { name: "B", type: "block" },
     ],
+    parameters: [
+      { name: "a", type: "number" },
+      { name: "b", type: "number" },
+      { name: "...args", type: "number[]" },
+    ],
+    returnType: "number",
   },
   handler: async (args, ctx) => {
     if (args.length < 2) {
@@ -578,6 +667,12 @@ const div = defineOpcode<
       { name: "A", type: "block" },
       { name: "B", type: "block" },
     ],
+    parameters: [
+      { name: "a", type: "number" },
+      { name: "b", type: "number" },
+      { name: "...args", type: "number[]" },
+    ],
+    returnType: "number",
   },
   handler: async (args, ctx) => {
     if (args.length < 2) {
@@ -615,6 +710,11 @@ const mod = defineOpcode<[ScriptValue<number>, ScriptValue<number>], number>(
         { name: "A", type: "block" },
         { name: "B", type: "block" },
       ],
+      parameters: [
+        { name: "a", type: "number" },
+        { name: "b", type: "number" },
+      ],
+      returnType: "number",
     },
     handler: async (args, ctx) => {
       if (args.length !== 2) {
@@ -651,6 +751,12 @@ const pow = defineOpcode<
       { name: "Base", type: "block" },
       { name: "Exp", type: "block" },
     ],
+    parameters: [
+      { name: "base", type: "number" },
+      { name: "exp", type: "number" },
+      { name: "...args", type: "number[]" },
+    ],
+    returnType: "number",
   },
   handler: async (args, ctx) => {
     // Power tower
@@ -693,6 +799,12 @@ export const and = defineOpcode<
       { name: "A", type: "block" },
       { name: "B", type: "block" },
     ],
+    parameters: [
+      { name: "a", type: "unknown" },
+      { name: "b", type: "unknown" },
+      { name: "...args", type: "unknown[]" },
+    ],
+    returnType: "boolean",
   },
   handler: async (args, ctx) => {
     if (args.length < 2) {
@@ -718,6 +830,12 @@ export const or = defineOpcode<
       { name: "A", type: "block" },
       { name: "B", type: "block" },
     ],
+    parameters: [
+      { name: "a", type: "unknown" },
+      { name: "b", type: "unknown" },
+      { name: "...args", type: "unknown[]" },
+    ],
+    returnType: "boolean",
   },
   handler: async (args, ctx) => {
     if (args.length < 2) {
@@ -736,6 +854,8 @@ export const not = defineOpcode<[ScriptValue<unknown>], boolean>("not", {
     category: "logic",
     description: "Logical NOT",
     slots: [{ name: "Val", type: "block" }],
+    parameters: [{ name: "val", type: "unknown" }],
+    returnType: "boolean",
   },
   handler: async (args, ctx) => {
     if (args.length !== 1) {
@@ -755,6 +875,11 @@ export const log = defineOpcode<
     category: "action",
     description: "Log to server console",
     slots: [{ name: "Msg", type: "block" }],
+    parameters: [
+      { name: "msg", type: "unknown" },
+      { name: "...args", type: "unknown[]" },
+    ],
+    returnType: "null",
   },
   handler: async (args, ctx) => {
     if (args.length < 1) {
@@ -769,13 +894,15 @@ export const log = defineOpcode<
   },
 });
 
-export const arg = defineOpcode<[ScriptValue<number>], any>("arg", {
+export const arg = defineOpcode<[ScriptValue<number>], unknown>("arg", {
   metadata: {
     label: "Get Arg",
     category: "data",
     description: "Get argument by index",
     layout: "primitive",
     slots: [{ name: "Index", type: "number" }],
+    parameters: [{ name: "index", type: "number" }],
+    returnType: "any",
   },
   handler: async (args, ctx) => {
     const [index] = args;
@@ -789,6 +916,8 @@ export const args = defineOpcode<[], readonly any[]>("args", {
     category: "data",
     description: "Get all arguments",
     slots: [],
+    parameters: [],
+    returnType: "readonly any[]",
   },
   handler: async (_args, ctx) => {
     return ctx.args ?? [];
@@ -807,6 +936,11 @@ export const random = defineOpcode<
       { name: "Min", type: "number", default: 0 },
       { name: "Max", type: "number", default: 1 },
     ],
+    parameters: [
+      { name: "min", type: "number" },
+      { name: "max", type: "number" },
+    ],
+    returnType: "number",
   },
   handler: async (args, ctx) => {
     // random(max), random(min, max) or random() -> 0..1
@@ -836,7 +970,9 @@ export const warn = defineOpcode<[ScriptValue<unknown>], void>("warn", {
     label: "Warn",
     category: "action",
     description: "Send warning to client",
-    slots: [{ name: "Msg", type: "block" }],
+    slots: [{ name: "Message", type: "block" }],
+    parameters: [{ name: "message", type: "unknown" }],
+    returnType: "void",
   },
   handler: async (args, ctx) => {
     const [msg] = args;
@@ -850,7 +986,9 @@ const throwOp = defineOpcode<[ScriptValue<unknown>], never>("throw", {
     label: "Throw",
     category: "action",
     description: "Throw an error",
-    slots: [{ name: "Msg", type: "block" }],
+    slots: [{ name: "Message", type: "block" }],
+    parameters: [{ name: "message", type: "unknown" }],
+    returnType: "never",
   },
   handler: async (args, ctx) => {
     const [msg] = args;
@@ -873,6 +1011,12 @@ const tryOp = defineOpcode<
       { name: "ErrorVar", type: "string" },
       { name: "Catch", type: "block" },
     ],
+    parameters: [
+      { name: "try", type: "unknown" },
+      { name: "errorVar", type: "string" },
+      { name: "catch", type: "unknown" },
+    ],
+    returnType: "any",
   },
   handler: async (args, ctx) => {
     const [tryBlock, errorVar, catchBlock] = args;
@@ -907,6 +1051,13 @@ export const create = defineOpcode<
     category: "action",
     description: "Create a new entity",
     slots: [{ name: "Data", type: "block" }],
+    parameters: [
+      { name: "kindOrProps", type: "unknown" },
+      { name: "name", type: "string" },
+      { name: "props", type: "unknown" },
+      { name: "location", type: "number" },
+    ],
+    returnType: "number",
   },
   handler: async (args, ctx) => {
     if (!ctx.sys) {
@@ -939,6 +1090,8 @@ export const destroy = defineOpcode<[ScriptValue<Entity>], null>("destroy", {
     category: "action",
     description: "Destroy an entity",
     slots: [{ name: "Target", type: "block", default: "this" }],
+    parameters: [{ name: "target", type: "Entity" }],
+    returnType: "null",
   },
   handler: async (args, ctx) => {
     const [targetExpr] = args;
@@ -968,6 +1121,11 @@ export const lambda = defineOpcode<[readonly string[], ScriptValue<unknown>], an
         { name: "Args", type: "block" },
         { name: "Body", type: "block" },
       ],
+      parameters: [
+        { name: "args", type: "string[]" },
+        { name: "body", type: "unknown" },
+      ],
+      returnType: "any",
     },
     handler: async (args, ctx) => {
       const [argNames, body] = args;
@@ -993,6 +1151,11 @@ export const apply = defineOpcode<
       { name: "Func", type: "block" },
       { name: "Args...", type: "block" },
     ],
+    parameters: [
+      { name: "func", type: "unknown" },
+      { name: "...args", type: "unknown[]" },
+    ],
+    returnType: "any",
   },
   handler: async (args, ctx) => {
     const [funcExpr, ...argExprs] = args;
@@ -1040,6 +1203,12 @@ export const call = defineOpcode<
       { name: "Verb", type: "string" },
       { name: "Args...", type: "block" },
     ],
+    parameters: [
+      { name: "target", type: "Entity" },
+      { name: "verb", type: "string" },
+      { name: "...args", type: "unknown[]" },
+    ],
+    returnType: "null",
   },
   handler: async (args, ctx) => {
     const [targetExpr, verbExpr, ...callArgs] = args;
@@ -1089,6 +1258,12 @@ export const schedule = defineOpcode<
       { name: "Args", type: "block" },
       { name: "Delay", type: "number" },
     ],
+    parameters: [
+      { name: "verb", type: "string" },
+      { name: "args", type: "unknown[]" },
+      { name: "delay", type: "number" },
+    ],
+    returnType: "null",
   },
   handler: async (args, ctx) => {
     const [verbExpr, argsExpr, delayExpr] = args;
@@ -1121,6 +1296,8 @@ export const send = defineOpcode<[ScriptValue<unknown>], null>("send", {
     category: "system",
     description: "Send a system message",
     slots: [{ name: "Msg", type: "block" }],
+    parameters: [{ name: "msg", type: "unknown" }],
+    returnType: "null",
   },
   handler: async (args, ctx) => {
     const [msgExpr] = args;
@@ -1137,6 +1314,8 @@ export const verbs = defineOpcode<[ScriptValue<unknown>], readonly Verb[]>("verb
     category: "world",
     description: "Get verbs of an entity",
     slots: [{ name: "Target", type: "block" }],
+    parameters: [{ name: "target", type: "unknown" }],
+    returnType: "readonly Verb[]",
   },
   handler: async (args, ctx) => {
     if (!ctx.sys) {
@@ -1162,6 +1341,8 @@ export const entity = defineOpcode<[ScriptValue<number>], Entity>("entity", {
     category: "world",
     description: "Get entity by ID",
     slots: [{ name: "ID", type: "number" }],
+    parameters: [{ name: "id", type: "number" }],
+    returnType: "Entity",
   },
   handler: async (args, ctx) => {
     if (!ctx.sys) {
@@ -1191,6 +1372,8 @@ export const set_entity = defineOpcode<ScriptValue<Entity>[], null>("set_entity"
     category: "action",
     description: "Set entity properties",
     slots: [{ name: "Entity", type: "block" }],
+    parameters: [{ name: "entity", type: "Entity[]" }],
+    returnType: "null",
   },
   handler: async (args, ctx) => {
     if (args.length < 1) {
@@ -1223,6 +1406,8 @@ export const get_prototype = defineOpcode<[ScriptValue<Entity>], number | null>(
       category: "world",
       description: "Get entity prototype ID",
       slots: [{ name: "Entity", type: "block" }],
+      parameters: [{ name: "target", type: "Entity" }],
+      returnType: "number | null",
     },
     handler: async (args, ctx) => {
       if (args.length !== 1) {
@@ -1256,6 +1441,11 @@ export const set_prototype = defineOpcode<
       { name: "Entity", type: "block" },
       { name: "PrototypeID", type: "number" },
     ],
+    parameters: [
+      { name: "target", type: "Entity" },
+      { name: "prototype", type: "number | null" },
+    ],
+    returnType: "null",
   },
   handler: async (args, ctx) => {
     if (args.length !== 2) {
@@ -1288,7 +1478,7 @@ export const set_prototype = defineOpcode<
   },
 });
 
-export const resolve_props = defineOpcode<[ScriptValue<Entity>], any>(
+export const resolve_props = defineOpcode<[ScriptValue<Entity>], Entity>(
   "resolve_props",
   {
     metadata: {
@@ -1296,6 +1486,8 @@ export const resolve_props = defineOpcode<[ScriptValue<Entity>], any>(
       category: "data",
       description: "Resolve entity properties",
       slots: [{ name: "Entity", type: "block" }],
+      parameters: [{ name: "target", type: "Entity" }],
+      returnType: "Entity",
     },
     handler: async (args, ctx) => {
       if (args.length !== 1) {

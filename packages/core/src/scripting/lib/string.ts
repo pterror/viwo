@@ -9,6 +9,8 @@ const strLen = defineOpcode<[ScriptValue<string>], number>(
       category: "string",
       description: "Get string length",
       slots: [{ name: "String", type: "string" }],
+      parameters: [{ name: "string", type: "string" }],
+      returnType: "number",
     },
     handler: async (args, ctx) => {
       if (args.length !== 1) {
@@ -33,6 +35,8 @@ const strConcat = defineOpcode<[...ScriptValue<string | number | boolean | null>
       category: "string",
       description: "Concatenate strings",
       slots: [{ name: "Strings", type: "block" }], // Variadic?
+      parameters: [{ name: "...strings", type: "string[]" }],
+      returnType: "string",
     },
     handler: async (args, ctx) => {
       const strings: string[] = [];
@@ -60,6 +64,11 @@ const strSplit = defineOpcode<[ScriptValue<string>, ScriptValue<string>], string
         { name: "String", type: "string" },
         { name: "Separator", type: "string" },
       ],
+      parameters: [
+        { name: "string", type: "string" },
+        { name: "separator", type: "string" },
+      ],
+      returnType: "string[]",
     },
     handler: async (args, ctx) => {
       if (args.length !== 2) {
@@ -92,6 +101,12 @@ const strSlice = defineOpcode<[ScriptValue<string>, ScriptValue<number>, ScriptV
         { name: "Start", type: "number" },
         { name: "End", type: "number", default: null },
       ],
+      parameters: [
+        { name: "string", type: "string" },
+        { name: "start", type: "number" },
+        { name: "end", type: "number" },
+      ],
+      returnType: "string",
     },
     handler: async (args, ctx) => {
       if (args.length < 2 || args.length > 3) {
@@ -124,6 +139,8 @@ const strUpper = defineOpcode<[ScriptValue<string>], string>(
       category: "string",
       description: "Convert to uppercase",
       slots: [{ name: "String", type: "string" }],
+      parameters: [{ name: "string", type: "string" }],
+      returnType: "string",
     },
     handler: async (args, ctx) => {
       if (args.length !== 1) {
@@ -148,6 +165,8 @@ const strLower = defineOpcode<[ScriptValue<string>], string>(
       category: "string",
       description: "Convert to lowercase",
       slots: [{ name: "String", type: "string" }],
+      parameters: [{ name: "string", type: "string" }],
+      returnType: "string",
     },
     handler: async (args, ctx) => {
       if (args.length !== 1) {
@@ -172,6 +191,8 @@ const strTrim = defineOpcode<[ScriptValue<string>], string>(
       category: "string",
       description: "Trim whitespace",
       slots: [{ name: "String", type: "string" }],
+      parameters: [{ name: "string", type: "string" }],
+      returnType: "string",
     },
     handler: async (args, ctx) => {
       if (args.length !== 1) {
@@ -200,6 +221,12 @@ const strReplace = defineOpcode<[ScriptValue<string>, ScriptValue<string>, Scrip
         { name: "Search", type: "string" },
         { name: "Replace", type: "string" },
       ],
+      parameters: [
+        { name: "string", type: "string" },
+        { name: "search", type: "string" },
+        { name: "replace", type: "string" },
+      ],
+      returnType: "string",
     },
     handler: async (args, ctx) => {
       if (args.length !== 3) {
@@ -235,6 +262,11 @@ const strIncludes = defineOpcode<[ScriptValue<string>, ScriptValue<string>], boo
         { name: "String", type: "string" },
         { name: "Search", type: "string" },
       ],
+      parameters: [
+        { name: "string", type: "string" },
+        { name: "search", type: "string" },
+      ],
+      returnType: "boolean",
     },
     handler: async (args, ctx) => {
       if (args.length !== 2) {
@@ -266,6 +298,11 @@ const strJoin = defineOpcode<[ScriptValue<any[]>, ScriptValue<string>], string>(
         { name: "List", type: "block" },
         { name: "Separator", type: "string" },
       ],
+      parameters: [
+        { name: "list", type: "any[]" },
+        { name: "separator", type: "string" },
+      ],
+      returnType: "string",
     },
     handler: async (args, ctx) => {
       if (args.length !== 2) {

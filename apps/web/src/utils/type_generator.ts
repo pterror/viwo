@@ -54,6 +54,20 @@ interface Entity {
   [key: string]: unknown;
 };
 
+/**
+ * Represents a scriptable action (verb) attached to an entity.
+ */
+interface Verb {
+  id: number;
+  entity_id: number;
+  /** The name of the verb (command) */
+  name: string;
+  /** The compiled S-expression code for the verb */
+  code: ScriptValue<unknown>;
+  /** Permission settings for the verb */
+  permissions: Record<string, unknown>;
+}
+
 // Standard library functions
 `;
 

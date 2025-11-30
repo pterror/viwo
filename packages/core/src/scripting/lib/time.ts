@@ -9,6 +9,8 @@ const timeNow = defineOpcode<[], string>(
       category: "time",
       description: "Get current time (ISO)",
       slots: [],
+      parameters: [],
+      returnType: "string",
     },
     handler: async (args, _ctx) => {
       if (args.length !== 0) {
@@ -31,6 +33,11 @@ const timeFormat = defineOpcode<[ScriptValue<string>, ScriptValue<string>?], str
         { name: "Time", type: "string" },
         { name: "Format", type: "string", default: null }, // Format string not really used yet?
       ],
+      parameters: [
+        { name: "time", type: "string" },
+        { name: "format", type: "string" },
+      ],
+      returnType: "string",
     },
     handler: async (args, ctx) => {
       if (args.length < 1 || args.length > 2) {
@@ -55,6 +62,8 @@ const timeParse = defineOpcode<[ScriptValue<string>], string>(
       category: "time",
       description: "Parse datetime string",
       slots: [{ name: "Time", type: "string" }],
+      parameters: [{ name: "time", type: "string" }],
+      returnType: "string",
     },
     handler: async (args, ctx) => {
       if (args.length !== 1) {
@@ -79,6 +88,8 @@ const timeFromTimestamp = defineOpcode<[ScriptValue<number>], string>(
       category: "time",
       description: "Convert number to ISO",
       slots: [{ name: "Timestamp", type: "number" }],
+      parameters: [{ name: "timestamp", type: "number" }],
+      returnType: "string",
     },
     handler: async (args, ctx) => {
       if (args.length !== 1) {
@@ -105,6 +116,8 @@ const timeToTimestamp = defineOpcode<[ScriptValue<string>], number>(
       category: "time",
       description: "Convert ISO to number",
       slots: [{ name: "Time", type: "string" }],
+      parameters: [{ name: "time", type: "string" }],
+      returnType: "number",
     },
     handler: async (args, ctx) => {
       if (args.length !== 1) {
@@ -135,6 +148,12 @@ const timeOffset = defineOpcode<[ScriptValue<number>, ScriptValue<"day" | "days"
         { name: "Unit", type: "string" },
         { name: "Base", type: "string", default: null },
       ],
+      parameters: [
+        { name: "amount", type: "number" },
+        { name: "unit", type: "string" },
+        { name: "base", type: "string" },
+      ],
+      returnType: "string",
     },
     handler: async (args, ctx) => {
       if (args.length < 2 || args.length > 3) {

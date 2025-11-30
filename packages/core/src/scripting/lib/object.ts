@@ -15,6 +15,8 @@ const objNew = defineOpcode<[...ScriptValue<unknown>[]], any>(
       category: "data",
       description: "Create a new object",
       slots: [],
+      parameters: [{ name: "...args", type: "unknown[]" }],
+      returnType: "any",
     },
     handler: async (args, ctx) => {
       // args: [key1, val1, key2, val2, ...]
@@ -48,6 +50,8 @@ const objKeys = defineOpcode<[ScriptValue<object>], string[]>(
       category: "object",
       description: "Get object keys",
       slots: [{ name: "Object", type: "block" }],
+      parameters: [{ name: "object", type: "object" }],
+      returnType: "string[]",
     },
     handler: async (args, ctx) => {
       if (args.length !== 1) {
@@ -74,6 +78,8 @@ const objValues = defineOpcode<[ScriptValue<object>], any[]>(
       category: "object",
       description: "Get object values",
       slots: [{ name: "Object", type: "block" }],
+      parameters: [{ name: "object", type: "object" }],
+      returnType: "any[]",
     },
     handler: async (args, ctx) => {
       if (args.length !== 1) {
@@ -100,6 +106,8 @@ const objEntries = defineOpcode<[ScriptValue<object>], [string, any][]>(
       category: "object",
       description: "Get object entries",
       slots: [{ name: "Object", type: "block" }],
+      parameters: [{ name: "object", type: "object" }],
+      returnType: "[string, any][]",
     },
     handler: async (args, ctx) => {
       if (args.length !== 1) {
@@ -129,6 +137,11 @@ const objGet = defineOpcode<[ScriptValue<object>, ScriptValue<string>], any>(
         { name: "Object", type: "block" },
         { name: "Key", type: "string" },
       ],
+      parameters: [
+        { name: "object", type: "object" },
+        { name: "key", type: "string" },
+      ],
+      returnType: "any",
     },
     handler: async (args, ctx) => {
       if (args.length !== 2) {
@@ -168,6 +181,12 @@ const objSet = defineOpcode<[ScriptValue<object>, ScriptValue<string>, ScriptVal
         { name: "Key", type: "string" },
         { name: "Value", type: "block" },
       ],
+      parameters: [
+        { name: "object", type: "object" },
+        { name: "key", type: "string" },
+        { name: "value", type: "unknown" },
+      ],
+      returnType: "any",
     },
     handler: async (args, ctx) => {
       if (args.length !== 3) {
@@ -208,6 +227,11 @@ const objHas = defineOpcode<[ScriptValue<object>, ScriptValue<string>], boolean>
         { name: "Object", type: "block" },
         { name: "Key", type: "string" },
       ],
+      parameters: [
+        { name: "object", type: "object" },
+        { name: "key", type: "string" },
+      ],
+      returnType: "boolean",
     },
     handler: async (args, ctx) => {
       if (args.length !== 2) {
@@ -243,6 +267,11 @@ const objDel = defineOpcode<[ScriptValue<object>, ScriptValue<string>], boolean>
         { name: "Object", type: "block" },
         { name: "Key", type: "string" },
       ],
+      parameters: [
+        { name: "object", type: "object" },
+        { name: "key", type: "string" },
+      ],
+      returnType: "boolean",
     },
     handler: async (args, ctx) => {
       if (args.length !== 2) {
@@ -279,6 +308,8 @@ const objMerge = defineOpcode<[ScriptValue<object>, ScriptValue<object>, ...Scri
       category: "object",
       description: "Merge objects",
       slots: [{ name: "Objects", type: "block" }], // Variadic
+      parameters: [{ name: "...objects", type: "object[]" }],
+      returnType: "any",
     },
     handler: async (args, ctx) => {
       if (args.length < 2) {
@@ -311,6 +342,11 @@ const objMap = defineOpcode<[ScriptValue<object>, ScriptValue<unknown>], any>(
         { name: "Object", type: "block" },
         { name: "Lambda", type: "block" },
       ],
+      parameters: [
+        { name: "object", type: "object" },
+        { name: "lambda", type: "unknown" },
+      ],
+      returnType: "any",
     },
     handler: async (args, ctx) => {
       if (args.length !== 2) {
@@ -352,6 +388,11 @@ const objFilter = defineOpcode<[ScriptValue<object>, ScriptValue<unknown>], any>
         { name: "Object", type: "block" },
         { name: "Lambda", type: "block" },
       ],
+      parameters: [
+        { name: "object", type: "object" },
+        { name: "lambda", type: "unknown" },
+      ],
+      returnType: "any",
     },
     handler: async (args, ctx) => {
       if (args.length !== 2) {
@@ -389,6 +430,12 @@ const objReduce = defineOpcode<[ScriptValue<object>, ScriptValue<unknown>, Scrip
         { name: "Lambda", type: "block" },
         { name: "Init", type: "block" },
       ],
+      parameters: [
+        { name: "object", type: "object" },
+        { name: "lambda", type: "unknown" },
+        { name: "init", type: "unknown" },
+      ],
+      returnType: "any",
     },
     handler: async (args, ctx) => {
       if (args.length !== 3) {
@@ -423,6 +470,11 @@ const objFlatMap = defineOpcode<[ScriptValue<object>, ScriptValue<unknown>], any
         { name: "Object", type: "block" },
         { name: "Lambda", type: "block" },
       ],
+      parameters: [
+        { name: "object", type: "object" },
+        { name: "lambda", type: "unknown" },
+      ],
+      returnType: "any",
     },
     handler: async (args, ctx) => {
       if (args.length !== 2) {

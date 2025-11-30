@@ -13,6 +13,8 @@ const listNew = defineOpcode<[...ScriptValue<unknown>[]], any[]>(
       category: "list",
       description: "Create a list",
       slots: [],
+      parameters: [{ name: "...args", type: "unknown[]" }],
+      returnType: "any[]",
     },
     handler: async (args, ctx) => {
       const result = [];
@@ -33,6 +35,8 @@ const listLen = defineOpcode<[ScriptValue<readonly unknown[]>], number>(
       category: "list",
       description: "Get list length",
       slots: [{ name: "List", type: "block" }],
+      parameters: [{ name: "List", type: "unknown[]" }],
+      returnType: "number",
     },
     handler: async (args, ctx) => {
       const list = await evaluate(args[0], ctx);
@@ -51,6 +55,8 @@ const listEmpty = defineOpcode<[ScriptValue<readonly unknown[]>], boolean>(
       category: "list",
       description: "Check if list is empty",
       slots: [{ name: "List", type: "block" }],
+      parameters: [{ name: "List", type: "unknown[]" }],
+      returnType: "boolean",
     },
     handler: async (args, ctx) => {
       const list = await evaluate(args[0], ctx);
@@ -72,6 +78,11 @@ const listGet = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<numbe
         { name: "List", type: "block" },
         { name: "Index", type: "number" },
       ],
+      parameters: [
+        { name: "List", type: "unknown[]" },
+        { name: "Index", type: "number" },
+      ],
+      returnType: "any",
     },
     handler: async (args, ctx) => {
       const list = await evaluate(args[0], ctx);
@@ -95,6 +106,12 @@ const listSet = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<numbe
         { name: "Index", type: "number" },
         { name: "Value", type: "block" },
       ],
+      parameters: [
+        { name: "List", type: "unknown[]" },
+        { name: "Index", type: "number" },
+        { name: "Value", type: "unknown" },
+      ],
+      returnType: "any",
     },
     handler: async (args, ctx) => {
       const list = await evaluate(args[0], ctx);
@@ -119,6 +136,11 @@ const listPush = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<unkn
         { name: "List", type: "block" },
         { name: "Value", type: "block" },
       ],
+      parameters: [
+        { name: "List", type: "unknown[]" },
+        { name: "Value", type: "unknown" },
+      ],
+      returnType: "number",
     },
     handler: async (args, ctx) => {
       const list = await evaluate(args[0], ctx);
@@ -141,6 +163,8 @@ const listPop = defineOpcode<[ScriptValue<readonly unknown[]>], any>(
       category: "list",
       description: "Remove item from end",
       slots: [{ name: "List", type: "block" }],
+      parameters: [{ name: "List", type: "unknown[]" }],
+      returnType: "any",
     },
     handler: async (args, ctx) => {
       if (args.length !== 1) {
@@ -168,6 +192,11 @@ const listUnshift = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<u
         { name: "List", type: "block" },
         { name: "Value", type: "block" },
       ],
+      parameters: [
+        { name: "List", type: "unknown[]" },
+        { name: "Value", type: "unknown" },
+      ],
+      returnType: "number",
     },
     handler: async (args, ctx) => {
       const list = await evaluate(args[0], ctx);
@@ -190,6 +219,8 @@ const listShift = defineOpcode<[ScriptValue<readonly unknown[]>], any>(
       category: "list",
       description: "Remove item from start",
       slots: [{ name: "List", type: "block" }],
+      parameters: [{ name: "List", type: "unknown[]" }],
+      returnType: "any",
     },
     handler: async (args, ctx) => {
       const list = await evaluate(args[0], ctx);
@@ -214,6 +245,12 @@ const listSlice = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<num
         { name: "Start", type: "number" },
         { name: "End", type: "number", default: null },
       ],
+      parameters: [
+        { name: "List", type: "unknown[]" },
+        { name: "Start", type: "number" },
+        { name: "End", type: "number" },
+      ],
+      returnType: "any[]",
     },
     handler: async (args, ctx) => {
       if (args.length < 2 || args.length > 3) {
@@ -248,6 +285,13 @@ const listSplice = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<nu
         { name: "Delete Count", type: "number" },
         { name: "Items", type: "block" }, // Variadic
       ],
+      parameters: [
+        { name: "List", type: "unknown[]" },
+        { name: "Start", type: "number" },
+        { name: "Delete Count", type: "number" },
+        { name: "...args", type: "unknown[]" },
+      ],
+      returnType: "any[]",
     },
     handler: async (args, ctx) => {
       const list = await evaluate(args[0], ctx);
@@ -284,6 +328,11 @@ const listConcat = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<re
         { name: "List 1", type: "block" },
         { name: "List 2", type: "block" },
       ],
+      parameters: [
+        { name: "List 1", type: "unknown[]" },
+        { name: "List 2", type: "unknown[]" },
+      ],
+      returnType: "any[]",
     },
     handler: async (args, ctx) => {
       if (args.length !== 2) {
@@ -312,6 +361,11 @@ const listIncludes = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<
         { name: "List", type: "block" },
         { name: "Value", type: "block" },
       ],
+      parameters: [
+        { name: "List", type: "unknown[]" },
+        { name: "Value", type: "unknown" },
+      ],
+      returnType: "boolean",
     },
     handler: async (args, ctx) => {
       const list = await evaluate(args[0], ctx);
@@ -333,6 +387,8 @@ const listReverse = defineOpcode<[ScriptValue<readonly unknown[]>], any[]>(
       category: "list",
       description: "Reverse list order",
       slots: [{ name: "List", type: "block" }],
+      parameters: [{ name: "List", type: "unknown[]" }],
+      returnType: "any[]",
     },
     handler: async (args, ctx) => {
       const list = await evaluate(args[0], ctx);
@@ -353,6 +409,8 @@ const listSort = defineOpcode<[ScriptValue<readonly unknown[]>], any[]>(
       category: "list",
       description: "Sort list",
       slots: [{ name: "List", type: "block" }],
+      parameters: [{ name: "List", type: "unknown[]" }],
+      returnType: "any[]",
     },
     handler: async (args, ctx) => {
       const list = await evaluate(args[0], ctx);
@@ -376,6 +434,11 @@ const listFind = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<unkn
         { name: "List", type: "block" },
         { name: "Lambda", type: "block" },
       ],
+      parameters: [
+        { name: "List", type: "unknown[]" },
+        { name: "Lambda", type: "unknown" },
+      ],
+      returnType: "any",
     },
     handler: async (args, ctx) => {
       if (args.length !== 2) {
@@ -412,6 +475,11 @@ const listMap = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<unkno
         { name: "List", type: "block" },
         { name: "Lambda", type: "block" },
       ],
+      parameters: [
+        { name: "List", type: "unknown[]" },
+        { name: "Lambda", type: "unknown" },
+      ],
+      returnType: "any[]",
     },
     handler: async (args, ctx) => {
       if (args.length !== 2) {
@@ -447,6 +515,11 @@ const listFilter = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<un
         { name: "List", type: "block" },
         { name: "Lambda", type: "block" },
       ],
+      parameters: [
+        { name: "List", type: "unknown[]" },
+        { name: "Lambda", type: "unknown" },
+      ],
+      returnType: "any[]",
     },
     handler: async (args, ctx) => {
       if (args.length !== 2) {
@@ -485,6 +558,12 @@ const listReduce = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<un
         { name: "Lambda", type: "block" },
         { name: "Init", type: "block" },
       ],
+      parameters: [
+        { name: "List", type: "unknown[]" },
+        { name: "Lambda", type: "unknown" },
+        { name: "Init", type: "unknown" },
+      ],
+      returnType: "any",
     },
     handler: async (args, ctx) => {
       if (args.length !== 3) {
@@ -520,6 +599,11 @@ const listFlatMap = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<u
         { name: "List", type: "block" },
         { name: "Lambda", type: "block" },
       ],
+      parameters: [
+        { name: "List", type: "unknown[]" },
+        { name: "Lambda", type: "unknown" },
+      ],
+      returnType: "any[]",
     },
     handler: async (args, ctx) => {
       if (args.length !== 2) {
