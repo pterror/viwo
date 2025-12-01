@@ -1171,7 +1171,7 @@ export const apply = defineOpcode<
 // TODO: Return verb result value?
 export const call = defineOpcode<
   [ScriptValue<Entity>, ScriptValue<string>, ...ScriptValue<unknown>[]],
-  null
+  any
 >("call", {
   metadata: {
     label: "Call",
@@ -1187,7 +1187,7 @@ export const call = defineOpcode<
       { name: "verb", type: "string" },
       { name: "...args", type: "unknown[]" },
     ],
-    returnType: "null",
+    returnType: "any",
   },
   handler: async (args, ctx) => {
     const [targetExpr, verbExpr, ...callArgs] = args;

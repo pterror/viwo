@@ -40,30 +40,45 @@ const ItemView = (props: { item: Entity }) => (
 );
 
 export default function RoomPanel() {
+  const room = () => {
+    const id = gameStore.state.roomId;
+    return id ? gameStore.state.entities.get(id) : null;
+  };
+
+  const contents = () => {
+    const r = room();
+    if (!r || !Array.isArray(r["contents"])) return [];
+    return (r["contents"] as number[])
+      .map((id) => gameStore.state.entities.get(id))
+      .filter((e): e is Entity => !!e);
+  };
+
+  const exits = () => {
+    const r = room();
+    if (!r || !Array.isArray(r["exits"])) return [];
+    return (r["exits"] as number[])
+      .map((id) => gameStore.state.entities.get(id))
+      .filter((e): e is Entity => !!e);
+  };
+
   return (
     <div class="room-panel">
       <Show
-        when={gameStore.state.room}
-        fallback={<div class="room-panel__loading">Loading room...</div>}
+        when={room()}
+        fallback={<div class="room-panel__empty">No room data</div>}
       >
-        <div class="room-panel__name">{gameStore.state.room!.name}</div>
-        <Show when={gameStore.state.room!.custom_css}>
-          <style>{gameStore.state.room!.custom_css}</style>
-        </Show>
-        <Show when={gameStore.state.room!.image}>
-          <img
-            src={gameStore.state.room!.image}
-            class="room-panel__image"
-            alt={gameStore.state.room!.name}
-          />
-        </Show>
-        <div class="room-panel__desc">{gameStore.state.room!.description}</div>
+        <div class="room-panel__header">
+          <h2 class="room-panel__title">{room()?.["name"] as string}</h2>
+        </div>
+        <div class="room-panel__description">
+          {room()?.["description"] as string}
+        </div>
 
         {/* Exits */}
         <div class="room-panel__section">
           <div class="room-panel__section-title">Exits</div>
           <div class="room-panel__exits">
-            <For each={gameStore.state.room?.exits}>
+            <For each={exits()}>
               {(exit) => (
                 <span
                   onClick={() =>
@@ -81,10 +96,13 @@ export default function RoomPanel() {
         {/* Items */}
         <div>
           <div class="room-panel__section-title">Contents</div>
-          <For each={gameStore.state.room!.contents}>
-            {(item) => <ItemView item={item} />}
-          </For>
+          <For each={contents()}>{(item) => <ItemView item={item} />}</For>
         </div>
+      </Show>
+
+      {/* Custom CSS Injection */}
+      <Show when={room()?.["custom_css"]}>
+        <style>{room()?.["custom_css"] as string}</style>
       </Show>
     </div>
   );

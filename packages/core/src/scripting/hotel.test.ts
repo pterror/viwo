@@ -50,7 +50,6 @@ describe("Hotel Scripting", () => {
     // Reset DB state
     db.query("DELETE FROM entities").run();
     db.query("DELETE FROM verbs").run();
-    db.query("DELETE FROM entity_data").run();
     db.query("DELETE FROM sqlite_sequence").run();
 
     messages = [];

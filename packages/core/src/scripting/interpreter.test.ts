@@ -141,7 +141,7 @@ describe("Interpreter", () => {
     // Verify DB update
     const row = db
       .query<{ props: string }, [targetId: number]>(
-        "SELECT props FROM entity_data WHERE entity_id = ?",
+        "SELECT props FROM entity WHERE id = ?",
       )
       .get(targetId)!;
     const props = JSON.parse(row.props);

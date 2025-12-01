@@ -4,11 +4,17 @@ import Popover from "./Popover";
 
 export default function Compass() {
   const getExit = (dir: string) => {
-    if (!gameStore.state.room) return null;
-    if (!gameStore.state.room) return null;
-    return gameStore.state.room.exits.find(
-      (item) => (item["name"] as string).toLowerCase() === dir.toLowerCase(),
-    );
+    const roomId = gameStore.state.roomId;
+    if (!roomId) return null;
+    const room = gameStore.state.entities.get(roomId);
+    if (!room || !Array.isArray(room["exits"])) return null;
+
+    return (room["exits"] as number[])
+      .map((id) => gameStore.state.entities.get(id))
+      .find(
+        (item) =>
+          item && (item["name"] as string).toLowerCase() === dir.toLowerCase(),
+      );
   };
 
   const handleDir = (dir: string) => {

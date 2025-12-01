@@ -43,7 +43,6 @@ describe("Player Commands", () => {
     // Reset DB state
     db.query("DELETE FROM entities").run();
     db.query("DELETE FROM verbs").run();
-    db.query("DELETE FROM entity_data").run();
     db.query("DELETE FROM sqlite_sequence").run();
 
     sentMessages = [];
@@ -74,8 +73,10 @@ describe("Player Commands", () => {
 
     // Get Guest Player
     const guest = db
-      .query("SELECT * FROM entities WHERE name = 'Guest'")
-      .get() as any;
+      .query<Entity, []>(
+        "SELECT * FROM entities WHERE json_extract(props, '$.name') = 'Guest'",
+      )
+      .get()!;
     player = getEntity(guest.id)!;
     room = getEntity(player["location"] as number)!;
   });

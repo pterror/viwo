@@ -21,36 +21,29 @@ export interface Entity {
   [key: string]: unknown;
 }
 
-export interface RoomMessage {
-  type: "room";
-  name: string;
-  description: string;
-  contents: Entity[];
-  exits: Entity[];
-  custom_css?: string;
-  image?: string;
+export interface UpdateMessage {
+  type: "update";
+  entities: Entity[];
 }
 
-export interface InventoryMessage {
-  type: "inventory";
-  items: Entity[];
+export interface RoomChangeMessage {
+  type: "room_change";
+  roomId: number;
 }
 
-export interface ItemMessage {
-  type: "item";
-  name: string;
-  description: string;
-  contents: Entity[];
-  custom_css?: string;
+export interface PlayerIdMessage {
+  type: "player_id";
+  playerId: number;
 }
 
 interface GameState {
   responseResolveFunctions: Map<number, (value: any) => void>;
   isConnected: boolean;
   messages: GameMessage[];
-  room: RoomMessage | null;
-  inventory: InventoryMessage | null;
-  inspectedItem: ItemMessage | null;
+  entities: Map<number, Entity>;
+  roomId: number | null;
+  playerId: number | null;
+  inspectedItem: number | null;
   opcodes: any[] | null;
   socket: WebSocket | null;
 }
@@ -59,8 +52,9 @@ const [state, setState] = createStore<GameState>({
   responseResolveFunctions: new Map(),
   isConnected: false,
   messages: [],
-  room: null,
-  inventory: null,
+  entities: new Map(),
+  roomId: null,
+  playerId: null,
   inspectedItem: null,
   opcodes: null,
   socket: null,
@@ -80,12 +74,9 @@ export const gameStore = {
     socket.onopen = () => {
       setState("isConnected", true);
       // Initial fetch
-      gameStore.execute(["look"]).then((result) => {
-        setState("room", result as any);
-      });
-      gameStore.execute(["inventory"]).then((result) => {
-        setState("inventory", result as any);
-      });
+      gameStore.execute(["whoami"]);
+      gameStore.execute(["look"]);
+      gameStore.execute(["inventory"]);
 
       // Fetch opcodes
       socket?.send(
@@ -107,6 +98,23 @@ export const gameStore = {
       setState("socket", null);
     };
 
+    const handleServerMessage = (msg: any) => {
+      if (!msg || typeof msg !== "object") return;
+
+      if (msg.type === "update") {
+        const update = msg as UpdateMessage;
+        const newEntities = new Map(state.entities);
+        for (const entity of update.entities) {
+          newEntities.set(entity.id, entity);
+        }
+        setState("entities", newEntities);
+      } else if (msg.type === "room_change") {
+        setState("roomId", (msg as RoomChangeMessage).roomId);
+      } else if (msg.type === "player_id") {
+        setState("playerId", (msg as PlayerIdMessage).playerId);
+      }
+    };
+
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
@@ -122,7 +130,6 @@ export const gameStore = {
               }
             }
             // Check if this is the opcode response
-            // Ideally we should track IDs, but for now we can infer or just check structure
             if (
               Array.isArray(data.result) &&
               data.result.length > 0 &&
@@ -131,11 +138,16 @@ export const gameStore = {
               setState("opcodes", data.result);
               return;
             }
-            // Handle other RPC results if needed
+
+            // Handle Server Messages (Single or Array)
+            if (Array.isArray(data.result)) {
+              data.result.forEach(handleServerMessage);
+            } else {
+              handleServerMessage(data.result);
+            }
           } else if (data.method === "message" && data.params) {
             gameStore.addMessage(structuredClone(data.params));
           }
-          // Handle RPC errors?
           return;
         }
       } catch (e) {
@@ -167,11 +179,7 @@ export const gameStore = {
     }
   },
 
-  lookAt: (item: number | string) =>
-    gameStore.execute(["look", item]).then((result) => {
-      setState("room", result as any);
-      return result;
-    }),
+  lookAt: (item: number | string) => gameStore.execute(["look", item]),
 
   addMessage: (msg: GameMessage) => {
     setState("messages", (msgs) => [...msgs, msg]);

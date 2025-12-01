@@ -7,6 +7,13 @@ const ItemView = (props: { item: Entity }) => {
     props.item["contents"] &&
     (props.item["contents"] as readonly number[]).length > 0;
 
+  const children = () => {
+    if (!hasContents()) return [];
+    return (props.item["contents"] as number[])
+      .map((id) => gameStore.state.entities.get(id))
+      .filter((e): e is Entity => !!e);
+  };
+
   return (
     <div class="inventory-panel__item-container">
       <div class="inventory-panel__item">
@@ -60,13 +67,7 @@ const ItemView = (props: { item: Entity }) => {
       </div>
       <Show when={isExpanded() && hasContents()}>
         <div class="inventory-panel__nested">
-          <For each={props.item["contents"] as readonly number[]}>
-            {(child) => (
-              // TODO: Batch retrieve items
-              // @ts-expect-error
-              <ItemView item={child} />
-            )}
-          </For>
+          <For each={children()}>{(child) => <ItemView item={child} />}</For>
         </div>
       </Show>
     </div>
@@ -74,12 +75,23 @@ const ItemView = (props: { item: Entity }) => {
 };
 
 export default function InventoryPanel() {
+  const player = () => {
+    const id = gameStore.state.playerId;
+    return id ? gameStore.state.entities.get(id) : null;
+  };
+
+  const items = () => {
+    const p = player();
+    if (!p || !Array.isArray(p["contents"])) return [];
+    return (p["contents"] as number[])
+      .map((id) => gameStore.state.entities.get(id))
+      .filter((e): e is Entity => !!e);
+  };
+
   return (
     <div class="inventory-panel">
-      <Show when={gameStore.state.inventory}>
-        <For each={gameStore.state.inventory!.items}>
-          {(item) => <ItemView item={item} />}
-        </For>
+      <Show when={player()}>
+        <For each={items()}>{(item) => <ItemView item={item} />}</For>
       </Show>
     </div>
   );

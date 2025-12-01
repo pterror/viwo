@@ -168,6 +168,16 @@ export function seed() {
                       ),
                     ),
                   ),
+                  // Return RoomChangeMessage and Look result
+                  List["list.new"](
+                    Object["obj.new"](
+                      "type",
+                      "room_change",
+                      "roomId",
+                      Core["var"]("destId"),
+                    ),
+                    Core["call"](Core["caller"](), "look"),
+                  ),
                 ),
                 Core["send"]("That way leads nowhere."),
               ),
@@ -291,13 +301,16 @@ export function seed() {
             ),
           ),
         ),
-        Object["obj.merge"](
-          Core["var"]("room"),
-          Object["obj.new"](
-            "contents",
-            Core["var"]("resolvedContents"),
-            "exits",
-            Core["var"]("resolvedExits"),
+        Object["obj.new"](
+          "type",
+          "update",
+          "entities",
+          List["list.concat"](
+            List["list.new"](Core["var"]("room")),
+            List["list.concat"](
+              Core["var"]("resolvedContents"),
+              Core["var"]("resolvedExits"),
+            ),
           ),
         ),
       ),
@@ -314,13 +327,44 @@ export function seed() {
     playerBaseId,
     "inventory",
     Core["seq"](
-      List["list.map"](
-        Object["obj.get"](Core["caller"](), "contents"),
-        Core["lambda"](
-          ["id"],
-          Core["resolve_props"](Core["entity"](Core["var"]("id"))),
+      Core["let"]("player", Core["resolve_props"](Core["caller"]())),
+      Core["let"](
+        "contents",
+        Core["or"](
+          Object["obj.get"](Core["var"]("player"), "contents"),
+          List["list.new"](),
         ),
       ),
+      Core["let"](
+        "resolvedItems",
+        List["list.map"](
+          Core["var"]("contents"),
+          Core["lambda"](
+            ["id"],
+            Core["resolve_props"](Core["entity"](Core["var"]("id"))),
+          ),
+        ),
+      ),
+      Object["obj.new"](
+        "type",
+        "update",
+        "entities",
+        List["list.concat"](
+          List["list.new"](Core["var"]("player")),
+          Core["var"]("resolvedItems"),
+        ),
+      ),
+    ),
+  );
+
+  addVerb(
+    playerBaseId,
+    "whoami",
+    Object["obj.new"](
+      "type",
+      "player_id",
+      "playerId",
+      Object["obj.get"](Core["caller"](), "id"),
     ),
   );
 

@@ -1,5 +1,5 @@
 import { Show, For } from "solid-js";
-import { gameStore } from "../store/game";
+import { Entity, gameStore } from "../store/game";
 import DigPanel from "./DigPanel";
 import Popover from "./Popover";
 
@@ -15,10 +15,20 @@ const STANDARD_DIRS = [
 ];
 
 export default function CustomExits() {
-  const customExits = () =>
-    gameStore.state.room?.exits.filter(
-      (item) => !STANDARD_DIRS.includes((item["name"] as string).toLowerCase()),
-    ) || [];
+  const customExits = () => {
+    const roomId = gameStore.state.roomId;
+    if (!roomId) return [];
+    const room = gameStore.state.entities.get(roomId);
+    if (!room || !Array.isArray(room["exits"])) return [];
+
+    return (room["exits"] as number[])
+      .map((id) => gameStore.state.entities.get(id))
+      .filter(
+        (item) =>
+          item &&
+          !STANDARD_DIRS.includes((item["name"] as string).toLowerCase()),
+      ) as Entity[];
+  };
 
   return (
     <div class="custom-exits">

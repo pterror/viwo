@@ -242,7 +242,6 @@ export function updateVerb(
 
 export function deleteEntity(id: number) {
   const transaction = db.transaction(() => {
-    db.query("DELETE FROM entity_data WHERE entity_id = ?").run(id);
     db.query("DELETE FROM verbs WHERE entity_id = ?").run(id);
     db.query("DELETE FROM entities WHERE id = ?").run(id);
   });
