@@ -16,7 +16,7 @@ export type ScriptContext = {
   /** Gas limit to prevent infinite loops. */
   gas: number;
   /** Function to send messages back to the caller. */
-  send?: (msg: unknown) => void;
+  send?: (type: string, payload: unknown) => void;
   /** List of warnings generated during execution. */
   warnings: string[];
   /** Local variables in the current scope. */

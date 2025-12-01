@@ -192,7 +192,7 @@ export function seed() {
       Core["let"]("direction", Core["arg"](0)),
       Core["if"](
         Core["not"](Core["var"]("direction")),
-        Core["send"]("Where do you want to go?"),
+        Core["send"]("message", "Where do you want to go?"),
         Core["seq"](
           Core["let"](
             "exitId",
@@ -269,19 +269,27 @@ export function seed() {
                     Core["call"](Core["caller"](), "look"),
                   ),
                 ),
-                Core["send"]("That way leads nowhere."),
+                Core["send"]("message", "That way leads nowhere."),
               ),
             ),
-            Core["send"]("You can't go that way."),
+            Core["send"]("message", "You can't go that way."),
           ),
         ),
       ),
     ),
   );
 
-  addVerb(entityBaseId, "say", Core["send"]("Say is not yet implemented."));
+  addVerb(
+    entityBaseId,
+    "say",
+    Core["send"]("message", "Say is not yet implemented."),
+  );
 
-  addVerb(entityBaseId, "tell", Core["send"]("Tell is not yet implemented."));
+  addVerb(
+    entityBaseId,
+    "tell",
+    Core["send"]("message", "Tell is not yet implemented."),
+  );
 
   // 3. Create Humanoid Base
   const humanoidBaseId = createEntity(
@@ -389,15 +397,16 @@ export function seed() {
             ),
           ),
         ),
-        Object["obj.new"](
-          "type",
+        Core["send"](
           "update",
-          "entities",
-          List["list.concat"](
-            List["list.new"](Core["var"]("room")),
+          Object["obj.new"](
+            "entities",
             List["list.concat"](
-              Core["var"]("resolvedContents"),
-              Core["var"]("resolvedExits"),
+              List["list.new"](Core["var"]("room")),
+              List["list.concat"](
+                Core["var"]("resolvedContents"),
+                Core["var"]("resolvedExits"),
+              ),
             ),
           ),
         ),
@@ -406,7 +415,7 @@ export function seed() {
         // world.find is missing.
         // Core["letOp"]("targetId", ["world.find", ["arg", 0]]),
         // Commenting out the else branch logic that relies on world.find
-        Core["send"]("You don't see that here."),
+        Core["send"]("message", "You don't see that here."),
       ),
     ),
   );
@@ -434,13 +443,14 @@ export function seed() {
           ),
         ),
       ),
-      Object["obj.new"](
-        "type",
+      Core["send"](
         "update",
-        "entities",
-        List["list.concat"](
-          List["list.new"](Core["var"]("player")),
-          Core["var"]("resolvedItems"),
+        Object["obj.new"](
+          "entities",
+          List["list.concat"](
+            List["list.new"](Core["var"]("player")),
+            Core["var"]("resolvedItems"),
+          ),
         ),
       ),
     ),
@@ -449,11 +459,9 @@ export function seed() {
   addVerb(
     playerBaseId,
     "whoami",
-    Object["obj.new"](
-      "type",
+    Core["send"](
       "player_id",
-      "playerId",
-      Object["obj.get"](Core["caller"](), "id"),
+      Object["obj.new"]("playerId", Object["obj.get"](Core["caller"](), "id")),
     ),
   );
 
@@ -468,7 +476,7 @@ export function seed() {
       ),
       Core["if"](
         Core["not"](Core["var"]("direction")),
-        Core["send"]("Where do you want to dig?"),
+        Core["send"]("message", "Where do you want to dig?"),
         Core["seq"](
           Core["if"](
             Core["call"](
@@ -481,10 +489,11 @@ export function seed() {
             Core["seq"](
               // TODO: Implement dig logic
               Core["send"](
+                "message",
                 "Digging logic not yet implemented, but you have permission!",
               ),
             ),
-            Core["send"]("You do not have permission to dig here."),
+            Core["send"]("message", "You do not have permission to dig here."),
           ),
         ),
       ),
@@ -498,7 +507,7 @@ export function seed() {
       Core["let"]("name", Core["arg"](0)),
       Core["if"](
         Core["not"](Core["var"]("name")),
-        Core["send"]("What do you want to create?"),
+        Core["send"]("message", "What do you want to create?"),
         Core["seq"](
           Core["if"](
             Core["call"](
@@ -511,10 +520,14 @@ export function seed() {
             Core["seq"](
               // TODO: Implement create logic
               Core["send"](
+                "message",
                 "Creation logic not yet implemented, but you have permission!",
               ),
             ),
-            Core["send"]("You do not have permission to create here."),
+            Core["send"](
+              "message",
+              "You do not have permission to create here.",
+            ),
           ),
         ),
       ),
@@ -533,7 +546,7 @@ export function seed() {
           Core["not"](Core["var"]("targetName")),
           Core["not"](Core["var"]("propName")),
         ),
-        Core["send"]("Usage: set <target> <prop> <value>"),
+        Core["send"]("message", "Usage: set <target> <prop> <value>"),
         Core["seq"](
           Core["let"](
             "targetId",
@@ -560,12 +573,15 @@ export function seed() {
                       ),
                     ),
                   ),
-                  Core["send"]("Property set."),
+                  Core["send"]("message", "Property set."),
                 ),
-                Core["send"]("You do not have permission to edit this object."),
+                Core["send"](
+                  "message",
+                  "You do not have permission to edit this object.",
+                ),
               ),
             ),
-            Core["send"]("I don't see that here."),
+            Core["send"]("message", "I don't see that here."),
           ),
         ),
       ),
@@ -809,7 +825,7 @@ export function seed() {
   addVerb(
     watchId,
     "tell",
-    Core["send"](Time["time.format"](Time["time.now"](), "time")),
+    Core["send"]("message", Time["time.format"](Time["time.now"](), "time")),
   );
 
   // Teleporter Item
@@ -870,7 +886,7 @@ export function seed() {
           ),
         ),
       ),
-      Core["send"]("Whoosh! You have been teleported."),
+      Core["send"]("message", "Whoosh! You have been teleported."),
     ),
   );
 
@@ -888,7 +904,7 @@ export function seed() {
     statusId,
     "check",
     // world.entities missing
-    Core["send"]("Status check disabled."),
+    Core["send"]("message", "Status check disabled."),
   );
 
   console.log("Seeding complete!");
@@ -1017,6 +1033,7 @@ export function seed() {
     Core["seq"](
       // broadcast missing
       Core["send"](
+        "message",
         Str["str.concat"](
           "Tick Tock: ",
           Time["time.format"](Time["time.now"](), "time"),
@@ -1046,6 +1063,7 @@ export function seed() {
     Core["seq"](
       // broadcast missing
       Core["send"](
+        "message",
         Str["str.concat"](
           "BONG! It is ",
           Time["time.format"](Time["time.now"](), "time"),
@@ -1069,6 +1087,7 @@ export function seed() {
     Core["seq"](
       // broadcast missing
       Core["send"](
+        "message",
         Str["str.concat"](
           "The Clock Tower tolls: ",
           Time["time.format"](Time["time.now"](), "time"),
@@ -1096,7 +1115,7 @@ export function seed() {
     mailboxProtoId,
     "deposit",
     // give missing
-    Core["send"]("Deposit disabled."),
+    Core["send"]("message", "Deposit disabled."),
     { call: "public" },
   ); // Anyone can call deposit
 

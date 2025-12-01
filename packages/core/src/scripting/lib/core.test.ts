@@ -303,7 +303,7 @@ createLibraryTester(Core, "Core Library", (test) => {
 
   test("send", async () => {
     // We mocked send in ctx, just check it doesn't crash
-    await evaluate(Core["send"]("msg"), ctx);
+    await evaluate(Core["send"]("message", "hello"), ctx);
   });
 
   // Entity Introspection

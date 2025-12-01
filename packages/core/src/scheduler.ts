@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { getEntity, getVerb } from "./repo";
-import { evaluate } from "./scripting/interpreter";
+import { evaluate, createScriptContext } from "./scripting/interpreter";
 
 /**
  * Manages scheduled tasks (delayed verb executions).
@@ -29,15 +29,18 @@ export class TaskScheduler {
     ).run(entityId, verb, JSON.stringify(args), executeAt);
   }
 
-  private sendFactory: ((entityId: number) => (msg: unknown) => void) | null =
-    null;
+  private sendFactory: (
+    entityId: number,
+  ) => (type: string, payload: unknown) => void = () => () => {};
   /**
    * Sets the factory function for creating the 'send' function used in scheduled tasks.
    * This allows the scheduler to send messages to clients even when triggered asynchronously.
    *
    * @param factory - A function that returns a send function for a given entity ID.
    */
-  setSendFactory(factory: (entityId: number) => (msg: unknown) => void) {
+  setSendFactory(
+    factory: (entityId: number) => (type: string, payload: unknown) => void,
+  ) {
     this.sendFactory = factory;
   }
 
@@ -65,23 +68,24 @@ export class TaskScheduler {
 
     for (const task of tasks) {
       // Create a send function specific to this entity
-      const send = this.sendFactory(task.entity_id);
 
       try {
         const entity = getEntity(task.entity_id);
         const verb = getVerb(task.entity_id, task.verb);
         const args = JSON.parse(task.args);
 
+        const send = this.sendFactory(task.entity_id);
+
         if (entity && verb) {
-          await evaluate(verb.code, {
-            caller: entity,
-            this: entity,
-            args: args,
-            gas: 1000,
-            send,
-            warnings: [],
-            vars: {},
-          });
+          await evaluate(
+            verb.code,
+            createScriptContext({
+              caller: entity, // System is caller? Or self?
+              this: entity,
+              args,
+              send,
+            }),
+          );
         }
       } catch (e) {
         console.error(`[Scheduler] Error executing task ${task.id}:`, e);

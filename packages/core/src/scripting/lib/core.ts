@@ -1419,19 +1419,32 @@ export const schedule = defineOpcode<
 /**
  * Sends a message to the client.
  */
-export const send = defineOpcode<[ScriptValue<unknown>], null>("send", {
+export const send = defineOpcode<[ScriptValue<string>, ScriptValue<unknown>], null>("send", {
   metadata: {
     label: "System Send",
     category: "system",
     description: "Send a system message",
-    slots: [{ name: "Msg", type: "block" }],
-    parameters: [{ name: "msg", type: "unknown" }],
+    slots: [
+      { name: "Type", type: "string" },
+      { name: "Payload", type: "block" }
+    ],
+    parameters: [
+      { name: "type", type: "string" },
+      { name: "payload", type: "unknown" }
+    ],
     returnType: "null",
   },
   handler: async (args, ctx) => {
-    const [msgExpr] = args;
-    const msg = await evaluate(msgExpr, ctx);
-    ctx.send?.(msg);
+    if (args.length !== 2) {
+      throw new ScriptError("send: expected `type` `payload`");
+    }
+    const [typeExpr, payloadExpr] = args;
+    const type = await evaluate(typeExpr, ctx);
+    if (typeof type !== "string") {
+      throw new ScriptError(`send: type must be a string, got ${JSON.stringify(type)}`);
+    }
+    const payload = await evaluate(payloadExpr, ctx);
+    ctx.send?.(type, payload);
     return null;
   },
 });
