@@ -1339,7 +1339,7 @@ export const set_entity = defineOpcode<ScriptValue<Entity>[], null>("set_entity"
     category: "action",
     description: "Set entity properties",
     slots: [{ name: "Entity", type: "block" }],
-    parameters: [{ name: "entity", type: "Entity[]" }],
+    parameters: [{ name: "...entity", type: "Entity[]" }],
     returnType: "null",
   },
   handler: async (args, ctx) => {

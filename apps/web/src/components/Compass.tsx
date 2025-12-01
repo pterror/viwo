@@ -5,10 +5,9 @@ import Popover from "./Popover";
 export default function Compass() {
   const getExit = (dir: string) => {
     if (!gameStore.state.room) return null;
-    return gameStore.state.room.contents.find(
-      (item) =>
-        item["kind"] === "EXIT" &&
-        (item["name"] as string).toLowerCase() === dir.toLowerCase(),
+    if (!gameStore.state.room) return null;
+    return gameStore.state.room.exits.find(
+      (item) => (item["name"] as string).toLowerCase() === dir.toLowerCase(),
     );
   };
 

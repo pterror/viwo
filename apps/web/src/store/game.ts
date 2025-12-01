@@ -26,6 +26,7 @@ export interface RoomMessage {
   name: string;
   description: string;
   contents: Entity[];
+  exits: Entity[];
   custom_css?: string;
   image?: string;
 }

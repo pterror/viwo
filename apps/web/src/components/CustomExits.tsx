@@ -16,10 +16,8 @@ const STANDARD_DIRS = [
 
 export default function CustomExits() {
   const customExits = () =>
-    gameStore.state.room?.contents.filter(
-      (item) =>
-        item["kind"] === "EXIT" &&
-        !STANDARD_DIRS.includes((item["name"] as string).toLowerCase()),
+    gameStore.state.room?.exits.filter(
+      (item) => !STANDARD_DIRS.includes((item["name"] as string).toLowerCase()),
     ) || [];
 
   return (

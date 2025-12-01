@@ -127,12 +127,14 @@ describe("Player Commands", () => {
     // Create another room
     const otherRoomId = createEntity({ name: "Other Room", kind: "ROOM" });
     // Create exit
-    createEntity({
+    const exitId = createEntity({
       name: "north",
-      kind: "EXIT",
-      location_id: startRoomId,
-      props: { direction: "north", destination_id: otherRoomId },
+      location: startRoomId,
+      direction: "north",
+      destination: otherRoomId,
     });
+    // Update start room with exit
+    updateEntity({ ...room, exits: [exitId] });
 
     await runCommand("move", ["north"]);
 

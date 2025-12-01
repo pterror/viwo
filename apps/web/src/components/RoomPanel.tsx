@@ -63,12 +63,7 @@ export default function RoomPanel() {
         <div class="room-panel__section">
           <div class="room-panel__section-title">Exits</div>
           <div class="room-panel__exits">
-            <For
-              each={gameStore.state.room?.contents.filter(
-                // TODO: kind has been removed from Entity. We need a better way to filter for exits.
-                (i) => i["kind"] === "EXIT",
-              )}
-            >
+            <For each={gameStore.state.room?.exits}>
               {(exit) => (
                 <span
                   onClick={() =>
@@ -86,12 +81,7 @@ export default function RoomPanel() {
         {/* Items */}
         <div>
           <div class="room-panel__section-title">Contents</div>
-          <For
-            each={gameStore.state.room!.contents.filter(
-              // TODO: kind has been removed from Entity. We need a better way to filter out exits.
-              (i) => i["kind"] !== "EXIT",
-            )}
-          >
+          <For each={gameStore.state.room!.contents}>
             {(item) => <ItemView item={item} />}
           </For>
         </div>

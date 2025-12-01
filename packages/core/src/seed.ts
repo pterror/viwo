@@ -1,4 +1,4 @@
-import { createEntity, addVerb } from "./repo";
+import { createEntity, addVerb, updateEntity, getEntity } from "./repo";
 import { db } from "./db";
 import * as Core from "./scripting/lib/core";
 import * as List from "./scripting/lib/list";
@@ -38,30 +38,49 @@ export function seed() {
         "locationId",
         Object["obj.get"](Core["caller"](), "location"),
       ),
+      Core["let"]("location", Core["entity"](Core["var"]("locationId"))),
+      // Search contents first
       Core["let"](
-        "contents",
-        Object["obj.get"](
-          Core["entity"](Core["var"]("locationId")),
-          "contents",
-        ),
-      ),
-      List["list.find"](
-        Core["var"]("contents"),
-        Core["lambda"](
-          ["id"],
-          Core["seq"](
-            Core["let"](
-              "props",
-              Core["resolve_props"](Core["entity"](Core["var"]("id"))),
-            ),
-            Core["or"](
+        "foundInContents",
+        List["list.find"](
+          Object["obj.get"](Core["var"]("location"), "contents"),
+          Core["lambda"](
+            ["id"],
+            Core["seq"](
+              Core["let"](
+                "props",
+                Core["resolve_props"](Core["entity"](Core["var"]("id"))),
+              ),
               Core["=="](
                 Object["obj.get"](Core["var"]("props"), "name"),
                 Core["var"]("query"),
               ),
-              Core["=="](
-                Object["obj.get"](Core["var"]("props"), "direction"),
-                Core["var"]("query"),
+            ),
+          ),
+        ),
+      ),
+      Core["if"](
+        Core["var"]("foundInContents"),
+        Core["var"]("foundInContents"),
+        // If not found in contents, search exits
+        List["list.find"](
+          Object["obj.get"](Core["var"]("location"), "exits"),
+          Core["lambda"](
+            ["id"],
+            Core["seq"](
+              Core["let"](
+                "props",
+                Core["resolve_props"](Core["entity"](Core["var"]("id"))),
+              ),
+              Core["or"](
+                Core["=="](
+                  Object["obj.get"](Core["var"]("props"), "name"),
+                  Core["var"]("query"),
+                ),
+                Core["=="](
+                  Object["obj.get"](Core["var"]("props"), "direction"),
+                  Core["var"]("query"),
+                ),
               ),
             ),
           ),
@@ -225,8 +244,56 @@ export function seed() {
     "look",
     Core["if"](
       List["list.empty"](Core["args"]()),
-      Core["resolve_props"](
-        Core["entity"](Object["obj.get"](Core["caller"](), "location")),
+      Core["seq"](
+        Core["let"](
+          "room",
+          Core["resolve_props"](
+            Core["entity"](Object["obj.get"](Core["caller"](), "location")),
+          ),
+        ),
+        Core["let"](
+          "contents",
+          Core["or"](
+            Object["obj.get"](Core["var"]("room"), "contents"),
+            List["list.new"](),
+          ),
+        ),
+        Core["let"](
+          "exits",
+          Core["or"](
+            Object["obj.get"](Core["var"]("room"), "exits"),
+            List["list.new"](),
+          ),
+        ),
+        Core["let"](
+          "resolvedContents",
+          List["list.map"](
+            Core["var"]("contents"),
+            Core["lambda"](
+              ["id"],
+              Core["resolve_props"](Core["entity"](Core["var"]("id"))),
+            ),
+          ),
+        ),
+        Core["let"](
+          "resolvedExits",
+          List["list.map"](
+            Core["var"]("exits"),
+            Core["lambda"](
+              ["id"],
+              Core["resolve_props"](Core["entity"](Core["var"]("id"))),
+            ),
+          ),
+        ),
+        Object["obj.merge"](
+          Core["var"]("room"),
+          Object["obj.new"](
+            "contents",
+            Core["var"]("resolvedContents"),
+            "exits",
+            Core["var"]("resolvedExits"),
+          ),
+        ),
       ),
       Core["seq"](
         // world.find is missing.
@@ -365,18 +432,28 @@ export function seed() {
   });
 
   // Link Lobby and Garden
-  createEntity({
+  const northExitId = createEntity({
     name: "north",
     location: lobbyId,
     direction: "north",
     destination: gardenId,
   });
+  const lobby = getEntity(lobbyId)!;
+  updateEntity({
+    ...lobby,
+    exits: [northExitId],
+  });
 
-  createEntity({
+  const southExitId = createEntity({
     name: "south",
     location: gardenId,
     direction: "south",
     destination: lobbyId,
+  });
+  const garden = getEntity(gardenId)!;
+  updateEntity({
+    ...garden,
+    exits: [southExitId],
   });
 
   // 9. Create a Gemstore
@@ -386,18 +463,33 @@ export function seed() {
   });
 
   // Link Lobby and Gemstore
-  createEntity({
+  // Link Lobby and Gemstore
+  const eastExitId = createEntity({
     name: "east",
     location: lobbyId,
     direction: "east",
     destination: gemstoreId,
   });
+  // Note: We need to append to existing exits if any
+  // But here we know Lobby only has north so far (actually we just added it above)
+  // Let's do a cleaner way: update Lobby with both exits
+  const lobbyExits = [northExitId, eastExitId];
+  const lobbyUpdated = getEntity(lobbyId)!;
+  updateEntity({
+    ...lobbyUpdated,
+    exits: lobbyExits,
+  });
 
-  createEntity({
+  const westExitId = createEntity({
     name: "west",
     location: gemstoreId,
     direction: "west",
     destination: lobbyId,
+  });
+  const gemstore = getEntity(gemstoreId)!;
+  updateEntity({
+    ...gemstore,
+    exits: [westExitId],
   });
 
   // Items in Gemstore
