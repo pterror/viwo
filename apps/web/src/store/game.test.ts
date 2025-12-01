@@ -86,61 +86,6 @@ describe("Game Store", () => {
     expect(socket?.send.mock.lastCall?.[0]).toContain(JSON.stringify(["look"]));
   });
 
-  test("Handle Room Message", async () => {
-    gameStore.connect();
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    const socket = mockSockets[0];
-
-    const roomMsg = {
-      type: "room",
-      name: "Test Room",
-      description: "A test room",
-      contents: [],
-    };
-
-    if (socket?.onmessage) {
-      socket.onmessage({ data: JSON.stringify(roomMsg) });
-    }
-
-    expect(gameStore.state.room).toEqual(roomMsg as any);
-  });
-
-  test("Handle Inventory Message", async () => {
-    gameStore.connect();
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    const socket = mockSockets[0];
-
-    const invMsg = {
-      type: "inventory",
-      items: [],
-    };
-
-    if (socket?.onmessage) {
-      socket.onmessage({ data: JSON.stringify(invMsg) });
-    }
-
-    expect(gameStore.state.inventory).toEqual(invMsg as any);
-  });
-
-  test("Handle Item Message", async () => {
-    gameStore.connect();
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    const socket = mockSockets[0];
-
-    const itemMsg = {
-      type: "item",
-      name: "Sword",
-      description: "Sharp",
-      contents: [],
-    };
-
-    if (socket?.onmessage) {
-      socket.onmessage({ data: JSON.stringify(itemMsg) });
-    }
-
-    expect(gameStore.state.inspectedItem).toEqual(itemMsg as any);
-  });
-
   test("Handle Malformed Message", async () => {
     gameStore.connect();
     await new Promise((resolve) => setTimeout(resolve, 10));

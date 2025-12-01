@@ -35,10 +35,16 @@ export default function ItemEditor() {
   };
 
   const items: () => readonly Entity[] = () => {
-    const roomItems =
-      // TODO: kind has been removed from Entity, so we need a better way to filter for items.
-      gameStore.state.room?.contents.filter((c) => c["kind"] === "ITEM") || [];
-    const inventoryItems = gameStore.state.inventory?.items || [];
+    const roomItems = (
+      (gameStore.state.entities.get(gameStore.state.roomId!)?.[
+        "contents"
+      ] as number[]) ?? []
+    ).map((id) => gameStore.state.entities.get(id)!);
+    const inventoryItems = (
+      (gameStore.state.entities.get(gameStore.state.playerId!)?.[
+        "contents"
+      ] as number[]) ?? []
+    ).map((id) => gameStore.state.entities.get(id)!);
 
     // We want to distinguish between room and inventory, but also flatten.
     // Let's flatten separately and tag them.

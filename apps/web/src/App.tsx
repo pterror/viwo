@@ -79,8 +79,10 @@ function App() {
       />
       {/* Custom CSS Injection */}
       <style>
-        {themeStore.state.allowCustomCss && gameStore.state.room?.custom_css
-          ? gameStore.state.room.custom_css
+        {themeStore.state.allowCustomCss && gameStore.state.roomId
+          ? (gameStore.state.entities.get(gameStore.state.roomId)?.[
+              "custom_css"
+            ] as string) ?? ""
           : ""}
       </style>
 

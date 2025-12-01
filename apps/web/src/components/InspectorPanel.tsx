@@ -1,51 +1,58 @@
 import { Show, For } from "solid-js";
-import { gameStore, Entity } from "../store/game";
+import { gameStore } from "../store/game";
 
-const ItemView = (props: { item: Entity }) => (
-  <div class="inspector-panel__item">
-    <span
-      onClick={() => gameStore.execute(["look", props.item["name"] as string])}
-      class={`inspector-panel__item-link ${
-        (props.item["adjectives"] as readonly string[])
-          ?.map((a) => `attribute-${a.replace(/[: ]/g, "-")}`)
-          .join(" ") || ""
-      }`}
-    >
-      {props.item["name"] as string}
-    </span>
-    <Show when={(props.item["contents"] as readonly number[]).length > 0}>
-      <div class="inspector-panel__item-contents">
-        <For each={props.item["contents"] as readonly number[]}>
-          {(sub) => (
-            // TODO: batch retrieve items
-            // @ts-expect-error
-            <ItemView item={sub} />
-          )}
-        </For>
+const ItemView = (props: { item: number }) => {
+  const item = gameStore.state.entities.get(props.item)!;
+  return (
+    <Show when={item}>
+      <div class="inspector-panel__item">
+        <span
+          onClick={() => gameStore.execute(["look", item["name"] as string])}
+          class={`inspector-panel__item-link ${
+            (item["adjectives"] as readonly string[])
+              ?.map((a) => `attribute-${a.replace(/[: ]/g, "-")}`)
+              .join(" ") || ""
+          }`}
+        >
+          {item["name"] as string}
+        </span>
+        <Show when={(item["contents"] as readonly number[]).length > 0}>
+          <div class="inspector-panel__item-contents">
+            <For each={item["contents"] as readonly number[]}>
+              {(sub) => <ItemView item={sub} />}
+            </For>
+          </div>
+        </Show>
       </div>
     </Show>
-  </div>
-);
+  );
+};
 
 export default function InspectorPanel() {
+  const inspectedItem =
+    gameStore.state.inspectedItem == null
+      ? null!
+      : gameStore.state.entities.get(gameStore.state.inspectedItem)!;
   return (
     <div class="inspector-panel">
       <Show
-        when={gameStore.state.inspectedItem}
+        when={inspectedItem}
         fallback={
           <div class="inspector-panel__empty">Select an item to inspect</div>
         }
       >
         <div class="inspector-panel__name">
-          {gameStore.state.inspectedItem!.name}
+          {inspectedItem["name"] as string}
         </div>
         <div class="inspector-panel__desc">
-          {gameStore.state.inspectedItem!.description}
+          {inspectedItem["description"] as string}
         </div>
 
-        <Show when={gameStore.state.inspectedItem!.contents.length > 0}>
+        <Show
+          when={(inspectedItem["contents"] as readonly number[]).length > 0}
+        >
           <div class="inspector-panel__contents-label">Contains:</div>
-          <For each={gameStore.state.inspectedItem!.contents}>
+          <For each={inspectedItem["contents"] as readonly number[]}>
             {(item) => <ItemView item={item} />}
           </For>
         </Show>
