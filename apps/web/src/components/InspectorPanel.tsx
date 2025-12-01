@@ -4,18 +4,24 @@ import { gameStore, Entity } from "../store/game";
 const ItemView = (props: { item: Entity }) => (
   <div class="inspector-panel__item">
     <span
-      onClick={() => gameStore.execute(["look", props.item.name])}
+      onClick={() => gameStore.execute(["look", props.item["name"] as string])}
       class={`inspector-panel__item-link ${
-        props.item.props.adjectives
+        (props.item["adjectives"] as readonly string[])
           ?.map((a) => `attribute-${a.replace(/[: ]/g, "-")}`)
           .join(" ") || ""
       }`}
     >
-      {props.item.name}
+      {props.item["name"] as string}
     </span>
-    <Show when={props.item.contents.length > 0}>
+    <Show when={(props.item["contents"] as readonly number[]).length > 0}>
       <div class="inspector-panel__item-contents">
-        <For each={props.item.contents}>{(sub) => <ItemView item={sub} />}</For>
+        <For each={props.item["contents"] as readonly number[]}>
+          {(sub) => (
+            // TODO: batch retrieve items
+            // @ts-expect-error
+            <ItemView item={sub} />
+          )}
+        </For>
       </div>
     </Show>
   </div>

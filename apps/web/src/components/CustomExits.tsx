@@ -17,7 +17,9 @@ const STANDARD_DIRS = [
 export default function CustomExits() {
   const customExits = () =>
     gameStore.state.room?.contents.filter(
-      (c) => c.kind === "EXIT" && !STANDARD_DIRS.includes(c.name.toLowerCase()),
+      (item) =>
+        item["kind"] === "EXIT" &&
+        !STANDARD_DIRS.includes((item["name"] as string).toLowerCase()),
     ) || [];
 
   return (
@@ -48,12 +50,14 @@ export default function CustomExits() {
           {(exit) => (
             <div
               class="custom-exits__item"
-              onClick={() => gameStore.execute(["move", exit.name])}
+              onClick={() =>
+                gameStore.execute(["move", exit["name"] as string])
+              }
             >
-              <span class="custom-exits__name">{exit.name}</span>
-              <Show when={exit.props.destination_name}>
+              <span class="custom-exits__name">{exit["name"] as string}</span>
+              <Show when={exit["destination_name"] as string}>
                 <span class="custom-exits__dest">
-                  &rarr; {exit.props.destination_name}
+                  &rarr; {exit["destination_name"] as string}
                 </span>
               </Show>
             </div>

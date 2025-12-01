@@ -1,5 +1,12 @@
 import { createStore } from "solid-js/store";
 
+export type CommandArgument =
+  | string
+  | number
+  | boolean
+  | null
+  | readonly CommandArgument[];
+
 export type GameMessage =
   | { type: "message"; text: string }
   | { type: "error"; text: string };
@@ -137,7 +144,7 @@ export const gameStore = {
   },
 
   execute: (
-    command: readonly [command: string, ...args: (string | number)[]],
+    command: readonly [command: string, ...args: CommandArgument[]],
   ) => {
     if (state.socket && state.socket.readyState === WebSocket.OPEN) {
       const id = idCounter;

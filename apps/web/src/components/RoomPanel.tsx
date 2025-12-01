@@ -4,27 +4,31 @@ import { gameStore, Entity } from "../store/game";
 const ItemView = (props: { item: Entity }) => (
   <div class="room-panel__item">
     <span
-      onClick={() => gameStore.execute(["look", props.item.name])}
+      onClick={() => gameStore.execute(["look", props.item["name"] as string])}
       class={`room-panel__item-link ${
-        props.item.props.adjectives
+        (props.item["adjectives"] as readonly string[])
           ?.map((a) => `attribute-${a.replace(/:/g, "-").replace(/ /g, "-")}`)
           .join(" ") || ""
       }`}
     >
-      {props.item.name}
+      {props.item["name"] as string}
     </span>
-    <Show when={props.item.location_detail}>
+    <Show when={props.item["location_detail"] as string | undefined}>
       <span class="room-panel__item-detail">
-        ({props.item.location_detail})
+        ({props.item["location_detail"] as string})
       </span>
     </Show>
-    <Show when={props.item.verbs && props.item.verbs.length > 0}>
+    <Show
+      when={props.item["verbs"] && (props.item["verbs"] as string[]).length > 0}
+    >
       <span class="room-panel__item-verbs">
-        <For each={props.item.verbs}>
+        <For each={(props.item["verbs"] as string[]) ?? []}>
           {(verb) => (
             <button
               class="room-panel__verb-btn"
-              onClick={() => gameStore.execute([verb, props.item.name])}
+              onClick={() =>
+                gameStore.execute([verb, props.item["name"] as string])
+              }
             >
               {verb}
             </button>
@@ -61,18 +65,18 @@ export default function RoomPanel() {
           <div class="room-panel__exits">
             <For
               each={gameStore.state.room?.contents.filter(
-                (i) => i.kind === "EXIT",
+                // TODO: kind has been removed from Entity. We need a better way to filter for exits.
+                (i) => i["kind"] === "EXIT",
               )}
             >
               {(exit) => (
                 <span
-                  onClick={() => gameStore.execute(["move", exit.name])}
+                  onClick={() =>
+                    gameStore.execute(["move", exit["name"] as string])
+                  }
                   class="room-panel__exit-tag"
                 >
-                  {exit.name}
-                  {exit.props.destination_name
-                    ? ` (to ${exit.props.destination_name})`
-                    : ""}
+                  {exit["name"] as string}
                 </span>
               )}
             </For>
@@ -84,7 +88,8 @@ export default function RoomPanel() {
           <div class="room-panel__section-title">Contents</div>
           <For
             each={gameStore.state.room!.contents.filter(
-              (i) => i.kind !== "EXIT",
+              // TODO: kind has been removed from Entity. We need a better way to filter out exits.
+              (i) => i["kind"] !== "EXIT",
             )}
           >
             {(item) => <ItemView item={item} />}

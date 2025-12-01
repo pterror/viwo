@@ -6,7 +6,9 @@ export default function Compass() {
   const getExit = (dir: string) => {
     if (!gameStore.state.room) return null;
     return gameStore.state.room.contents.find(
-      (c) => c.kind === "EXIT" && c.name.toLowerCase() === dir.toLowerCase(),
+      (item) =>
+        item["kind"] === "EXIT" &&
+        (item["name"] as string).toLowerCase() === dir.toLowerCase(),
     );
   };
 
@@ -44,7 +46,9 @@ export default function Compass() {
                 "compass__cell-dest--active": !!exit(),
               }}
             >
-              {exit() ? exit()?.props.destination_name ?? exit()?.name : "+"}
+              {exit()
+                ? ((exit()?.["destination_name"] ?? exit()?.["name"]) as string)
+                : "+"}
             </div>
           </button>
         )}

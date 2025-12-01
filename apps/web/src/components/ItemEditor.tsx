@@ -5,30 +5,39 @@ import { ALL_ADJECTIVES } from "@viwo/shared/constants/adjectives";
 export default function ItemEditor() {
   const [selectedItemId, setSelectedItemId] = createSignal<number | null>(null);
   const [description, setDescription] = createSignal("");
-  const [selectedAdjectives, setSelectedAdjectives] = createSignal<string[]>(
-    [],
-  );
-  const [adjInput, setAdjInput] = createSignal("");
+  const [selectedAdjectives, setSelectedAdjectives] = createSignal<
+    readonly string[]
+  >([]);
+  const [adjectiveInput, setAdjectiveInput] = createSignal("");
 
   const flattenItems = (
     items: readonly Entity[],
     prefix = "",
-  ): readonly (Entity & { displayName: string })[] => {
-    let result: (Entity & { displayName: string })[] = [];
+  ): readonly Entity[] => {
+    let result: Entity[] = [];
     for (const item of items) {
-      result.push({ ...item, displayName: `${prefix}${item.name}` });
-      if (item.contents && item.contents.length > 0) {
+      result.push({ ...item, displayName: `${prefix}${item["name"]}` });
+      if (
+        item["contents"] &&
+        (item["contents"] as readonly number[]).length > 0
+      ) {
         result = result.concat(
-          flattenItems(item.contents, `${prefix}${item.name} > `),
+          flattenItems(
+            // TODO: Batch retrieve items.
+            // @ts-expect-error
+            item["contents"] as readonly number[],
+            `${prefix}${item["name"]} > `,
+          ),
         );
       }
     }
     return result;
   };
 
-  const items = () => {
+  const items: () => readonly Entity[] = () => {
     const roomItems =
-      gameStore.state.room?.contents.filter((c) => c.kind === "ITEM") || [];
+      // TODO: kind has been removed from Entity, so we need a better way to filter for items.
+      gameStore.state.room?.contents.filter((c) => c["kind"] === "ITEM") || [];
     const inventoryItems = gameStore.state.inventory?.items || [];
 
     // We want to distinguish between room and inventory, but also flatten.
@@ -36,11 +45,11 @@ export default function ItemEditor() {
 
     const flatRoom = flattenItems(roomItems).map((i) => ({
       ...i,
-      source: "(Room)",
+      source: "Room",
     }));
     const flatInventory = flattenItems(inventoryItems).map((i) => ({
       ...i,
-      source: "(Inventory)",
+      source: "Inventory",
     }));
 
     return [...flatRoom, ...flatInventory];
@@ -51,13 +60,13 @@ export default function ItemEditor() {
   createEffect(() => {
     const item = selectedItem();
     if (item) {
-      setDescription(item.props.description ?? "");
-      setSelectedAdjectives(item.props.adjectives ?? []);
+      setDescription((item["description"] as string) ?? "");
+      setSelectedAdjectives((item["adjectives"] as readonly string[]) ?? []);
     }
   });
 
   const filteredAdjectives = () => {
-    const input = adjInput().toLowerCase();
+    const input = adjectiveInput().toLowerCase();
     if (!input) return [];
     return ALL_ADJECTIVES.filter(
       (adj) => adj.includes(input) && !selectedAdjectives().includes(adj),
@@ -66,7 +75,7 @@ export default function ItemEditor() {
 
   const addAdjective = (adj: string) => {
     setSelectedAdjectives([...selectedAdjectives(), adj]);
-    setAdjInput("");
+    setAdjectiveInput("");
   };
 
   const removeAdjective = (adj: string) => {
@@ -79,14 +88,19 @@ export default function ItemEditor() {
     if (!item) return;
 
     if (description()) {
-      gameStore.execute(["set", item.name, "description", description()]);
+      gameStore.execute([
+        "set",
+        item["name"] as string,
+        "description",
+        description(),
+      ]);
     }
 
     gameStore.execute([
       "set",
-      item.name,
+      item["name"] as string,
       "adjectives",
-      JSON.stringify(selectedAdjectives()),
+      selectedAdjectives(),
     ]);
   };
 
@@ -105,7 +119,7 @@ export default function ItemEditor() {
           <For each={items()}>
             {(item) => (
               <option value={item.id}>
-                {item.displayName} {item.source}
+                {item["displayName"] as string} ({item["source"] as string})
               </option>
             )}
           </For>
@@ -139,8 +153,8 @@ export default function ItemEditor() {
                 <input
                   type="text"
                   placeholder="Add Adjective (e.g. color:red)"
-                  value={adjInput()}
-                  onInput={(e) => setAdjInput(e.currentTarget.value)}
+                  value={adjectiveInput()}
+                  onInput={(e) => setAdjectiveInput(e.currentTarget.value)}
                   class="builder__input"
                 />
                 {filteredAdjectives().length > 0 && (
