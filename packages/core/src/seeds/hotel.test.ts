@@ -54,11 +54,19 @@ describe("Hotel Seed", () => {
     seedHotel(lobbyId, voidId);
 
     // Create a player
-    const playerId = createEntity({
-      name: "Tester",
-      location: lobbyId,
-      is_wizard: true,
-    });
+    const playerBase = db
+      .query<{ id: number }, []>(
+        "SELECT id FROM entities WHERE json_extract(props, '$.name') = 'Player Base'",
+      )
+      .get()!;
+    const playerId = createEntity(
+      {
+        name: "Tester",
+        location: lobbyId,
+        is_wizard: true,
+      },
+      playerBase.id,
+    );
     player = getEntity(playerId);
   });
 
@@ -80,6 +88,7 @@ describe("Hotel Seed", () => {
     const westVerb = getVerb(floorLobbyId, "west")!;
 
     // TODO: `move` does not support `id`
+    let output = "";
     await evaluate(
       Core["call"](player, "move", floorLobbyId),
       createScriptContext({ caller: player, this: player }),
@@ -90,8 +99,10 @@ describe("Hotel Seed", () => {
       createScriptContext({
         caller: player,
         this: getEntity(floorLobbyId)!,
-        send: (msg: any) => {
-          output = msg.text || JSON.stringify(msg);
+        send: (type: any, payload: any) => {
+          const msg = { type, payload };
+          console.log("DEBUG MSG:", msg);
+          output = JSON.stringify(msg);
         },
       }),
     );
@@ -104,10 +115,19 @@ describe("Hotel Seed", () => {
 
     // 4. Try to enter invalid room (e.g. 51)
     const enterVerb = getVerb(westWingId, "enter")!;
-    let output = "";
+
     await evaluate(
       enterVerb.code,
-      createScriptContext({ caller: player, this: westWing, args: [51] }),
+      createScriptContext({
+        caller: player,
+        this: westWing,
+        args: [51],
+        send: (type: any, payload: any) => {
+          const msg = { type, payload };
+          console.log("DEBUG MSG:", msg);
+          output = JSON.stringify(msg);
+        },
+      }),
     );
 
     // Should fail and tell user
@@ -145,6 +165,7 @@ describe("Hotel Seed", () => {
 
     // 3. Execute 'east' verb to create East Wing
     const eastVerb = getVerb(floorLobbyId, "east")!;
+    let output = "";
 
     // TODO: `move` does not support `id`
     await evaluate(
@@ -160,8 +181,10 @@ describe("Hotel Seed", () => {
       createScriptContext({
         caller: player,
         this: getEntity(floorLobbyId)!,
-        send: (msg: any) => {
-          output = msg.text || JSON.stringify(msg);
+        send: (type: any, payload: any) => {
+          const msg = { type, payload };
+          console.log("DEBUG MSG:", msg);
+          output = JSON.stringify(msg);
         },
       }),
     );
@@ -173,11 +196,19 @@ describe("Hotel Seed", () => {
 
     // 4. Try to enter invalid room (e.g. 10)
     const enterVerb = getVerb(eastWingId, "enter")!;
-    let output = "";
 
     await evaluate(
       enterVerb.code,
-      createScriptContext({ caller: player, this: eastWing, args: [10] }),
+      createScriptContext({
+        caller: player,
+        this: eastWing,
+        args: [10],
+        send: (type: any, payload: any) => {
+          const msg = { type, payload };
+          console.log("DEBUG MSG:", msg);
+          output = JSON.stringify(msg);
+        },
+      }),
     );
 
     expect(output).toContain("Room numbers in the East Wing are 51-99");

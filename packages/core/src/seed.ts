@@ -131,7 +131,11 @@ export function seed() {
       Core["let"]("location", Core["entity"](Core["var"]("locationId"))),
       // Search contents only
       List["list.find"](
-        Object["obj.get"](Core["var"]("location"), "contents"),
+        Object["obj.get"](
+          Core["var"]("location"),
+          "contents",
+          List["list.new"](),
+        ),
         Core["lambda"](
           ["id"],
           Core["seq"](
@@ -189,90 +193,104 @@ export function seed() {
     entityBaseId,
     "move",
     Core["seq"](
-      Core["let"]("direction", Core["arg"](0)),
+      Core["let"]("arg", Core["arg"](0)),
       Core["if"](
-        Core["not"](Core["var"]("direction")),
+        Core["not"](Core["var"]("arg")),
         Core["send"]("message", "Where do you want to go?"),
         Core["seq"](
-          Core["let"](
-            "exitId",
-            Core["call"](Core["this"](), "find_exit", Core["var"]("direction")),
-          ),
+          Core["let"]("destId", null),
           Core["if"](
-            Core["var"]("exitId"),
+            Core["=="](Core["typeof"](Core["var"]("arg")), "number"),
+            Core["let"]("destId", Core["var"]("arg")),
             Core["seq"](
               Core["let"](
-                "destId",
-                Object["obj.get"](
-                  Core["resolve_props"](Core["entity"](Core["var"]("exitId"))),
-                  "destination",
-                ),
+                "exitId",
+                Core["call"](Core["this"](), "find_exit", Core["var"]("arg")),
               ),
               Core["if"](
-                Core["var"]("destId"),
-                Core["seq"](
-                  Core["let"]("mover", Core["caller"]()),
-                  Core["let"](
-                    "oldLocId",
-                    Object["obj.get"](Core["var"]("mover"), "location"),
-                  ),
-                  Core["let"](
-                    "oldLoc",
-                    Core["entity"](Core["var"]("oldLocId")),
-                  ),
-                  Core["let"]("newLoc", Core["entity"](Core["var"]("destId"))),
-                  Core["set_entity"](
-                    // Update mover
-                    Object["obj.merge"](
-                      Core["var"]("mover"),
-                      Object["obj.new"]("location", Core["var"]("destId")),
+                Core["var"]("exitId"),
+                Core["let"](
+                  "destId",
+                  Object["obj.get"](
+                    Core["resolve_props"](
+                      Core["entity"](Core["var"]("exitId")),
                     ),
-                    // Update old location
-                    Object["obj.merge"](
-                      Core["var"]("oldLoc"),
-                      Object["obj.new"](
-                        "contents",
-                        List["list.filter"](
-                          Object["obj.get"](Core["var"]("oldLoc"), "contents"),
-                          Core["lambda"](
-                            ["id"],
-                            Core["!="](
-                              Core["var"]("id"),
-                              Object["obj.get"](Core["var"]("mover"), "id"),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    // Update new location
-                    Object["obj.merge"](
-                      Core["var"]("newLoc"),
-                      Object["obj.new"](
-                        "contents",
-                        List["list.concat"](
-                          Object["obj.get"](Core["var"]("newLoc"), "contents"),
-                          List["list.new"](
-                            Object["obj.get"](Core["var"]("mover"), "id"),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Return RoomChangeMessage and Look result
-                  List["list.new"](
-                    Object["obj.new"](
-                      "type",
-                      "room_change",
-                      "roomId",
-                      Core["var"]("destId"),
-                    ),
-                    Core["call"](Core["caller"](), "look"),
+                    "destination",
                   ),
                 ),
-                Core["send"]("message", "That way leads nowhere."),
               ),
             ),
-            Core["send"]("message", "You can't go that way."),
+          ),
+          Core["if"](
+            Core["var"]("destId"),
+            Core["seq"](
+              Core["let"]("mover", Core["caller"]()),
+              Core["let"](
+                "oldLocId",
+                Object["obj.get"](Core["var"]("mover"), "location"),
+              ),
+              Core["let"]("oldLoc", Core["entity"](Core["var"]("oldLocId"))),
+              Core["let"]("newLoc", Core["entity"](Core["var"]("destId"))),
+              Core["set_entity"](
+                // Update mover
+                Object["obj.set"](
+                  Core["var"]("mover"),
+                  "location",
+                  Core["var"]("destId"),
+                ),
+                // Update old location
+                Object["obj.set"](
+                  Core["var"]("oldLoc"),
+                  "contents",
+                  List["list.filter"](
+                    Object["obj.get"](
+                      Core["var"]("oldLoc"),
+                      "contents",
+                      List["list.new"](),
+                    ),
+                    Core["lambda"](
+                      ["id"],
+                      Core["!="](
+                        Core["var"]("id"),
+                        Object["obj.get"](Core["var"]("mover"), "id"),
+                      ),
+                    ),
+                  ),
+                ),
+                // Update new location
+                Object["obj.set"](
+                  Core["var"]("newLoc"),
+                  "contents",
+                  List["list.concat"](
+                    Object["obj.get"](
+                      Core["var"]("newLoc"),
+                      "contents",
+                      List["list.new"](),
+                    ),
+                    List["list.new"](
+                      Object["obj.get"](Core["var"]("mover"), "id"),
+                    ),
+                  ),
+                ),
+              ),
+              // Return RoomChangeMessage and Look result
+              List["list.new"](
+                Object["obj.new"](
+                  "type",
+                  "room_change",
+                  "roomId",
+                  Core["var"]("destId"),
+                ),
+                Core["log"](
+                  Str["str.concat"](
+                    "move: mover location is ",
+                    Object["obj.get"](Core["var"]("mover"), "location"),
+                  ),
+                ),
+                Core["call"](Core["var"]("mover"), "look"),
+              ),
+            ),
+            Core["send"]("message", "That way leads nowhere."),
           ),
         ),
       ),
@@ -288,7 +306,10 @@ export function seed() {
   addVerb(
     entityBaseId,
     "tell",
-    Core["send"]("message", "Tell is not yet implemented."),
+    Core["seq"](
+      Core["let"]("msg", Core["arg"](0)),
+      Core["send"]("message", Core["var"]("msg")),
+    ),
   );
 
   // 3. Create Humanoid Base
@@ -350,6 +371,9 @@ export function seed() {
     },
     humanoidBaseId,
   );
+  console.log(
+    `seed: Created Player Base with ID ${playerBaseId}, prototype ${humanoidBaseId}`,
+  );
 
   // Add verbs to Player Base
 
@@ -365,12 +389,24 @@ export function seed() {
             Core["entity"](Object["obj.get"](Core["caller"](), "location")),
           ),
         ),
+        Core["log"](
+          Str["str.concat"](
+            "look: room is ",
+            Object["obj.get"](Core["var"]("room"), "name"),
+          ),
+        ),
         Core["let"](
           "contents",
           Object["obj.get"](
             Core["var"]("room"),
             "contents",
             List["list.new"](),
+          ),
+        ),
+        Core["log"](
+          Str["str.concat"](
+            "look: room contents: ",
+            Core["json.stringify"](Core["var"]("contents")),
           ),
         ),
         Core["let"](
@@ -412,10 +448,28 @@ export function seed() {
         ),
       ),
       Core["seq"](
-        // world.find is missing.
-        // Core["letOp"]("targetId", ["world.find", ["arg", 0]]),
-        // Commenting out the else branch logic that relies on world.find
-        Core["send"]("message", "You don't see that here."),
+        Core["let"]("targetName", Core["arg"](0)),
+        Core["let"](
+          "targetId",
+          Core["call"](Core["caller"](), "find", Core["var"]("targetName")),
+        ),
+        Core["if"](
+          Core["var"]("targetId"),
+          Core["seq"](
+            Core["let"](
+              "target",
+              Core["resolve_props"](Core["entity"](Core["var"]("targetId"))),
+            ),
+            Core["send"](
+              "update",
+              Object["obj.new"](
+                "entities",
+                List["list.new"](Core["var"]("target")),
+              ),
+            ),
+          ),
+          Core["send"]("message", "You don't see that here."),
+        ),
       ),
     ),
   );
@@ -443,15 +497,16 @@ export function seed() {
           ),
         ),
       ),
+      Core["let"](
+        "finalList",
+        List["list.concat"](
+          List["list.new"](Core["var"]("player")),
+          Core["var"]("resolvedItems"),
+        ),
+      ),
       Core["send"](
         "update",
-        Object["obj.new"](
-          "entities",
-          List["list.concat"](
-            List["list.new"](Core["var"]("player")),
-            Core["var"]("resolvedItems"),
-          ),
-        ),
+        Object["obj.new"]("entities", Core["var"]("finalList")),
       ),
     ),
   );
@@ -487,11 +542,68 @@ export function seed() {
               "edit",
             ),
             Core["seq"](
-              // TODO: Implement dig logic
-              Core["send"](
-                "message",
-                "Digging logic not yet implemented, but you have permission!",
+              Core["let"]("newRoomData", Object["obj.new"]()),
+              Object["obj.set"](
+                Core["var"]("newRoomData"),
+                "name",
+                Core["var"]("roomName"),
               ),
+              Core["let"](
+                "newRoomId",
+                Core["create"](Core["var"]("newRoomData")),
+              ),
+
+              // Create exit
+              Core["let"]("exitData", Object["obj.new"]()),
+              Object["obj.set"](
+                Core["var"]("exitData"),
+                "name",
+                Core["var"]("direction"),
+              ),
+              Object["obj.set"](
+                Core["var"]("exitData"),
+                "location",
+                Object["obj.get"](Core["caller"](), "location"),
+              ),
+              Object["obj.set"](
+                Core["var"]("exitData"),
+                "direction",
+                Core["var"]("direction"),
+              ),
+              Object["obj.set"](
+                Core["var"]("exitData"),
+                "destination",
+                Core["var"]("newRoomId"),
+              ),
+              Core["let"]("exitId", Core["create"](Core["var"]("exitData"))),
+
+              // Update current room exits
+              Core["let"](
+                "currentRoom",
+                Core["entity"](Object["obj.get"](Core["caller"](), "location")),
+              ),
+              Core["let"](
+                "currentExits",
+                Object["obj.get"](
+                  Core["var"]("currentRoom"),
+                  "exits",
+                  List["list.new"](),
+                ),
+              ),
+              List["list.push"](
+                Core["var"]("currentExits"),
+                Core["var"]("exitId"),
+              ),
+              Core["set_entity"](
+                Object["obj.set"](
+                  Core["var"]("currentRoom"),
+                  "exits",
+                  Core["var"]("currentExits"),
+                ),
+              ),
+
+              // Move player
+              Core["call"](Core["caller"](), "move", Core["var"]("direction")),
             ),
             Core["send"]("message", "You do not have permission to dig here."),
           ),
@@ -518,11 +630,48 @@ export function seed() {
               "edit",
             ),
             Core["seq"](
-              // TODO: Implement create logic
+              Core["let"]("itemData", Object["obj.new"]()),
+              Object["obj.set"](
+                Core["var"]("itemData"),
+                "name",
+                Core["var"]("name"),
+              ),
+              Object["obj.set"](
+                Core["var"]("itemData"),
+                "location",
+                Object["obj.get"](Core["caller"](), "location"),
+              ),
+              Core["let"]("itemId", Core["create"](Core["var"]("itemData"))),
+
+              // Update room contents
+              Core["let"](
+                "room",
+                Core["entity"](Object["obj.get"](Core["caller"](), "location")),
+              ),
+              Core["let"](
+                "contents",
+                Object["obj.get"](
+                  Core["var"]("room"),
+                  "contents",
+                  List["list.new"](),
+                ),
+              ),
+              List["list.push"](Core["var"]("contents"), Core["var"]("itemId")),
+              Core["set_entity"](
+                Object["obj.set"](
+                  Core["var"]("room"),
+                  "contents",
+                  Core["var"]("contents"),
+                ),
+              ),
+
               Core["send"](
                 "message",
-                "Creation logic not yet implemented, but you have permission!",
+                Str["str.concat"]("You create ", Core["var"]("name"), "."),
               ),
+              Core["call"](Core["caller"](), "look"),
+              // Return item ID
+              Core["var"]("itemId"),
             ),
             Core["send"](
               "message",
@@ -574,6 +723,14 @@ export function seed() {
                     ),
                   ),
                   Core["send"]("message", "Property set."),
+                  Core["log"](
+                    Str["str.concat"](
+                      "set: updated ",
+                      Core["var"]("propName"),
+                      " to ",
+                      Core["var"]("value"),
+                    ),
+                  ),
                 ),
                 Core["send"](
                   "message",
@@ -603,6 +760,9 @@ export function seed() {
       description: "A confused looking guest.",
     },
     playerBaseId,
+  );
+  console.log(
+    `seed: Created Guest with ID ${playerId}, prototype ${playerBaseId}`,
   );
 
   // 5. Create some furniture (Table)

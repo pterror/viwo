@@ -2,6 +2,7 @@ import { createEntity, addVerb, updateVerb, getVerb } from "../repo";
 import * as Core from "../scripting/lib/core";
 import * as Object from "../scripting/lib/object";
 import * as String from "../scripting/lib/string";
+import * as List from "../scripting/lib/list";
 
 export function seedHotel(lobbyId: number, voidId: number) {
   // 7. Hotel Implementation
@@ -74,13 +75,25 @@ export function seedHotel(lobbyId: number, voidId: number) {
         "You leave the room and it fades away behind you.",
       ),
       // Destroy contents (furnishings)
-      Core["let"]("contents", Object["obj.get"](Core["this"](), "contents")),
+      Core["let"](
+        "contents",
+        Object["obj.get"](Core["this"](), "contents", List["list.new"]()),
+      ),
       Core["for"](
-        "item",
+        "itemId",
         Core["var"]("contents"),
-        Core["if"](
-          Core["!="](Object["obj.get"](Core["var"]("item"), "kind"), "ACTOR"),
-          Core["destroy"](Core["var"]("item")),
+        Core["seq"](
+          Core["let"]("item", Core["entity"](Core["var"]("itemId"))),
+          Core["if"](
+            Core["and"](
+              Core["var"]("item"),
+              Core["!="](
+                Object["obj.get"](Core["var"]("item"), "kind", "UNKNOWN"),
+                "ACTOR",
+              ),
+            ),
+            Core["destroy"](Core["var"]("item")),
+          ),
         ),
       ),
       Core["destroy"](Core["this"]()),
@@ -132,6 +145,7 @@ export function seedHotel(lobbyId: number, voidId: number) {
     Core["seq"](
       Core["let"]("floor", Core["arg"](0)),
       Object["obj.set"](Core["this"](), "current_floor", Core["var"]("floor")),
+      Core["set_entity"](Core["this"]()),
       Core["call"](
         Core["caller"](),
         "tell",
@@ -172,10 +186,9 @@ export function seedHotel(lobbyId: number, voidId: number) {
             String["str.concat"]("Floor ", Core["var"]("floor"), " Lobby"),
           ),
           Object["obj.set"](Core["var"]("lobbyData"), "kind", "ROOM"),
-          Core["set_prototype"](Core["var"]("lobbyData"), floorLobbyProtoId),
-          Core["let"]("props", {}),
+
           Object["obj.set"](
-            Core["var"]("props"),
+            Core["var"]("lobbyData"),
             "description",
             String["str.concat"](
               "The lobby of floor ",
@@ -184,17 +197,20 @@ export function seedHotel(lobbyId: number, voidId: number) {
             ),
           ),
           Object["obj.set"](
-            Core["var"]("props"),
+            Core["var"]("lobbyData"),
             "floor",
             Core["var"]("floor"),
           ),
-          Object["obj.set"](Core["var"]("props"), "elevator_id", elevatorId),
           Object["obj.set"](
             Core["var"]("lobbyData"),
-            "props",
-            Core["var"]("props"),
+            "elevator_id",
+            elevatorId,
           ),
           Core["let"]("lobbyId", Core["create"](Core["var"]("lobbyData"))),
+          Core["set_prototype"](
+            Core["entity"](Core["var"]("lobbyId")),
+            floorLobbyProtoId,
+          ),
           // TODO: `move` does not take an `id`
           Core["call"](Core["caller"](), "move", Core["var"]("lobbyId")),
           Core["call"](
@@ -243,22 +259,21 @@ export function seedHotel(lobbyId: number, voidId: number) {
         String["str.concat"]("Floor ", Core["var"]("floor"), " West Wing"),
       ),
       Object["obj.set"](Core["var"]("wingData"), "kind", "ROOM"),
-      Core["set_prototype"](Core["var"]("wingData"), wingProtoId),
-      Core["let"]("props", Object["obj.new"]()),
+
       Object["obj.set"](
-        Core["var"]("props"),
+        Core["var"]("wingData"),
         "description",
         "A long hallway. Rooms 01-50 are here.",
       ),
-      Object["obj.set"](Core["var"]("props"), "floor", Core["var"]("floor")),
-      Object["obj.set"](Core["var"]("props"), "side", "West"),
+      Object["obj.set"](Core["var"]("wingData"), "floor", Core["var"]("floor")),
+      Object["obj.set"](Core["var"]("wingData"), "side", "West"),
       Object["obj.set"](
-        Core["var"]("props"),
+        Core["var"]("wingData"),
         "return_id",
         Object["obj.get"](Core["this"](), "id"),
       ), // Return to THIS lobby
-      Object["obj.set"](Core["var"]("wingData"), "props", Core["var"]("props")),
       Core["let"]("wingId", Core["create"](Core["var"]("wingData"))),
+      Core["set_prototype"](Core["entity"](Core["var"]("wingId")), wingProtoId),
       // TODO: `move` does not take an `id`
       Core["call"](Core["caller"](), "move", Core["var"]("wingId")),
       Core["call"](Core["caller"](), "tell", "You walk down the West Wing."),
@@ -278,22 +293,21 @@ export function seedHotel(lobbyId: number, voidId: number) {
         String["str.concat"]("Floor ", Core["var"]("floor"), " East Wing"),
       ),
       Object["obj.set"](Core["var"]("wingData"), "kind", "ROOM"),
-      Core["set_prototype"](Core["var"]("wingData"), wingProtoId),
-      Core["let"]("props", Object["obj.new"]()),
+
       Object["obj.set"](
-        Core["var"]("props"),
+        Core["var"]("wingData"),
         "description",
         "A long hallway. Rooms 51-99 are here.",
       ),
-      Object["obj.set"](Core["var"]("props"), "floor", Core["var"]("floor")),
-      Object["obj.set"](Core["var"]("props"), "side", "East"),
+      Object["obj.set"](Core["var"]("wingData"), "floor", Core["var"]("floor")),
+      Object["obj.set"](Core["var"]("wingData"), "side", "East"),
       Object["obj.set"](
-        Core["var"]("props"),
+        Core["var"]("wingData"),
         "return_id",
         Object["obj.get"](Core["this"](), "id"),
       ),
-      Object["obj.set"](Core["var"]("wingData"), "props", Core["var"]("props")),
       Core["let"]("wingId", Core["create"](Core["var"]("wingData"))),
+      Core["set_prototype"](Core["entity"](Core["var"]("wingId")), wingProtoId),
       // TODO: `move` does not take an `id`
       Core["call"](Core["caller"](), "move", Core["var"]("wingId")),
       Core["call"](Core["caller"](), "tell", "You walk down the East Wing."),
@@ -388,55 +402,76 @@ export function seedHotel(lobbyId: number, voidId: number) {
             String["str.concat"]("Room ", Core["var"]("roomNum")),
           ),
           Object["obj.set"](Core["var"]("roomData"), "kind", "ROOM"),
-          Core["set_prototype"](Core["var"]("roomData"), hotelRoomProtoId),
-          Core["let"]("props", Object["obj.new"]()),
+
           Object["obj.set"](
-            Core["var"]("props"),
+            Core["var"]("roomData"),
             "description",
             "A standard hotel room.",
           ),
           Object["obj.set"](
-            Core["var"]("props"),
+            Core["var"]("roomData"),
             "lobby_id",
             Object["obj.get"](Core["this"](), "id"),
           ), // Return to THIS wing
-          Object["obj.set"](
-            Core["var"]("roomData"),
-            "props",
-            Core["var"]("props"),
-          ),
           Core["let"]("roomId", Core["create"](Core["var"]("roomData"))),
+          Core["set_prototype"](
+            Core["entity"](Core["var"]("roomId")),
+            hotelRoomProtoId,
+          ),
           // Furnish the room
           Core["let"]("bedData", Object["obj.new"]()),
           Object["obj.set"](Core["var"]("bedData"), "name", "Bed"),
           Object["obj.set"](Core["var"]("bedData"), "kind", "ITEM"),
-          Core["set_prototype"](Core["var"]("bedData"), bedProtoId),
           Object["obj.set"](
             Core["var"]("bedData"),
             "location",
             Core["var"]("roomId"),
           ),
-          Core["create"](Core["var"]("bedData")),
+          Core["let"]("bedId", Core["create"](Core["var"]("bedData"))),
+          Core["set_prototype"](
+            Core["entity"](Core["var"]("bedId")),
+            bedProtoId,
+          ),
           Core["let"]("lampData", Object["obj.new"]()),
           Object["obj.set"](Core["var"]("lampData"), "name", "Lamp"),
           Object["obj.set"](Core["var"]("lampData"), "kind", "ITEM"),
-          Core["set_prototype"](Core["var"]("lampData"), lampProtoId),
           Object["obj.set"](
             Core["var"]("lampData"),
             "location",
             Core["var"]("roomId"),
           ),
-          Core["create"](Core["var"]("lampData")),
+          Core["let"]("lampId", Core["create"](Core["var"]("lampData"))),
+          Core["set_prototype"](
+            Core["entity"](Core["var"]("lampId")),
+            lampProtoId,
+          ),
           Core["let"]("chairData", Object["obj.new"]()),
           Object["obj.set"](Core["var"]("chairData"), "name", "Chair"),
           Object["obj.set"](Core["var"]("chairData"), "kind", "ITEM"),
-          Core["set_prototype"](Core["var"]("chairData"), chairProtoId),
           Object["obj.set"](
             Core["var"]("chairData"),
             "location",
             Core["var"]("roomId"),
           ),
-          Core["create"](Core["var"]("chairData")),
+          Core["let"]("chairId", Core["create"](Core["var"]("chairData"))),
+          Core["set_prototype"](
+            Core["entity"](Core["var"]("chairId")),
+            chairProtoId,
+          ),
+
+          // Update Room Contents
+          Core["let"]("room", Core["entity"](Core["var"]("roomId"))),
+          Core["let"]("contents", List["list.new"]()),
+          List["list.push"](Core["var"]("contents"), Core["var"]("bedId")),
+          List["list.push"](Core["var"]("contents"), Core["var"]("lampId")),
+          List["list.push"](Core["var"]("contents"), Core["var"]("chairId")),
+          Object["obj.set"](
+            Core["var"]("room"),
+            "contents",
+            Core["var"]("contents"),
+          ),
+          Core["set_entity"](Core["var"]("room")),
+
           // TODO: `move` does not take an `id`
           Core["call"](Core["caller"](), "move", Core["var"]("roomId")),
           Core["call"](

@@ -17,7 +17,7 @@ export function getEntity(id: number): Entity | null {
     .get(id) as { id: number; prototype_id: number | null; props: string };
 
   if (!row) return null;
-
+  if (!row) return null;
   let props = JSON.parse(row.props);
 
   // Recursive prototype resolution
@@ -31,10 +31,12 @@ export function getEntity(id: number): Entity | null {
     }
   }
 
-  return {
+  const entity = {
     id: row.id,
     ...props,
   };
+  // console.log(`getEntity(${id}):`, JSON.stringify(entity));
+  return entity;
 }
 
 /**
@@ -64,17 +66,17 @@ export function createEntity(
  * @param props - The properties to update (merged with existing).
  */
 export function updateEntity(...entities: readonly Entity[]) {
-  const ids: number[] = [];
-  const allProps: string[] = [];
+  // FORCE REFRESH
+  const params: (number | string)[] = [];
   for (const { id, ...props } of entities) {
-    ids.push(id);
-    allProps.push(JSON.stringify(props));
+    params.push(id, JSON.stringify(props));
   }
+  console.log(`updateEntity: params=${JSON.stringify(params)}`);
   db.query(
     `INSERT INTO entities (id, props) VALUES ${entities
       .map(() => "(?, ?)")
       .join(", ")} ON CONFLICT (id) DO UPDATE SET props = excluded.props`,
-  ).run(...ids, ...allProps);
+  ).run(...params);
 }
 
 /**
@@ -152,6 +154,7 @@ function lookupVerb(
   name: string,
   visited: Set<number>,
 ): Verb | null {
+  console.log(`lookupVerb: checking ${id} for ${name}`);
   if (visited.has(id)) return null;
   visited.add(id);
 
@@ -182,6 +185,14 @@ function lookupVerb(
       "SELECT prototype_id FROM entities WHERE id = ?",
     )
     .get(id);
+
+  if (entity) {
+    console.log(
+      `lookupVerb: entity ${id} has prototype ${entity.prototype_id}`,
+    );
+  } else {
+    console.log(`lookupVerb: entity ${id} not found`);
+  }
 
   if (entity?.prototype_id) {
     return lookupVerb(entity.prototype_id, name, visited);

@@ -59,8 +59,12 @@ describe("Game Store", () => {
     if (socket?.onmessage) {
       socket.onmessage({
         data: JSON.stringify({
-          type: "message",
-          text: "Hello World",
+          jsonrpc: "2.0",
+          method: "message",
+          params: {
+            type: "message",
+            text: "Hello World",
+          },
         }),
       });
     }

@@ -20,6 +20,7 @@ import * as List from "./lib/list";
 import * as String from "./lib/string";
 import * as Object from "./lib/object";
 import { seedHotel } from "../seeds/hotel";
+import { seed } from "../seed";
 import { createEntity, getEntity, updateEntity, getVerb } from "../repo";
 import { Entity } from "@viwo/shared/jsonrpc";
 
@@ -44,15 +45,29 @@ describe("Hotel Scripting", () => {
 
     // Setup Sys Context
     // Setup Send
-    send = (msg: any) => {
-      if (msg.type === "message") {
-        messages.push(msg.text);
+    send = (type: any, payload: any) => {
+      if (type === "message") {
+        messages.push(payload);
       }
     };
 
     // Setup Environment
-    const lobbyId = createEntity({ name: "Main Lobby" });
-    const voidId = 0;
+    // Seed Base
+    seed();
+
+    // Find Main Lobby & Void
+    const lobby = db
+      .query<{ id: number }, []>(
+        "SELECT id FROM entities WHERE json_extract(props, '$.name') = 'Lobby'",
+      )
+      .get()!;
+    const lobbyId = lobby.id;
+    const voidEntity = db
+      .query<{ id: number }, []>(
+        "SELECT id FROM entities WHERE json_extract(props, '$.name') = 'The Void'",
+      )
+      .get()!;
+    const voidId = voidEntity.id;
 
     // Seed Hotel
     seedHotel(lobbyId, voidId);
@@ -66,7 +81,15 @@ describe("Hotel Scripting", () => {
     hotelLobby = getEntity(hotelLobbyData.id)!;
 
     // Setup Caller
-    const callerId = createEntity({ name: "Guest", location: hotelLobby.id });
+    const playerBase = db
+      .query<{ id: number }, []>(
+        "SELECT id FROM entities WHERE json_extract(props, '$.name') = 'Player Base'",
+      )
+      .get()!;
+    const callerId = createEntity(
+      { name: "Guest", kind: "ACTOR", location: hotelLobby.id },
+      playerBase.id,
+    );
     caller = getEntity(callerId)!;
   });
 
@@ -181,7 +204,8 @@ describe("Hotel Scripting", () => {
     expect(room["name"]).toBe("Room 5");
 
     // Verify furnishings
-    const contents = room["contents"] as Entity[];
+    const contentIds = room["contents"] as number[];
+    const contents = contentIds.map((id) => getEntity(id)!);
     expect(contents.some((e) => e["name"] === "Bed")).toBe(true);
     expect(contents.some((e) => e["name"] === "Lamp")).toBe(true);
     expect(contents.some((e) => e["name"] === "Chair")).toBe(true);

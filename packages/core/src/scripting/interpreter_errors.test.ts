@@ -62,7 +62,7 @@ describe("Interpreter Errors and Warnings", () => {
       Core["try"](
         Core["throw"]("inner"),
         "this should be unused", // No error var
-        "caught",
+        Core["throw"]("outer"),
       ),
       "e",
       Core["var"]("e"),
