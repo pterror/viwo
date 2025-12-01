@@ -20,13 +20,8 @@ import * as List from "./lib/list";
 import * as String from "./lib/string";
 import * as Object from "./lib/object";
 import { seed } from "../seed";
-import {
-  createEntity,
-  getEntity,
-  updateEntity,
-  Entity,
-  getVerb,
-} from "../repo";
+import { createEntity, getEntity, updateEntity, getVerb } from "../repo";
+import { Entity } from "@viwo/shared/jsonrpc";
 
 describe("Player Commands", () => {
   registerLibrary(Core);

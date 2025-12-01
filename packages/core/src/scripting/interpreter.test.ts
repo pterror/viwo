@@ -19,8 +19,8 @@ import * as Core from "./lib/core";
 import * as Object from "./lib/object";
 import * as List from "./lib/list";
 import { beforeAll } from "bun:test";
-import { mockEntity } from "../mock";
 import { createEntity } from "../repo";
+import { Entity } from "@viwo/shared/jsonrpc";
 
 const checkPermissionMock = mock(() => true);
 mock.module("../permissions", () => ({
@@ -33,8 +33,8 @@ describe("Interpreter", () => {
     registerLibrary(List);
   });
 
-  const caller = mockEntity(1);
-  const target = mockEntity(2);
+  const caller: Entity = { id: 1 };
+  const target: Entity = { id: 2 };
   target["owner"] = 1;
   const sys = {
     move: mock(() => {}),

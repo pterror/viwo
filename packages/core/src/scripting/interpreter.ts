@@ -1,5 +1,6 @@
-import { Entity, getVerbs } from "../repo";
+import { getVerbs } from "../repo";
 import { ScriptValue } from "./def";
+import { Entity } from "@viwo/shared/jsonrpc";
 
 export type ScriptSystemContext = {
   send: (msg: unknown) => void;

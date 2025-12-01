@@ -1,5 +1,5 @@
+import { Entity } from "@viwo/shared/jsonrpc";
 import { WebSocket } from "ws";
-import { Entity } from "./repo";
 
 /**
  * Context representing a connected player.

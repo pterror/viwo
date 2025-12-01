@@ -1,40 +1,37 @@
 // @ts-nocheck
-// TODO: Re-implement permissions and '
+// TODO: Re-implement permissions
 import { describe, test, expect } from "bun:test";
 import { checkPermission } from "./permissions";
-import { mockEntity } from "./mock";
 
 describe("Permissions", () => {
-  const owner = mockEntity(1);
-  const other = mockEntity(2);
-  const wizard = mockEntity(3, { is_wizard: true });
+  const owner = { id: 1 };
+  const other = { id: 2 };
+  const wizard = { id: 3, is_wizard: true };
 
   test("Wizard Override", () => {
-    const target = mockEntity(10, {}, other.id);
+    const target = { id: 10, owner: other.id };
     expect(checkPermission(wizard, target, "edit")).toBe(true);
     expect(checkPermission(wizard, target, "view")).toBe(true);
   });
 
   test("Ownership", () => {
-    const target = mockEntity(10, {}, owner.id);
+    const target = { id: 10, owner };
     expect(checkPermission(owner, target, "edit")).toBe(true);
     expect(checkPermission(other, target, "edit")).toBe(false);
   });
 
   test("Explicit Permission", () => {
-    const user = { id: 2, props: {} } as any;
-    const other = { id: 3, props: {} } as any;
+    const user = { id: 2, props: {} };
+    const other = { id: 3, props: {} };
 
     const item = {
       id: 10,
-      owner_id: 1,
-      props: {
-        permissions: {
-          edit: [2], // Only user 2
-          view: "public",
-        },
+      owner: 1,
+      permissions: {
+        edit: [2], // Only user 2
+        view: "public",
       },
-    } as any;
+    };
 
     expect(checkPermission(user, item, "edit")).toBe(true);
     expect(checkPermission(other, item, "edit")).toBe(false); // Not in list
@@ -43,9 +40,9 @@ describe("Permissions", () => {
 
   test("Cascading Permissions", () => {
     // Room owned by owner
-    const room = mockEntity(100, {}, owner.id);
+    const room = { id: 100, owner };
     // Item in room, owned by nobody (or other)
-    const item = mockEntity(101, {}, null, room.id);
+    const item = { id: 101, owner: null, location: room.id };
 
     // Mock resolver to find the room
     const resolver = (id: number) => (id === 100 ? room : null);

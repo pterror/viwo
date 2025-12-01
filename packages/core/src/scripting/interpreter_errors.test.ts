@@ -1,11 +1,10 @@
 import { describe, test, expect } from "bun:test";
 import { evaluate, registerLibrary, ScriptContext } from "./interpreter";
-import { mockEntity } from "../mock";
 import * as Core from "./lib/core";
 
 const ctx: ScriptContext = {
-  caller: mockEntity(1),
-  this: mockEntity(2),
+  caller: { id: 1 },
+  this: { id: 2 },
   args: [],
   gas: 1000,
   warnings: [],

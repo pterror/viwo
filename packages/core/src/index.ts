@@ -1,5 +1,5 @@
 import { serve } from "bun";
-import { createEntity, getEntity, Entity, getVerbs } from "./repo";
+import { createEntity, getEntity, getVerbs } from "./repo";
 import {
   createScriptContext,
   evaluate,
@@ -18,6 +18,7 @@ import {
   JsonRpcRequest,
   JsonRpcResponse,
   JsonRpcNotification,
+  Entity,
 } from "@viwo/shared/jsonrpc";
 
 export { PluginManager };

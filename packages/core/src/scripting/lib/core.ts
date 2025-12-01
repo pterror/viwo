@@ -2,7 +2,6 @@ import { evaluate, resolveProps, ScriptError } from "../interpreter";
 import {
   createEntity,
   deleteEntity,
-  Entity,
   getEntity,
   getPrototypeId,
   getVerbs,
@@ -11,6 +10,7 @@ import {
   Verb,
 } from "../../repo";
 import { defineOpcode, ScriptValue } from "../def";
+import { Entity } from "@viwo/shared/jsonrpc";
 
 // Values
 const this_ = defineOpcode<[], Entity>("this", {

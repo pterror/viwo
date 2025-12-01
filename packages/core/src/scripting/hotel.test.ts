@@ -30,10 +30,10 @@ import {
   createEntity,
   getEntity,
   updateEntity,
-  Entity,
   getVerb,
   getVerbs,
 } from "../repo";
+import { Entity } from "@viwo/shared/jsonrpc";
 
 describe("Hotel Scripting", () => {
   registerLibrary(Core);

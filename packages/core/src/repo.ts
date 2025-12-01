@@ -1,20 +1,7 @@
 import { SQLQueryBindings } from "bun:sqlite";
 import { db } from "./db";
 import { ScriptValue } from "./scripting/def";
-
-/**
- * Represents a game entity.
- * Everything in the game is an Entity (Room, Player, Item, Exit, etc.).
- */
-export interface Entity {
-  /** Unique ID of the entity */
-  id: number;
-  /**
-   * Resolved properties (merged from prototype and instance).
-   * Contains arbitrary game data like description, adjectives, custom_css.
-   */
-  [key: string]: unknown;
-}
+import { Entity } from "@viwo/shared/jsonrpc";
 
 /**
  * Fetches an entity by ID, resolving its properties against its prototype.

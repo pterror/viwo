@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { createScriptContext, evaluate, registerLibrary } from "./interpreter";
-import { Entity } from "../repo";
 import * as Core from "./lib/core";
 import * as List from "./lib/list";
 import * as String from "./lib/string";
 import * as Object from "./lib/object";
+import { Entity } from "@viwo/shared/jsonrpc";
 
 describe("Book Item Scripting", () => {
   registerLibrary(Core);

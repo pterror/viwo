@@ -46,13 +46,22 @@ export interface MessageNotification extends JsonRpcNotification {
   params: MessageNotificationParams;
 }
 
+/**
+ * Represents a game entity.
+ * Everything in the game is an Entity (Room, Player, Item, Exit, etc.).
+ */
 export interface Entity {
+  /** Unique ID of the entity */
   id: number;
+  /**
+   * Resolved properties (merged from prototype and instance).
+   * Contains arbitrary game data like description, adjectives, custom_css.
+   */
   [key: string]: unknown;
 }
 
 export interface UpdateNotificationParams {
-  entities: Entity[];
+  entities: readonly Entity[];
 }
 
 export interface UpdateNotification extends JsonRpcNotification {

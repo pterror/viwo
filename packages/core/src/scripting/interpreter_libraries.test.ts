@@ -4,11 +4,10 @@ import * as Core from "./lib/core";
 import * as String from "./lib/string";
 import * as List from "./lib/list";
 import * as Object from "./lib/object";
-import { mockEntity } from "../mock";
 
 const ctx: ScriptContext = {
-  caller: mockEntity(1),
-  this: mockEntity(2),
+  caller: { id: 1 },
+  this: { id: 2 },
   args: [],
   gas: 1000,
   sys: {
