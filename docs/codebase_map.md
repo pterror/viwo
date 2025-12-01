@@ -16,7 +16,6 @@ This document lists key files and directories to help navigation.
 ## Shared Library (`packages/shared`)
 
 - **`src/jsonrpc.ts`**: JSON-RPC 2.0 type definitions and notification schemas.
-- **`src/commands.ts`**: Zod schemas for command validation.
 
 ## Web Client (`apps/web`)
 

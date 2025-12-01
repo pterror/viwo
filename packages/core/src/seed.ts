@@ -962,13 +962,17 @@ export function seed() {
           ),
         ),
       ),
-      Core["schedule"]("update_color", [], 5000),
+      Core["schedule"]("update_color", List["list.new"](), 5000),
     ),
   );
 
   // Kickoff
   // We need a way to start it. Let's add a 'touch' verb to start it.
-  addVerb(moodRingId, "touch", Core["schedule"]("update_color", [], 0));
+  addVerb(
+    moodRingId,
+    "touch",
+    Core["schedule"]("update_color", List["list.new"](), 0),
+  );
 
   // --- Advanced Items ---
 
@@ -1018,10 +1022,14 @@ export function seed() {
           Time["time.format"](Time["time.now"](), "time"),
         ),
       ),
-      Core["schedule"]("tick", [], 10000),
+      Core["schedule"]("tick", List["list.new"](), 10000),
     ),
   );
-  addVerb(specialWatchId, "start", Core["schedule"]("tick", [], 0));
+  addVerb(
+    specialWatchId,
+    "start",
+    Core["schedule"]("tick", List["list.new"](), 0),
+  );
 
   // 3. Clock (Room Broadcast)
   // Watch broadcasts to holder (Player), Clock broadcasts to Room.
@@ -1043,10 +1051,10 @@ export function seed() {
           Time["time.format"](Time["time.now"](), "time"),
         ),
       ),
-      Core["schedule"]("tick", [], 15000),
+      Core["schedule"]("tick", List["list.new"](), 15000),
     ),
   );
-  addVerb(clockId, "start", Core["schedule"]("tick", [], 0));
+  addVerb(clockId, "start", Core["schedule"]("tick", List["list.new"](), 0));
 
   // 4. Clock Tower (Global Broadcast)
   const towerId = createEntity({
@@ -1066,10 +1074,10 @@ export function seed() {
           Time["time.format"](Time["time.now"](), "time"),
         ),
       ),
-      Core["schedule"]("toll", [], 60000),
+      Core["schedule"]("toll", List["list.new"](), 60000),
     ),
   );
-  addVerb(towerId, "start", Core["schedule"]("toll", [], 0));
+  addVerb(towerId, "start", Core["schedule"]("toll", List["list.new"](), 0));
 
   // 5. Mailbox
   // A prototype for mailboxes.

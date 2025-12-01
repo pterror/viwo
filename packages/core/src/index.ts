@@ -17,6 +17,7 @@ import {
   JsonRpcRequest,
   JsonRpcResponse,
   JsonRpcNotification,
+  MessageNotificationParams,
   Entity,
 } from "@viwo/shared/jsonrpc";
 
@@ -26,6 +27,9 @@ export type { Plugin, PluginContext } from "./plugin";
 
 export const pluginManager = new PluginManager();
 
+// Registry of connected clients: PlayerID -> WebSocket
+const clients = new Map<number, Bun.ServerWebSocket<{ userId: number }>>();
+
 registerLibrary(Core);
 registerLibrary(List);
 registerLibrary(Object);
@@ -33,11 +37,15 @@ registerLibrary(String);
 registerLibrary(Time);
 
 // Initialize scheduler
-scheduler.setSendFactory(() => {
-  // TODO: This is a hack. We need a way to send messages to the right client.
-  // For now, we just log to console as scheduled tasks might not have a connected client.
+// Initialize scheduler
+scheduler.setSendFactory((entityId: number) => {
+  const ws = clients.get(entityId);
+  if (ws) {
+    return createSendFunction(ws);
+  }
+  // Fallback for entities without a connected client (e.g. NPCs, Rooms)
   return (msg: unknown) => {
-    console.log("[Scheduled Task Output]", msg);
+    console.log(`[Scheduled Task Output for Entity ${entityId}]`, msg);
   };
 });
 
@@ -78,6 +86,7 @@ export function startServer(port: number = 8080) {
         );
 
         ws.data = { userId: playerId };
+        clients.set(playerId, ws);
 
         // Send initial state via notification
         const player = getEntity(playerId);
@@ -115,8 +124,9 @@ export function startServer(port: number = 8080) {
           console.error("Failed to handle message", e);
         }
       },
-      close() {
+      close(ws) {
         console.log("Client disconnected");
+        clients.delete(ws.data.userId);
       },
     },
   });
@@ -291,38 +301,66 @@ async function executeVerb(
  * @param ws - The WebSocket connection.
  * @returns A function that sends messages to the client.
  */
-function createSendFunction(ws: WebSocket): (msg: unknown) => void {
+function createSendFunction(ws: any): (msg: unknown) => void {
   return (msg: unknown) => {
-    // If it's a string, wrap it in a message notification
+    // 1. Handle simple string messages
     if (typeof msg === "string") {
       const notification: JsonRpcNotification = {
         jsonrpc: "2.0",
         method: "message",
-        params: { type: "info", text: msg },
+        params: { type: "info", text: msg } as MessageNotificationParams,
       };
       ws.send(JSON.stringify(notification));
-    } else if (
+      return;
+    }
+
+    // 2. Handle Update messages (special internal structure from seed.ts/core.ts)
+    // Structure: { type: "update", entities: [...] }
+    if (
       typeof msg === "object" &&
       msg !== null &&
       "type" in msg &&
-      (msg as any).type === "update"
+      (msg as Record<string, unknown>)["type"] === "update" &&
+      "entities" in msg &&
+      Array.isArray((msg as Record<string, unknown>)["entities"])
     ) {
-      // Handle update messages specifically as notifications
       const notification: JsonRpcNotification = {
         jsonrpc: "2.0",
         method: "update",
-        params: msg,
+        params: { entities: (msg as any).entities },
       };
       ws.send(JSON.stringify(notification));
-    } else {
-      // Fallback for other objects
-      console.warn("Sending unstructured object:", msg);
+      return;
+    }
+
+    // 3. Handle explicit MessageNotificationParams
+    // Structure: { type: "info" | "error", text: string }
+    if (
+      typeof msg === "object" &&
+      msg !== null &&
+      "type" in msg &&
+      "text" in msg &&
+      typeof (msg as any).text === "string"
+    ) {
       const notification: JsonRpcNotification = {
         jsonrpc: "2.0",
         method: "message",
-        params: msg,
+        params: msg as MessageNotificationParams,
       };
       ws.send(JSON.stringify(notification));
+      return;
     }
+
+    // 4. Fallback: Stringify unknown objects to avoid crashing or sending invalid params
+    console.warn("Sending unstructured object:", msg);
+    const notification: JsonRpcNotification = {
+      jsonrpc: "2.0",
+      method: "message",
+      params: {
+        type: "info",
+        text: JSON.stringify(msg),
+      } as MessageNotificationParams,
+    };
+    ws.send(JSON.stringify(notification));
   };
 }

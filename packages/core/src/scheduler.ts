@@ -29,14 +29,15 @@ export class TaskScheduler {
     ).run(entityId, verb, JSON.stringify(args), executeAt);
   }
 
-  private sendFactory: (() => (msg: unknown) => void) | null = null;
+  private sendFactory: ((entityId: number) => (msg: unknown) => void) | null =
+    null;
   /**
    * Sets the factory function for creating the 'send' function used in scheduled tasks.
    * This allows the scheduler to send messages to clients even when triggered asynchronously.
    *
-   * @param factory - A function that returns a send function.
+   * @param factory - A function that returns a send function for a given entity ID.
    */
-  setSendFactory(factory: () => (msg: unknown) => void) {
+  setSendFactory(factory: (entityId: number) => (msg: unknown) => void) {
     this.sendFactory = factory;
   }
 
@@ -62,9 +63,10 @@ export class TaskScheduler {
       throw new Error("[Scheduler] No send factory set.");
     }
 
-    const send = this.sendFactory();
-
     for (const task of tasks) {
+      // Create a send function specific to this entity
+      const send = this.sendFactory(task.entity_id);
+
       try {
         const entity = getEntity(task.entity_id);
         const verb = getVerb(task.entity_id, task.verb);
