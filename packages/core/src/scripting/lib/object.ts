@@ -7,6 +7,9 @@ import { defineOpcode, ScriptValue } from "../def";
 
 const DISALLOWED_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 
+/**
+ * Creates a new object from key-value pairs.
+ */
 const objNew = defineOpcode<[...ScriptValue<unknown>[]], any>(
   "obj.new",
   {
@@ -42,6 +45,9 @@ const objNew = defineOpcode<[...ScriptValue<unknown>[]], any>(
 );
 export { objNew as "obj.new" };
 
+/**
+ * Returns an array of a given object's own enumerable property names.
+ */
 const objKeys = defineOpcode<[ScriptValue<object>], string[]>(
   "obj.keys",
   {
@@ -70,6 +76,9 @@ const objKeys = defineOpcode<[ScriptValue<object>], string[]>(
 );
 export { objKeys as "obj.keys" };
 
+/**
+ * Returns an array of a given object's own enumerable property values.
+ */
 const objValues = defineOpcode<[ScriptValue<object>], any[]>(
   "obj.values",
   {
@@ -98,6 +107,9 @@ const objValues = defineOpcode<[ScriptValue<object>], any[]>(
 );
 export { objValues as "obj.values" };
 
+/**
+ * Returns an array of a given object's own enumerable string-keyed property [key, value] pairs.
+ */
 const objEntries = defineOpcode<[ScriptValue<object>], [string, any][]>(
   "obj.entries",
   {
@@ -126,6 +138,9 @@ const objEntries = defineOpcode<[ScriptValue<object>], [string, any][]>(
 );
 export { objEntries as "obj.entries" };
 
+/**
+ * Retrieves a property from an object.
+ */
 const objGet = defineOpcode<[ScriptValue<object>, ScriptValue<string>, ScriptValue<unknown>?], any>(
   "obj.get",
   {
@@ -174,6 +189,9 @@ const objGet = defineOpcode<[ScriptValue<object>, ScriptValue<string>, ScriptVal
 );
 export { objGet as "obj.get" };
 
+/**
+ * Sets a property on an object.
+ */
 const objSet = defineOpcode<[ScriptValue<object>, ScriptValue<string>, ScriptValue<unknown>], any>(
   "obj.set",
   {
@@ -221,6 +239,9 @@ const objSet = defineOpcode<[ScriptValue<object>, ScriptValue<string>, ScriptVal
 );
 export { objSet as "obj.set" };
 
+/**
+ * Checks if an object has a specific property.
+ */
 const objHas = defineOpcode<[ScriptValue<object>, ScriptValue<string>], boolean>(
   "obj.has",
   {
@@ -261,6 +282,9 @@ const objHas = defineOpcode<[ScriptValue<object>, ScriptValue<string>], boolean>
 );
 export { objHas as "obj.has" };
 
+/**
+ * Deletes a property from an object.
+ */
 const objDel = defineOpcode<[ScriptValue<object>, ScriptValue<string>], boolean>(
   "obj.del",
   {
@@ -305,6 +329,9 @@ const objDel = defineOpcode<[ScriptValue<object>, ScriptValue<string>], boolean>
 );
 export { objDel as "obj.del" };
 
+/**
+ * Merges multiple objects into a new object.
+ */
 const objMerge = defineOpcode<[ScriptValue<object>, ScriptValue<object>, ...ScriptValue<object>[]], any>(
   "obj.merge",
   {
@@ -336,6 +363,9 @@ const objMerge = defineOpcode<[ScriptValue<object>, ScriptValue<object>, ...Scri
 );
 export { objMerge as "obj.merge" };
 
+/**
+ * Creates a new object with the same keys as the original, but with values transformed by a function.
+ */
 const objMap = defineOpcode<[ScriptValue<object>, ScriptValue<unknown>], any>(
   "obj.map",
   {
@@ -382,6 +412,9 @@ const objMap = defineOpcode<[ScriptValue<object>, ScriptValue<unknown>], any>(
 );
 export { objMap as "obj.map" };
 
+/**
+ * Creates a new object with a subset of properties that pass the test implemented by the provided function.
+ */
 const objFilter = defineOpcode<[ScriptValue<object>, ScriptValue<unknown>], any>(
   "obj.filter",
   {
@@ -423,6 +456,9 @@ const objFilter = defineOpcode<[ScriptValue<object>, ScriptValue<unknown>], any>
 );
 export { objFilter as "obj.filter" };
 
+/**
+ * Executes a user-supplied "reducer" callback function on each entry of the object.
+ */
 const objReduce = defineOpcode<[ScriptValue<object>, ScriptValue<unknown>, ScriptValue<unknown>], any>(
   "obj.reduce",
   {
@@ -464,6 +500,9 @@ const objReduce = defineOpcode<[ScriptValue<object>, ScriptValue<unknown>, Scrip
 );
 export { objReduce as "obj.reduce" };
 
+/**
+ * Creates a new object by applying a given callback function to each entry of the object, and then flattening the result.
+ */
 const objFlatMap = defineOpcode<[ScriptValue<object>, ScriptValue<unknown>], any>(
   "obj.flatMap",
   {

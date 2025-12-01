@@ -65,6 +65,11 @@ export class PluginManager {
 
   constructor() {}
 
+  /**
+   * Loads a plugin and registers its commands.
+   *
+   * @param plugin - The plugin to load.
+   */
   async loadPlugin(plugin: Plugin) {
     console.log(`Loading plugin: ${plugin.name} v${plugin.version}`);
     const context: PluginContext = {
@@ -78,6 +83,12 @@ export class PluginManager {
     this.plugins.set(plugin.name, plugin);
   }
 
+  /**
+   * Delegates a command to the registered handler.
+   *
+   * @param ctx - The command context.
+   * @returns True if the command was handled, false otherwise.
+   */
   async handleCommand(ctx: CommandContext): Promise<boolean> {
     const handler = this.commands.get(ctx.command);
     if (handler) {

@@ -44,6 +44,12 @@ scheduler.setSendFactory(() => {
 // Seed the database
 seed();
 
+/**
+ * Starts the Viwo Core Server.
+ * Sets up the WebSocket server and handles incoming connections.
+ *
+ * @param port - The port to listen on (default: 8080).
+ */
 export function startServer(port: number = 8080) {
   const server = serve<{ userId: number }>({
     port,
@@ -124,6 +130,14 @@ if (import.meta.main) {
   startServer();
 }
 
+/**
+ * Handles incoming JSON-RPC requests from clients.
+ *
+ * @param req - The JSON-RPC request object.
+ * @param playerId - The ID of the player making the request.
+ * @param ws - The WebSocket connection.
+ * @returns A promise that resolves to the JSON-RPC response.
+ */
 async function handleJsonRpcRequest(
   req: JsonRpcRequest,
   playerId: number,
@@ -195,6 +209,12 @@ async function handleJsonRpcRequest(
 }
 
 // TODO: Move this to scripting too
+/**
+ * Resolves all available verbs for a player based on their context (self, room, items, inventory).
+ *
+ * @param player - The player entity.
+ * @returns A list of available verbs with their source entity ID.
+ */
 async function getAvailableVerbs(player: Entity) {
   const verbs: { name: string; code: any; source: number }[] = [];
   const seen = new Set<string>();
@@ -242,6 +262,14 @@ async function getAvailableVerbs(player: Entity) {
   return verbs;
 }
 
+/**
+ * Executes a verb script.
+ *
+ * @param player - The player entity executing the verb.
+ * @param verb - The verb definition.
+ * @param args - Arguments passed to the verb.
+ * @param ws - The WebSocket connection for sending messages.
+ */
 async function executeVerb(
   player: Entity,
   verb: { name: string; code: any; source: number },
@@ -258,6 +286,12 @@ async function executeVerb(
   await evaluate(verb.code, ctx);
 }
 
+/**
+ * Creates a 'send' function for the scripting environment that wraps messages in JSON-RPC notifications.
+ *
+ * @param ws - The WebSocket connection.
+ * @returns A function that sends messages to the client.
+ */
 function createSendFunction(ws: WebSocket): (msg: unknown) => void {
   return (msg: unknown) => {
     // If it's a string, wrap it in a message notification

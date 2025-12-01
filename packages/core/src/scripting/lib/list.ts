@@ -5,6 +5,9 @@ import {
 } from "../interpreter";
 import { defineOpcode, ScriptValue } from "../def";
 
+/**
+ * Creates a new list.
+ */
 const listNew = defineOpcode<[...ScriptValue<unknown>[]], any[]>(
   "list.new",
   {
@@ -27,6 +30,9 @@ const listNew = defineOpcode<[...ScriptValue<unknown>[]], any[]>(
 );
 export { listNew as "list.new" };
 
+/**
+ * Returns the length of a list.
+ */
 const listLen = defineOpcode<[ScriptValue<readonly unknown[]>], number>(
   "list.len",
   {
@@ -47,6 +53,9 @@ const listLen = defineOpcode<[ScriptValue<readonly unknown[]>], number>(
 );
 export { listLen as "list.len" };
 
+/**
+ * Checks if a list is empty.
+ */
 const listEmpty = defineOpcode<[ScriptValue<readonly unknown[]>], boolean>(
   "list.empty",
   {
@@ -67,6 +76,9 @@ const listEmpty = defineOpcode<[ScriptValue<readonly unknown[]>], boolean>(
 );
 export { listEmpty as "list.empty" };
 
+/**
+ * Retrieves an item from a list at a specific index.
+ */
 const listGet = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<number>], any>(
   "list.get",
   {
@@ -94,6 +106,9 @@ const listGet = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<numbe
 );
 export { listGet as "list.get" };
 
+/**
+ * Sets an item in a list at a specific index.
+ */
 const listSet = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<number>, ScriptValue<unknown>], any>(
   "list.set",
   {
@@ -125,6 +140,9 @@ const listSet = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<numbe
 );
 export { listSet as "list.set" };
 
+/**
+ * Adds an item to the end of a list.
+ */
 const listPush = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<unknown>], number>(
   "list.push",
   {
@@ -155,6 +173,9 @@ const listPush = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<unkn
 );
 export { listPush as "list.push" };
 
+/**
+ * Removes and returns the last item of a list.
+ */
 const listPop = defineOpcode<[ScriptValue<readonly unknown[]>], any>(
   "list.pop",
   {
@@ -181,6 +202,9 @@ const listPop = defineOpcode<[ScriptValue<readonly unknown[]>], any>(
 );
 export { listPop as "list.pop" };
 
+/**
+ * Adds an item to the beginning of a list.
+ */
 const listUnshift = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<unknown>], number>(
   "list.unshift",
   {
@@ -211,6 +235,9 @@ const listUnshift = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<u
 );
 export { listUnshift as "list.unshift" };
 
+/**
+ * Removes and returns the first item of a list.
+ */
 const listShift = defineOpcode<[ScriptValue<readonly unknown[]>], any>(
   "list.shift",
   {
@@ -233,6 +260,9 @@ const listShift = defineOpcode<[ScriptValue<readonly unknown[]>], any>(
 );
 export { listShift as "list.shift" };
 
+/**
+ * Returns a shallow copy of a portion of a list.
+ */
 const listSlice = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<number>, ScriptValue<number>?], any[]>(
   "list.slice",
   {
@@ -272,6 +302,9 @@ const listSlice = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<num
 );
 export { listSlice as "list.slice" };
 
+/**
+ * Changes the contents of a list by removing or replacing existing elements and/or adding new elements.
+ */
 const listSplice = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<number>, ScriptValue<number>, ...ScriptValue<unknown>[]], any[]>(
   "list.splice",
   {
@@ -317,6 +350,9 @@ const listSplice = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<nu
 );
 export { listSplice as "list.splice" };
 
+/**
+ * Merges two or more lists.
+ */
 const listConcat = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<readonly unknown[]>], any[]>(
   "list.concat",
   {
@@ -350,6 +386,9 @@ const listConcat = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<re
 );
 export { listConcat as "list.concat" };
 
+/**
+ * Determines whether a list includes a certain value.
+ */
 const listIncludes = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<unknown>], boolean>(
   "list.includes",
   {
@@ -379,6 +418,9 @@ const listIncludes = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<
 );
 export { listIncludes as "list.includes" };
 
+/**
+ * Reverses a list in place.
+ */
 const listReverse = defineOpcode<[ScriptValue<readonly unknown[]>], any[]>(
   "list.reverse",
   {
@@ -401,6 +443,9 @@ const listReverse = defineOpcode<[ScriptValue<readonly unknown[]>], any[]>(
 );
 export { listReverse as "list.reverse" };
 
+/**
+ * Sorts the elements of a list in place.
+ */
 const listSort = defineOpcode<[ScriptValue<readonly unknown[]>], any[]>(
   "list.sort",
   {
@@ -423,6 +468,9 @@ const listSort = defineOpcode<[ScriptValue<readonly unknown[]>], any[]>(
 );
 export { listSort as "list.sort" };
 
+/**
+ * Returns the first element in the provided list that satisfies the provided testing function.
+ */
 const listFind = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<unknown>], any>(
   "list.find",
   {
@@ -464,6 +512,9 @@ const listFind = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<unkn
 );
 export { listFind as "list.find" };
 
+/**
+ * Creates a new list populated with the results of calling a provided function on every element in the calling list.
+ */
 const listMap = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<unknown>], any[]>(
   "list.map",
   {
@@ -504,6 +555,9 @@ const listMap = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<unkno
 );
 export { listMap as "list.map" };
 
+/**
+ * Creates a shallow copy of a portion of a given list, filtered down to just the elements from the given list that pass the test implemented by the provided function.
+ */
 const listFilter = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<unknown>], any[]>(
   "list.filter",
   {
@@ -546,6 +600,9 @@ const listFilter = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<un
 );
 export { listFilter as "list.filter" };
 
+/**
+ * Executes a user-supplied "reducer" callback function on each element of the list, in order, passing in the return value from the calculation on the preceding element.
+ */
 const listReduce = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<unknown>, ScriptValue<unknown>], any>(
   "list.reduce",
   {
@@ -588,6 +645,9 @@ const listReduce = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<un
 );
 export { listReduce as "list.reduce" };
 
+/**
+ * Creates a new list by applying a given callback function to each element of the list, and then flattening the result by one level.
+ */
 const listFlatMap = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<unknown>], any[]>(
   "list.flatMap",
   {

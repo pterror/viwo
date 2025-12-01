@@ -15,6 +15,9 @@ import { defineOpcode, ScriptValue } from "../def";
 import { Entity } from "@viwo/shared/jsonrpc";
 
 // Values
+/**
+ * Returns the current entity (this).
+ */
 const this_ = defineOpcode<[], Entity>("this", {
   metadata: {
     label: "This",
@@ -34,6 +37,9 @@ const this_ = defineOpcode<[], Entity>("this", {
 });
 export { this_ as this };
 
+/**
+ * Returns the entity that called the current script.
+ */
 export const caller = defineOpcode<[], Entity>("caller", {
   metadata: {
     label: "Caller",
@@ -53,6 +59,9 @@ export const caller = defineOpcode<[], Entity>("caller", {
 });
 
 // Control Flow
+/**
+ * Executes a sequence of steps and returns the result of the last step.
+ */
 export const seq = defineOpcode<ScriptValue<unknown>[], any>("seq", {
   metadata: {
     label: "Sequence",
@@ -75,6 +84,9 @@ export const seq = defineOpcode<ScriptValue<unknown>[], any>("seq", {
   },
 });
 
+/**
+ * Conditional execution.
+ */
 const ifOp = defineOpcode<
   [ScriptValue<boolean>, ScriptValue<unknown>, ScriptValue<unknown>?],
   any
@@ -111,6 +123,9 @@ const ifOp = defineOpcode<
 });
 export { ifOp as if };
 
+/**
+ * Repeats a body while a condition is true.
+ */
 const whileOp = defineOpcode<[ScriptValue<boolean>, ScriptValue<unknown>], any>(
   "while",
   {
@@ -139,6 +154,9 @@ const whileOp = defineOpcode<[ScriptValue<boolean>, ScriptValue<unknown>], any>(
 );
 export { whileOp as while };
 
+/**
+ * Iterates over a list.
+ */
 const forOp = defineOpcode<
   [string, ScriptValue<readonly unknown[]>, ScriptValue<unknown>],
   any
@@ -181,6 +199,9 @@ const forOp = defineOpcode<
 export { forOp as for };
 
 // Data Structures
+/**
+ * Converts a value to a JSON string.
+ */
 const jsonStringify = defineOpcode<[ScriptValue<unknown>], string>(
   "json.stringify",
   {
@@ -204,6 +225,9 @@ const jsonStringify = defineOpcode<[ScriptValue<unknown>], string>(
 );
 export { jsonStringify as "json.stringify" };
 
+/**
+ * Parses a JSON string into a value.
+ */
 const jsonParse = defineOpcode<[ScriptValue<string>], unknown>("json.parse", {
   metadata: {
     label: "JSON Parse",
@@ -227,6 +251,9 @@ const jsonParse = defineOpcode<[ScriptValue<string>], unknown>("json.parse", {
 export { jsonParse as "json.parse" };
 
 // Variables
+/**
+ * Defines a local variable in the current scope.
+ */
 const letOp = defineOpcode<[string, ScriptValue<unknown>], any>("let", {
   metadata: {
     label: "Let",
@@ -255,6 +282,9 @@ const letOp = defineOpcode<[string, ScriptValue<unknown>], any>("let", {
 });
 export { letOp as "let" };
 
+/**
+ * Retrieves the value of a variable.
+ */
 const var_ = defineOpcode<[string], any>("var", {
   metadata: {
     label: "Get Var",
@@ -275,6 +305,9 @@ const var_ = defineOpcode<[string], any>("var", {
 });
 export { var_ as var };
 
+/**
+ * Updates the value of an existing variable.
+ */
 const set_ = defineOpcode<[string, ScriptValue<unknown>], any>("set", {
   metadata: {
     label: "Set",
@@ -305,6 +338,9 @@ const set_ = defineOpcode<[string, ScriptValue<unknown>], any>("set", {
 export { set_ as set }
 
 // Comparison
+/**
+ * Checks if all arguments are equal.
+ */
 const eq = defineOpcode<
   [ScriptValue<unknown>, ScriptValue<unknown>, ...ScriptValue<unknown>[]],
   boolean
@@ -342,6 +378,9 @@ const eq = defineOpcode<
 });
 export { eq as "==" };
 
+/**
+ * Checks if adjacent arguments are different.
+ */
 const neq = defineOpcode<
   [ScriptValue<unknown>, ScriptValue<unknown>, ...ScriptValue<unknown>[]],
   boolean
@@ -379,6 +418,9 @@ const neq = defineOpcode<
 });
 export { neq as "!=" };
 
+/**
+ * Checks if arguments are strictly increasing.
+ */
 const lt = defineOpcode<
   [ScriptValue<number>, ScriptValue<number>, ...ScriptValue<number>[]],
   boolean
@@ -416,6 +458,9 @@ const lt = defineOpcode<
 });
 export { lt as "<" };
 
+/**
+ * Checks if arguments are strictly decreasing.
+ */
 const gt = defineOpcode<
   [ScriptValue<number>, ScriptValue<number>, ...ScriptValue<number>[]],
   boolean
@@ -453,6 +498,9 @@ const gt = defineOpcode<
 });
 export { gt as ">" };
 
+/**
+ * Checks if arguments are non-decreasing.
+ */
 const lte = defineOpcode<
   [ScriptValue<number>, ScriptValue<number>, ...ScriptValue<number>[]],
   boolean
@@ -490,6 +538,9 @@ const lte = defineOpcode<
 });
 export { lte as "<=" };
 
+/**
+ * Checks if arguments are non-increasing.
+ */
 const gte = defineOpcode<
   [ScriptValue<number>, ScriptValue<number>, ...ScriptValue<number>[]],
   boolean
@@ -528,6 +579,9 @@ const gte = defineOpcode<
 export { gte as ">=" };
 
 // Arithmetic
+/**
+ * Adds numbers.
+ */
 const add = defineOpcode<
   [ScriptValue<number>, ScriptValue<number>, ...ScriptValue<number>[]],
   number
@@ -572,6 +626,9 @@ const add = defineOpcode<
 });
 export { add as "+" };
 
+/**
+ * Returns the type of a value.
+ */
 export const typeof_ = defineOpcode<[ScriptValue<unknown>], "string" | "number" | "boolean" | "object"| "null" | "array">("typeof", {
   metadata: {
     label: "Type Of",
@@ -595,6 +652,9 @@ export const typeof_ = defineOpcode<[ScriptValue<unknown>], "string" | "number" 
 export { typeof_ as typeof };
 
 
+/**
+ * Subtracts numbers.
+ */
 const sub = defineOpcode<
   [ScriptValue<number>, ScriptValue<number>, ...ScriptValue<number>[]],
   number
@@ -639,6 +699,9 @@ const sub = defineOpcode<
 });
 export { sub as "-" };
 
+/**
+ * Multiplies numbers.
+ */
 const mul = defineOpcode<
   [ScriptValue<number>, ScriptValue<number>, ...ScriptValue<number>[]],
   number
@@ -683,6 +746,9 @@ const mul = defineOpcode<
 });
 export { mul as "*" };
 
+/**
+ * Divides numbers.
+ */
 const div = defineOpcode<
   [ScriptValue<number>, ScriptValue<number>, ...ScriptValue<number>[]],
   number
@@ -727,6 +793,9 @@ const div = defineOpcode<
 });
 export { div as "/" };
 
+/**
+ * Calculates the modulo of two numbers.
+ */
 const mod = defineOpcode<[ScriptValue<number>, ScriptValue<number>], number>(
   "%",
   {
@@ -767,6 +836,9 @@ const mod = defineOpcode<[ScriptValue<number>, ScriptValue<number>], number>(
 );
 export { mod as "%" };
 
+/**
+ * Calculates exponentiation (power tower).
+ */
 const pow = defineOpcode<
   [ScriptValue<number>, ScriptValue<number>, ...ScriptValue<number>[]],
   number
@@ -815,8 +887,11 @@ const pow = defineOpcode<
 export { pow as "^" };
 
 // Logic
+/**
+ * Logical AND.
+ */
 export const and = defineOpcode<
-  [ScriptValue<unknown>, ScriptValue<unknown>, ...ScriptValue<unknown>[]],
+  [ScriptValue<boolean>, ScriptValue<boolean>, ...ScriptValue<boolean>[]],
   boolean
 >("and", {
   metadata: {
@@ -846,8 +921,11 @@ export const and = defineOpcode<
   },
 });
 
+/**
+ * Logical OR.
+ */
 export const or = defineOpcode<
-  [ScriptValue<unknown>, ScriptValue<unknown>, ...ScriptValue<unknown>[]],
+  [ScriptValue<boolean>, ScriptValue<boolean>, ...ScriptValue<boolean>[]],
   boolean
 >("or", {
   metadata: {
@@ -877,7 +955,10 @@ export const or = defineOpcode<
   },
 });
 
-export const not = defineOpcode<[ScriptValue<unknown>], boolean>("not", {
+/**
+ * Logical NOT.
+ */
+export const not = defineOpcode<[ScriptValue<boolean>], boolean>("not", {
   metadata: {
     label: "Not",
     category: "logic",
@@ -895,6 +976,9 @@ export const not = defineOpcode<[ScriptValue<unknown>], boolean>("not", {
 });
 
 // System
+/**
+ * Logs a message to the console/client.
+ */
 export const log = defineOpcode<
   [ScriptValue<unknown>, ...ScriptValue<unknown>[]],
   null
@@ -923,6 +1007,9 @@ export const log = defineOpcode<
   },
 });
 
+/**
+ * Retrieves a specific argument passed to the script.
+ */
 export const arg = defineOpcode<[ScriptValue<number>], any>("arg", {
   metadata: {
     label: "Get Arg",
@@ -939,6 +1026,9 @@ export const arg = defineOpcode<[ScriptValue<number>], any>("arg", {
   },
 });
 
+/**
+ * Retrieves all arguments passed to the script.
+ */
 export const args = defineOpcode<[], readonly any[]>("args", {
   metadata: {
     label: "Get Args",
@@ -953,6 +1043,12 @@ export const args = defineOpcode<[], readonly any[]>("args", {
   },
 });
 
+/**
+ * Generates a random number.
+ * - `random()`: Returns a float between 0 (inclusive) and 1 (exclusive).
+ * - `random(max)`: Returns a number between 0 (inclusive) and `max` (inclusive). If `max` is an integer, returns an integer.
+ * - `random(min, max)`: Returns a number between `min` (inclusive) and `max` (inclusive). If `min` and `max` are integers, returns an integer.
+ */
 export const random = defineOpcode<
   [ScriptValue<number>?, ScriptValue<number>?],
   number
@@ -994,6 +1090,9 @@ export const random = defineOpcode<
   },
 });
 
+/**
+ * Sends a warning message to the client.
+ */
 export const warn = defineOpcode<[ScriptValue<unknown>], void>("warn", {
   metadata: {
     label: "Warn",
@@ -1010,6 +1109,9 @@ export const warn = defineOpcode<[ScriptValue<unknown>], void>("warn", {
   },
 });
 
+/**
+ * Throws an error, stopping script execution.
+ */
 const throwOp = defineOpcode<[ScriptValue<unknown>], never>("throw", {
   metadata: {
     label: "Throw",
@@ -1066,6 +1168,9 @@ export { tryOp as try };
 
 // Entity Interaction
 
+/**
+ * Creates a new entity.
+ */
 export const create = defineOpcode<[ScriptValue<object>], number>("create", {
   metadata: {
     label: "Create",
@@ -1088,6 +1193,9 @@ export const create = defineOpcode<[ScriptValue<object>], number>("create", {
   },
 });
 
+/**
+ * Destroys an entity.
+ */
 export const destroy = defineOpcode<[ScriptValue<Entity>], null>("destroy", {
   metadata: {
     label: "Destroy",
@@ -1114,6 +1222,9 @@ export const destroy = defineOpcode<[ScriptValue<Entity>], null>("destroy", {
   },
 });
 
+/**
+ * Creates a lambda (anonymous function).
+ */
 export const lambda = defineOpcode<[readonly string[], ScriptValue<unknown>], any>(
   "lambda",
   {
@@ -1143,6 +1254,9 @@ export const lambda = defineOpcode<[readonly string[], ScriptValue<unknown>], an
   },
 );
 
+/**
+ * Calls a lambda function.
+ */
 export const apply = defineOpcode<
   [ScriptValue<unknown>, ...ScriptValue<unknown>[]],
   any
@@ -1194,6 +1308,9 @@ export const apply = defineOpcode<
 });
 
 // TODO: Return verb result value?
+/**
+ * Calls a verb on an entity.
+ */
 export const call = defineOpcode<
   [ScriptValue<Entity>, ScriptValue<string>, ...ScriptValue<unknown>[]],
   any
@@ -1299,6 +1416,9 @@ export const schedule = defineOpcode<
   },
 });
 
+/**
+ * Sends a message to the client.
+ */
 export const send = defineOpcode<[ScriptValue<unknown>], null>("send", {
   metadata: {
     label: "System Send",
@@ -1317,27 +1437,31 @@ export const send = defineOpcode<[ScriptValue<unknown>], null>("send", {
 });
 
 // Entity Introspection
-export const verbs = defineOpcode<[ScriptValue<unknown>], readonly Verb[]>("verbs", {
+/**
+ * Returns a list of verbs available on an entity.
+ */
+export const verbs = defineOpcode<[ScriptValue<Entity>], readonly Verb[]>("verbs", {
   metadata: {
     label: "Verbs",
     category: "world",
-    description: "Get verbs of an entity",
+    description: "Get available verbs",
     slots: [{ name: "Target", type: "block" }],
     parameters: [{ name: "target", type: "unknown" }],
-    returnType: "readonly Verb[]",
+    returnType: "Verb[]",
   },
   handler: async (args, ctx) => {
     const [entityExpr] = args;
-    const entity = await evaluate(entityExpr, ctx);
-    if (typeof entity !== "object") {
-      throw new ScriptError(
-        `verbs: entity must be an object, got ${JSON.stringify(entity)}`,
-      );
+    const target = await evaluate(entityExpr, ctx);
+    if (!target || typeof target !== "object" || !("id" in target)) {
+      return [];
     }
-    return getVerbs(entity.id);
+    return getVerbs((target as Entity).id);
   },
 });
 
+/**
+ * Retrieves an entity by ID.
+ */
 export const entity = defineOpcode<[ScriptValue<number>], Entity>("entity", {
   metadata: {
     label: "Entity",
@@ -1363,38 +1487,54 @@ export const entity = defineOpcode<[ScriptValue<number>], Entity>("entity", {
   },
 });
 
-export const set_entity = defineOpcode<ScriptValue<Entity>[], null>("set_entity", {
+/**
+ * Updates an entity's properties.
+ */
+export const set_entity = defineOpcode<
+  [ScriptValue<number>, ScriptValue<Record<string, unknown>>],
+  void
+>("set_entity", {
   metadata: {
-    label: "Set Entity",
+    label: "Update Entity",
     category: "action",
-    description: "Set entity properties",
-    slots: [{ name: "Entity", type: "block" }],
-    parameters: [{ name: "...entity", type: "Entity[]" }],
-    returnType: "null",
+    description: "Update entity properties",
+    slots: [
+      { name: "ID", type: "number" },
+      { name: "Props", type: "block" },
+    ],
+    parameters: [
+      { name: "id", type: "number" },
+      { name: "props", type: "Record<string, unknown>" },
+    ],
+    returnType: "void",
   },
   handler: async (args, ctx) => {
-    if (args.length < 1) {
-      throw new ScriptError("set_entity: expected `entity`");
+    if (args.length !== 2) {
+      throw new ScriptError("set_entity: expected 2 arguments");
     }
-    let entities: Entity[] = [];
-    for (const targetExpr of args) {
-      const target = await evaluate(targetExpr, ctx);
-      if (
-        typeof target !== "object" ||
-        !target ||
-        typeof target.id !== "number"
-      ) {
-        throw new ScriptError(
-          `set_entity: target must be an object, got ${JSON.stringify(target)}`,
-        );
-      }
-      entities.push(target);
+    const [idExpr, propsExpr] = args;
+    const id = await evaluate(idExpr, ctx);
+    const props = await evaluate(propsExpr, ctx);
+
+    if (typeof id !== "number") {
+      throw new ScriptError(
+        `set_entity: expected number for id, got ${JSON.stringify(id)}`,
+      );
     }
-    updateEntity(...entities);
-    return null;
+    if (typeof props !== "object" || props === null) {
+      throw new ScriptError(
+        `set_entity: expected object for props, got ${JSON.stringify(props)}`,
+      );
+    }
+
+    updateEntity({ id, ...props });
+    return undefined;
   },
 });
 
+/**
+ * Gets the prototype ID of an entity.
+ */
 export const get_prototype = defineOpcode<[ScriptValue<Entity>], number | null>(
   "get_prototype",
   {
@@ -1475,6 +1615,9 @@ export const set_prototype = defineOpcode<
   },
 });
 
+/**
+ * Resolves all properties of an entity, including dynamic ones.
+ */
 export const resolve_props = defineOpcode<[ScriptValue<Entity>], Entity>(
   "resolve_props",
   {

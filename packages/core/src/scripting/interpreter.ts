@@ -2,13 +2,24 @@ import { getVerbs } from "../repo";
 import { ScriptValue } from "./def";
 import { Entity } from "@viwo/shared/jsonrpc";
 
+/**
+ * Execution context for a script.
+ * Contains the current state, variables, and environment.
+ */
 export type ScriptContext = {
+  /** The entity that initiated the script execution. */
   caller: Entity;
+  /** The entity the script is currently attached to/executing on. */
   this: Entity;
+  /** Arguments passed to the script. */
   args: readonly unknown[];
-  gas: number; // Gas limit
+  /** Gas limit to prevent infinite loops. */
+  gas: number;
+  /** Function to send messages back to the caller. */
   send?: (msg: unknown) => void;
+  /** List of warnings generated during execution. */
   warnings: string[];
+  /** Local variables in the current scope. */
   vars: Record<string, unknown>;
 };
 
@@ -17,6 +28,9 @@ export type ScriptLibraryDefinition = Record<
   (args: readonly unknown[], ctx: ScriptContext) => Promise<unknown>
 >;
 
+/**
+ * Error thrown when script execution fails.
+ */
 export class ScriptError extends Error {
   constructor(message: string) {
     super(message);
@@ -24,9 +38,15 @@ export class ScriptError extends Error {
   }
 }
 
+/**
+ * Metadata describing an opcode for documentation and UI generation.
+ */
 export interface OpcodeMetadata {
+  /** Human-readable label. */
   label: string;
+  /** Category for grouping. */
   category: string;
+  /** Description of what the opcode does. */
   description?: string;
   // For Node Editor
   layout?: "infix" | "standard" | "primitive" | "control-flow";
@@ -52,6 +72,11 @@ export interface OpcodeDefinition {
 
 export const OPS: Record<string, OpcodeDefinition> = {};
 
+/**
+ * Registers a library of opcodes.
+ *
+ * @param library - A record of opcode definitions.
+ */
 export function registerLibrary(library: Record<string, OpcodeDefinition>) {
   for (const [name, def] of Object.entries(library)) {
     OPS[name] = def;
@@ -62,6 +87,11 @@ export function getOpcode(name: string) {
   return OPS[name]?.handler;
 }
 
+/**
+ * Retrieves metadata for all registered opcodes.
+ *
+ * @returns An array of opcode metadata objects.
+ */
 export function getOpcodeMetadata() {
   return Object.entries(OPS).map(([opcode, def]) => ({
     opcode,
@@ -89,6 +119,14 @@ export async function executeLambda(
   });
 }
 
+/**
+ * Evaluates a script expression.
+ *
+ * @param ast - The script AST (S-expression) to evaluate.
+ * @param ctx - The execution context.
+ * @returns The result of the evaluation.
+ * @throws ScriptError if execution fails or gas runs out.
+ */
 export async function evaluate<T>(
   ast: ScriptValue<T>,
   ctx: ScriptContext,
@@ -110,6 +148,12 @@ export async function evaluate<T>(
   return ast as never;
 }
 
+/**
+ * Creates a new script context with default values.
+ *
+ * @param ctx - Partial context to override defaults.
+ * @returns A complete ScriptContext.
+ */
 export function createScriptContext(
   ctx: Pick<ScriptContext, "caller" | "this"> & Partial<ScriptContext>,
 ): ScriptContext {
@@ -122,6 +166,13 @@ export function createScriptContext(
   };
 }
 
+/**
+ * Resolves dynamic properties on an entity by executing 'get_*' verbs.
+ *
+ * @param entity - The entity to resolve.
+ * @param ctx - The script context.
+ * @returns A new entity object with resolved properties.
+ */
 export async function resolveProps(
   entity: Entity,
   ctx: ScriptContext,

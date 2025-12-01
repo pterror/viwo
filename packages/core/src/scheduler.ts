@@ -2,9 +2,21 @@ import { db } from "./db";
 import { getEntity, getVerb } from "./repo";
 import { evaluate } from "./scripting/interpreter";
 
+/**
+ * Manages scheduled tasks (delayed verb executions).
+ * Tasks are persisted in the database until execution.
+ */
 export class TaskScheduler {
   constructor() {}
 
+  /**
+   * Schedules a verb to be executed on an entity after a delay.
+   *
+   * @param entityId - The ID of the entity to execute the verb on.
+   * @param verb - The name of the verb.
+   * @param args - Arguments to pass to the verb.
+   * @param delayMs - Delay in milliseconds.
+   */
   schedule(
     entityId: number,
     verb: string,
@@ -18,10 +30,20 @@ export class TaskScheduler {
   }
 
   private sendFactory: (() => (msg: unknown) => void) | null = null;
+  /**
+   * Sets the factory function for creating the 'send' function used in scheduled tasks.
+   * This allows the scheduler to send messages to clients even when triggered asynchronously.
+   *
+   * @param factory - A function that returns a send function.
+   */
   setSendFactory(factory: () => (msg: unknown) => void) {
     this.sendFactory = factory;
   }
 
+  /**
+   * Processes all due tasks.
+   * Should be called periodically (e.g., every tick).
+   */
   async process() {
     const now = Date.now();
     const tasks = db

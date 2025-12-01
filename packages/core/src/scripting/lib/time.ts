@@ -1,6 +1,9 @@
 import { evaluate, ScriptError } from "../interpreter";
 import { defineOpcode, ScriptValue } from "../def";
 
+/**
+ * Returns the current time as an ISO 8601 string.
+ */
 const timeNow = defineOpcode<[], string>(
   "time.now",
   {
@@ -22,6 +25,9 @@ const timeNow = defineOpcode<[], string>(
 );
 export { timeNow as "time.now" };
 
+/**
+ * Formats a timestamp string.
+ */
 const timeFormat = defineOpcode<[ScriptValue<string>, ScriptValue<string>?], string>(
   "time.format",
   {
@@ -54,6 +60,9 @@ const timeFormat = defineOpcode<[ScriptValue<string>, ScriptValue<string>?], str
 );
 export { timeFormat as "time.format" };
 
+/**
+ * Parses a datetime string and returns it in ISO 8601 format.
+ */
 const timeParse = defineOpcode<[ScriptValue<string>], string>(
   "time.parse",
   {
@@ -80,6 +89,9 @@ const timeParse = defineOpcode<[ScriptValue<string>], string>(
 );
 export { timeParse as "time.parse" };
 
+/**
+ * Converts a numeric timestamp (ms since epoch) to an ISO 8601 string.
+ */
 const timeFromTimestamp = defineOpcode<[ScriptValue<number>], string>(
   "time.from_timestamp",
   {
@@ -108,6 +120,9 @@ const timeFromTimestamp = defineOpcode<[ScriptValue<number>], string>(
 );
 export { timeFromTimestamp as "time.from_timestamp" };
 
+/**
+ * Converts an ISO 8601 string to a numeric timestamp (ms since epoch).
+ */
 const timeToTimestamp = defineOpcode<[ScriptValue<string>], number>(
   "time.to_timestamp",
   {
@@ -136,6 +151,9 @@ const timeToTimestamp = defineOpcode<[ScriptValue<string>], number>(
 );
 export { timeToTimestamp as "time.to_timestamp" };
 
+/**
+ * Adds an offset to a timestamp.
+ */
 const timeOffset = defineOpcode<[ScriptValue<number>, ScriptValue<"day" | "days" | "hour" | "hours" | "minute" | "minutes" | "month" | "months" | "second" | "seconds" | "year" | "years">, ScriptValue<string>?], string>(
   "time.offset",
   {

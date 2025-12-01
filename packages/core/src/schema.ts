@@ -1,5 +1,11 @@
 import { Database } from "bun:sqlite";
 
+/**
+ * Initializes the database schema.
+ * Creates tables for entities, verbs, and scheduled tasks if they don't exist.
+ *
+ * @param db - The database instance.
+ */
 export function initSchema(db: Database) {
   db.query(
     `

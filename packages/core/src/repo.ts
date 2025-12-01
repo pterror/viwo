@@ -91,6 +91,12 @@ export interface Verb {
   permissions: Record<string, unknown>;
 }
 
+/**
+ * Retrieves all verbs available on an entity, including inherited ones.
+ *
+ * @param entityId - The ID of the entity to fetch verbs for.
+ * @returns An array of Verb objects.
+ */
 export function getVerbs(entityId: number): Verb[] {
   // Recursive function to collect verbs up the prototype chain
   const collectVerbs = (id: number, visited: Set<number>): Verb[] => {
@@ -184,10 +190,25 @@ function lookupVerb(
   return null;
 }
 
+/**
+ * Retrieves a specific verb by name from an entity (or its prototypes).
+ *
+ * @param entityId - The ID of the entity to search.
+ * @param name - The name of the verb.
+ * @returns The Verb object or null if not found.
+ */
 export function getVerb(entityId: number, name: string): Verb | null {
   return lookupVerb(entityId, name, new Set());
 }
 
+/**
+ * Adds a new verb to an entity.
+ *
+ * @param entityId - The ID of the entity to attach the verb to.
+ * @param name - The name of the verb.
+ * @param code - The S-expression code for the verb.
+ * @param permissions - Optional permission settings (default: public call).
+ */
 export function addVerb(
   entityId: number,
   name: string,
@@ -202,6 +223,13 @@ export function addVerb(
   ).run(entityId, name, JSON.stringify(code), JSON.stringify(permissions));
 }
 
+/**
+ * Updates an existing verb's code or permissions.
+ *
+ * @param id - The ID of the verb to update.
+ * @param code - Optional new code.
+ * @param permissions - Optional new permissions.
+ */
 export function updateVerb(
   id: number,
   code?: ScriptValue<unknown>,
@@ -227,6 +255,11 @@ export function updateVerb(
   }
 }
 
+/**
+ * Deletes an entity and all its associated verbs.
+ *
+ * @param id - The ID of the entity to delete.
+ */
 export function deleteEntity(id: number) {
   const transaction = db.transaction(() => {
     db.query("DELETE FROM verbs WHERE entity_id = ?").run(id);
@@ -235,6 +268,12 @@ export function deleteEntity(id: number) {
   transaction();
 }
 
+/**
+ * Gets the prototype ID of an entity.
+ *
+ * @param id - The ID of the entity.
+ * @returns The prototype ID or null if none.
+ */
 export function getPrototypeId(id: number): number | null {
   const row = db
     .query<{ prototype_id: number | null }, [number]>(
@@ -244,6 +283,12 @@ export function getPrototypeId(id: number): number | null {
   return row ? row.prototype_id : null;
 }
 
+/**
+ * Sets the prototype of an entity.
+ *
+ * @param id - The ID of the entity.
+ * @param prototypeId - The new prototype ID or null to remove inheritance.
+ */
 export function setPrototypeId(id: number, prototypeId: number | null) {
   db.query("UPDATE entities SET prototype_id = ? WHERE id = ?").run(
     prototypeId,

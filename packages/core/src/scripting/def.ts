@@ -11,6 +11,10 @@ type UnknownUnion =
 
 export type ScriptValue_<T> = Exclude<T, readonly unknown[]>;
 
+/**
+ * Represents a value in the scripting language.
+ * Can be a primitive, an object, or a nested S-expression (array).
+ */
 export type ScriptValue<T> =
   | (unknown extends T
       ? ScriptValue_<UnknownUnion>
@@ -37,6 +41,13 @@ export interface OpcodeBuilder<
   metadata: OpcodeMetadata;
 }
 
+/**
+ * Defines a new opcode.
+ *
+ * @param name - The opcode name (e.g., "log", "+").
+ * @param def - The opcode definition (metadata and handler).
+ * @returns A builder function that can be used to construct S-expressions for this opcode in TypeScript.
+ */
 export function defineOpcode<
   Args extends (string | ScriptValue_<unknown>)[] = never,
   Ret = never,
