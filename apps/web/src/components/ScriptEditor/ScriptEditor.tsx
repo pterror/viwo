@@ -3,6 +3,8 @@ import { BlockPalette } from "./BlockPalette";
 import { BlockNode } from "./BlockNode";
 import { gameStore } from "../../store/game";
 import { BlockDefinition } from "./types";
+import { MonacoEditor } from "./MonacoEditor";
+import { decompile } from "@viwo/scripting";
 
 export const ScriptEditor: Component = () => {
   // Initial script: ["seq"]
@@ -86,10 +88,14 @@ export const ScriptEditor: Component = () => {
       <div class="script-editor__workspace-container">
         <div
           class="script-editor__workspace"
+          style={{ "flex-direction": "row" }}
           onDrop={onDrop}
           onDragOver={onDragOver}
         >
-          <div class="script-editor__canvas">
+          <div
+            class="script-editor__canvas"
+            style={{ flex: 1, "border-right": "1px solid var(--border-color)" }}
+          >
             <BlockNode
               node={script()}
               path={[]}
@@ -97,8 +103,11 @@ export const ScriptEditor: Component = () => {
               onDelete={deleteNode}
             />
           </div>
-          <div class="script-editor__json-preview">
-            <pre>{JSON.stringify(script())}</pre>
+          <div
+            class="script-editor__code-preview"
+            style={{ flex: 1, height: "100%", overflow: "hidden" }}
+          >
+            <MonacoEditor value={decompile(script())} />
           </div>
         </div>
       </div>
