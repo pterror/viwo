@@ -23,7 +23,18 @@ mock.module("../../repo", () => ({
   },
   setPrototypeId: () => {},
   updateEntity: () => {},
-  getVerb: () => null,
+  getVerb: (id: number, name: string) => {
+    if (id === 101 && name === "get_dynamic") {
+      return {
+        id: 1,
+        entity_id: 101,
+        name: "get_dynamic",
+        code: "resolved_value",
+        permissions: {},
+      };
+    }
+    return null;
+  },
 }));
 
 // Mock scheduler
@@ -309,6 +320,23 @@ createLibraryTester(Core, "Core Library", (test) => {
   // Entity Introspection
   test("verbs", async () => {
     expect(await evaluate(Core["verbs"]({ id: 1 }), ctx)).toEqual([]);
+  });
+
+  test("get_verb", async () => {
+    // Mock returns a verb for id 101
+    expect(
+      await evaluate(Core["get_verb"]({ id: 101 }, "get_dynamic"), ctx),
+    ).toEqual({
+      id: 1,
+      entity_id: 101,
+      name: "get_dynamic",
+      code: "resolved_value",
+      permissions: {},
+    });
+    // Mock returns null for id 1
+    expect(await evaluate(Core["get_verb"]({ id: 1 }, "missing"), ctx)).toBe(
+      null,
+    );
   });
 
   test("entity", async () => {

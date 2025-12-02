@@ -120,6 +120,112 @@ export function seed() {
   );
 
   addVerb(
+    systemId,
+    "get_available_verbs",
+    Core["seq"](
+      Core["let"]("player", Core["arg"](0)),
+      Core["let"]("verbs", List["list.new"]()),
+      Core["let"]("seen", Object["obj.new"]()),
+
+      Core["let"](
+        "addVerbs",
+        Core["lambda"](
+          ["entityId"],
+          Core["seq"](
+            Core["let"](
+              "entityVerbs",
+              Core["verbs"](Core["entity"](Core["var"]("entityId"))),
+            ),
+            Core["for"](
+              "v",
+              Core["var"]("entityVerbs"),
+              Core["seq"](
+                Core["let"](
+                  "key",
+                  Str["str.concat"](
+                    Object["obj.get"](Core["var"]("v"), "name"),
+                    ":",
+                    Core["var"]("entityId"),
+                  ),
+                ),
+                Core["if"](
+                  Core["not"](
+                    Object["obj.has"](Core["var"]("seen"), Core["var"]("key")),
+                  ),
+                  Core["seq"](
+                    Object["obj.set"](
+                      Core["var"]("seen"),
+                      Core["var"]("key"),
+                      true,
+                    ),
+                    Object["obj.set"](
+                      Core["var"]("v"),
+                      "source",
+                      Core["var"]("entityId"),
+                    ),
+                    List["list.push"](Core["var"]("verbs"), Core["var"]("v")),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+
+      // 1. Player verbs
+      Core["apply"](
+        Core["var"]("addVerbs"),
+        Object["obj.get"](Core["var"]("player"), "id"),
+      ),
+
+      // 2. Room verbs
+      Core["let"](
+        "locationId",
+        Object["obj.get"](Core["var"]("player"), "location"),
+      ),
+      Core["if"](
+        Core["var"]("locationId"),
+        Core["seq"](
+          Core["apply"](Core["var"]("addVerbs"), Core["var"]("locationId")),
+
+          // 3. Items in Room
+          Core["let"]("room", Core["entity"](Core["var"]("locationId"))),
+          Core["let"](
+            "contents",
+            Object["obj.get"](
+              Core["var"]("room"),
+              "contents",
+              List["list.new"](),
+            ),
+          ),
+          Core["for"](
+            "itemId",
+            Core["var"]("contents"),
+            Core["apply"](Core["var"]("addVerbs"), Core["var"]("itemId")),
+          ),
+        ),
+      ),
+
+      // 4. Inventory verbs
+      Core["let"](
+        "inventory",
+        Object["obj.get"](
+          Core["var"]("player"),
+          "contents",
+          List["list.new"](),
+        ),
+      ),
+      Core["for"](
+        "itemId",
+        Core["var"]("inventory"),
+        Core["apply"](Core["var"]("addVerbs"), Core["var"]("itemId")),
+      ),
+
+      Core["var"]("verbs"),
+    ),
+  );
+
+  addVerb(
     entityBaseId,
     "find",
     Core["seq"](

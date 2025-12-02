@@ -1,5 +1,5 @@
 import { serve } from "bun";
-import { createEntity, getEntity, getVerbs } from "./repo";
+import { createEntity, getEntity } from "./repo";
 import {
   createScriptContext,
   evaluate,
@@ -177,7 +177,40 @@ async function handleJsonRpcRequest(
       const [command, ...args] = params;
       console.log(`Command: ${command} args: ${args}`);
 
-      const verbs = await getAvailableVerbs(player);
+      const system = getEntity(3); // System ID is 3
+      if (!system) {
+        return {
+          jsonrpc: "2.0",
+          id: req.id,
+          error: { code: -32603, message: "System entity not found" },
+        };
+      }
+
+      // Call system.get_available_verbs(player)
+      const verbs = await evaluate(
+        {
+          type: "call",
+          args: [
+            { type: "entity", args: [{ type: "value", value: system.id }] },
+            { type: "value", value: "get_available_verbs" },
+            { type: "entity", args: [{ type: "value", value: player.id }] },
+          ],
+        },
+        createScriptContext({
+          caller: system,
+          this: system,
+          args: [],
+          send: createSendFunction(ws),
+        }),
+      );
+
+      if (!Array.isArray(verbs)) {
+        return {
+          jsonrpc: "2.0",
+          id: req.id,
+          error: { code: -32603, message: "Failed to retrieve verbs" },
+        };
+      }
       const verb = verbs.find((v) => v.name === command);
 
       if (verb) {
@@ -218,59 +251,6 @@ async function handleJsonRpcRequest(
         error: { code: -32601, message: "Method not found" },
       };
   }
-}
-
-/**
- * Resolves all available verbs for a player based on their context (self, room, items, inventory).
- *
- * @param player - The player entity.
- * @returns A list of available verbs with their source entity ID.
- */
-async function getAvailableVerbs(player: Entity) {
-  const verbs: { name: string; code: any; source: number }[] = [];
-  const seen = new Set<string>();
-
-  const addVerbs = (entityId: number) => {
-    const entityVerbs = getVerbs(entityId);
-    for (const v of entityVerbs) {
-      const key = `${v.name}:${entityId}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        verbs.push({ ...v, source: entityId });
-      }
-    }
-  };
-
-  // 1. Player verbs
-  addVerbs(player.id);
-
-  // 2. Room verbs
-  const locationId = player["location"];
-  if (typeof locationId === "number") {
-    addVerbs(locationId);
-
-    // 3. Items in Room
-    // We need to resolve contents manually
-    const room = getEntity(locationId);
-    if (room) {
-      const contentIds = (room["contents"] as number[]) || [];
-      for (const id of contentIds) {
-        addVerbs(id);
-      }
-    }
-  }
-
-  // 4. Inventory verbs
-  const inventoryIds = player["contents"];
-  if (Array.isArray(inventoryIds)) {
-    for (const id of inventoryIds) {
-      if (typeof id === "number") {
-        addVerbs(id);
-      }
-    }
-  }
-
-  return verbs;
 }
 
 /**

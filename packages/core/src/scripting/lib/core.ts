@@ -1473,6 +1473,39 @@ export const verbs = defineOpcode<[ScriptValue<Entity>], readonly Verb[]>("verbs
 });
 
 /**
+ * Returns a specific verb from an entity.
+ */
+export const get_verb = defineOpcode<[ScriptValue<Entity>, ScriptValue<string>], Verb | null>("get_verb", {
+  metadata: {
+    label: "Get Verb",
+    category: "world",
+    description: "Get specific verb",
+    slots: [
+      { name: "Target", type: "block" },
+      { name: "Name", type: "string" },
+    ],
+    parameters: [
+      { name: "target", type: "unknown" },
+      { name: "name", type: "string" },
+    ],
+    returnType: "Verb | null",
+  },
+  handler: async (args, ctx) => {
+    const [entityExpr, nameExpr] = args;
+    const target = await evaluate(entityExpr, ctx);
+    const name = await evaluate(nameExpr, ctx);
+
+    if (!target || typeof target !== "object" || !("id" in target)) {
+      return null;
+    }
+    if (typeof name !== "string") {
+      return null;
+    }
+    return getVerb((target as Entity).id, name);
+  },
+});
+
+/**
  * Retrieves an entity by ID.
  */
 export const entity = defineOpcode<[ScriptValue<number>], Entity>("entity", {

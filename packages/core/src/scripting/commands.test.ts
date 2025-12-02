@@ -185,7 +185,13 @@ describe("Player Commands", () => {
 
     const updatedPlayer = getEntity(player.id)!;
     expect(updatedPlayer["location"]).toBe(otherRoomId);
-    expect(sentMessages[0]?.[0]?.name).toBe("Other Room");
+
+    // Find the update message (array of entities)
+    const updateMsg = sentMessages.find(
+      (msg) => Array.isArray(msg) && msg[0]?.name === "Other Room",
+    );
+    expect(updateMsg).toBeDefined();
+    expect(updateMsg![0].name).toBe("Other Room");
   });
 
   it("should dig", async () => {
