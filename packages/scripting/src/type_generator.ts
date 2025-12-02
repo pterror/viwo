@@ -81,7 +81,12 @@ interface Verb {
       const sanitizedName = RESERVED_TYPESCRIPT_KEYWORDS.has(name)
         ? `${name}_`
         : name;
-      namespaces[ns].push(`function ${sanitizedName}(${params}): ${ret};`);
+      const generics = op.genericParameters?.length
+        ? `<${op.genericParameters.join(", ")}>`
+        : "";
+      namespaces[ns].push(
+        `function ${sanitizedName}${generics}(${params}): ${ret};`,
+      );
     } else {
       // Global function
       const params =
@@ -90,7 +95,10 @@ interface Verb {
       const sanitizedOpcode = RESERVED_TYPESCRIPT_KEYWORDS.has(op.opcode)
         ? `${op.opcode}_`
         : op.opcode;
-      definitions += `declare function ${sanitizedOpcode}(${params}): ${ret};\n`;
+      const generics = op.genericParameters?.length
+        ? `<${op.genericParameters.join(", ")}>`
+        : "";
+      definitions += `declare function ${sanitizedOpcode}${generics}(${params}): ${ret};\n`;
     }
   }
 

@@ -89,6 +89,7 @@ export interface OpcodeMetadata {
   }[];
   // For Monaco/TS
   parameters?: { name: string; type: string }[];
+  genericParameters?: string[];
   returnType?: string;
 }
 
