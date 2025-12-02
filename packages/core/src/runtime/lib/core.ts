@@ -132,6 +132,7 @@ export const call = defineOpcode<
         args: evaluatedArgs,
         ...(ctx.send ? { send: ctx.send } : {}),
         warnings: ctx.warnings,
+        stack: [...(ctx.stack ?? []), { name: verb, args: evaluatedArgs }],
       }),
     );
   },

@@ -34,7 +34,7 @@ createLibraryTester(Time, "Time Library", (test) => {
       await evaluate(Time["time.format"]("invalid-date", "time"), ctx).catch(
         (e) => e,
       ),
-    ).toBeInstanceOf(RangeError);
+    ).toBeInstanceOf(ScriptError);
 
     const dateStr = "2023-01-01T12:00:00Z";
     expect(

@@ -575,6 +575,7 @@ export const apply = defineOpcode<
     return await evaluate(func.body, {
       ...ctx,
       vars: newVars,
+      stack: [...ctx.stack, { name: "<lambda>", args: evaluatedArgs }],
     });
   },
 });

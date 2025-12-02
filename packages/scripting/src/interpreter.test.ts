@@ -1,5 +1,10 @@
 import { describe, test, expect, beforeAll } from "bun:test";
-import { evaluate, ScriptContext, registerLibrary } from "./interpreter";
+import {
+  evaluate,
+  ScriptContext,
+  registerLibrary,
+  ScriptError,
+} from "./interpreter";
 import * as Std from "./lib/std";
 import * as ObjectLib from "./lib/object";
 import * as List from "./lib/list";
@@ -29,6 +34,7 @@ describe("Interpreter", () => {
     gas: 1000,
     warnings: [],
     vars: {},
+    stack: [],
   } satisfies ScriptContext;
 
   test("literals", async () => {
@@ -142,6 +148,7 @@ describe("Interpreter Errors and Warnings", () => {
     gas: 1000,
     warnings: [],
     vars: {},
+    stack: [],
   };
 
   test("throw", async () => {
@@ -205,6 +212,7 @@ describe("Interpreter Libraries", () => {
     gas: 1000,
     warnings: [],
     vars: {},
+    stack: [],
   };
 
   beforeAll(() => {
@@ -241,5 +249,84 @@ describe("Interpreter Libraries", () => {
         ),
       ).toBe(15);
     });
+  });
+});
+
+describe("Interpreter Stack Traces", () => {
+  beforeAll(() => {
+    registerLibrary(Std);
+    registerLibrary(MathLib);
+  });
+
+  const ctx: ScriptContext = {
+    caller: { id: 1 },
+    this: { id: 2 },
+    args: [],
+    gas: 1000,
+    warnings: [],
+    vars: {},
+    stack: [],
+  };
+
+  test("stack trace in lambda", async () => {
+    // (let fail (lambda () (throw "boom")))
+    // (apply fail)
+    const script = Std["seq"](
+      Std["let"]("fail", Std["lambda"]([], Std["throw"]("boom"))),
+      Std["apply"](Std["var"]("fail")),
+    );
+
+    try {
+      await evaluate(script, ctx);
+      expect(true).toBe(false);
+    } catch (e: any) {
+      expect(e).toBeInstanceOf(ScriptError);
+      expect(e.message).toBe("boom");
+      expect(e.stackTrace).toHaveLength(1);
+      expect(e.stackTrace[0].name).toBe("<lambda>");
+    }
+  });
+
+  test("nested stack trace", async () => {
+    // (let inner (lambda () (throw "boom")))
+    // (let outer (lambda () (apply inner)))
+    // (apply outer)
+    const script = Std["seq"](
+      Std["let"]("inner", Std["lambda"]([], Std["throw"]("boom"))),
+      Std["let"]("outer", Std["lambda"]([], Std["apply"](Std["var"]("inner")))),
+      Std["apply"](Std["var"]("outer")),
+    );
+
+    try {
+      await evaluate(script, ctx);
+      expect(true).toBe(false);
+    } catch (e: any) {
+      expect(e).toBeInstanceOf(ScriptError);
+      expect(e.message).toBe("boom");
+      expect(e.stackTrace).toHaveLength(2);
+      expect(e.stackTrace[0].name).toBe("<lambda>"); // outer
+      expect(e.stackTrace[1].name).toBe("<lambda>"); // inner
+    }
+  });
+
+  test("opcode error context", async () => {
+    // (+ 1 "string") -> should fail
+    const script = MathLib["+"](1, "string" as any);
+
+    try {
+      await evaluate(script, ctx);
+      expect(true).toBe(false);
+    } catch (e: any) {
+      expect(e).toBeInstanceOf(ScriptError);
+      // The error comes from the opcode itself, but since it's a primitive call
+      // without call/apply, it might not have a stack frame unless we wrapped it.
+      // In my implementation, I only push stack frames in call/apply.
+      // However, evaluate() catches errors and appends the current stack.
+      // Since the stack is empty, it should be empty.
+      expect(e.stackTrace).toHaveLength(0);
+      expect(e.context).toBeDefined();
+      expect(e.context.op).toBe("+");
+      expect(e.context.args).toEqual([1, "string"]);
+    }
   });
 });

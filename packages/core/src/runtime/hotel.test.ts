@@ -26,6 +26,7 @@ import {
   StringLib as String,
   ObjectLib,
   TimeLib as Time,
+  BooleanLib,
 } from "@viwo/scripting";
 import { seedHotel } from "../seeds/hotel";
 import { seed } from "../seed";
@@ -34,10 +35,12 @@ import { Entity } from "@viwo/shared/jsonrpc";
 import * as CoreLib from "../runtime/lib/core";
 
 describe("Hotel Scripting", () => {
+  registerLibrary(CoreLib);
   registerLibrary(Std);
   registerLibrary(List);
   registerLibrary(String);
   registerLibrary(ObjectLib);
+  registerLibrary(BooleanLib);
 
   let hotelLobby: Entity;
   let caller: Entity;

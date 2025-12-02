@@ -6,6 +6,8 @@ import {
   createScriptContext,
   ListLib as List,
   createLibraryTester,
+  ScriptError,
+  StdLib as Std,
 } from "@viwo/scripting";
 import * as Core from "./core";
 
@@ -33,6 +35,15 @@ mock.module("../../repo", () => ({
         permissions: {},
       };
     }
+    if (id === 102 && name === "fail") {
+      return {
+        id: 2,
+        entity_id: 102,
+        name: "fail",
+        code: Std["throw"]("verb failed"),
+        permissions: {},
+      };
+    }
     return null;
   },
 }));
@@ -47,6 +58,7 @@ mock.module("../../scheduler", () => ({
 createLibraryTester(Core, "Core Library", (test) => {
   registerLibrary(Core);
   registerLibrary(List);
+  registerLibrary(Std);
 
   let ctx: ScriptContext;
 
@@ -72,6 +84,18 @@ createLibraryTester(Core, "Core Library", (test) => {
   test("call", async () => {
     // Mock getVerb to return something executable
     expect(evaluate(Core["call"]({ id: 1 }, "missing"), ctx)).rejects.toThrow();
+  });
+
+  test("call stack trace", async () => {
+    try {
+      await evaluate(Core["call"]({ id: 102 }, "fail"), ctx);
+      expect(true).toBe(false);
+    } catch (e: any) {
+      expect(e).toBeInstanceOf(ScriptError);
+      expect(e.message).toBe("verb failed");
+      expect(e.stackTrace).toHaveLength(1);
+      expect(e.stackTrace[0].name).toBe("fail");
+    }
   });
 
   test("schedule", async () => {

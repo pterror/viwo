@@ -5,6 +5,11 @@ import { Entity } from "@viwo/shared/jsonrpc";
  * Execution context for a script.
  * Contains the current state, variables, and environment.
  */
+export interface StackFrame {
+  name: string;
+  args: unknown[];
+}
+
 export type ScriptContext = {
   /** The entity that initiated the script execution. */
   caller: Entity;
@@ -20,6 +25,8 @@ export type ScriptContext = {
   warnings: string[];
   /** Local variables in the current scope. */
   vars: Record<string, unknown>;
+  /** Call stack for error reporting. */
+  stack: StackFrame[];
 };
 
 export type ScriptLibraryDefinition = Record<
@@ -31,9 +38,33 @@ export type ScriptLibraryDefinition = Record<
  * Error thrown when script execution fails.
  */
 export class ScriptError extends Error {
-  constructor(message: string) {
+  public stackTrace: StackFrame[] = [];
+  public context?: { op: string; args: unknown[] };
+
+  constructor(message: string, stack: StackFrame[] = []) {
     super(message);
     this.name = "ScriptError";
+    this.stackTrace = stack;
+  }
+
+  override toString() {
+    let str = `ScriptError: ${this.message}`;
+    if (this.context) {
+      str += `\nAt: (${this.context.op} ...)\n`;
+    }
+    if (this.stackTrace.length > 0) {
+      str += "\nStack trace:\n";
+      for (let i = this.stackTrace.length - 1; i >= 0; i--) {
+        const frame = this.stackTrace[i];
+        if (!frame) {
+          continue;
+        }
+        str += `  at ${frame.name} (${frame.args
+          .map((a) => JSON.stringify(a))
+          .join(", ")})\n`;
+      }
+    }
+    return str;
   }
 }
 
@@ -139,9 +170,27 @@ export async function evaluate<T>(
   if (Array.isArray(ast)) {
     const [op, ...args] = ast;
     if (typeof op === "string" && OPS[op]) {
-      return OPS[op].handler(args, ctx) as T;
+      try {
+        return (await OPS[op].handler(args, ctx)) as T;
+      } catch (e: any) {
+        let scriptError: ScriptError;
+        if (e instanceof ScriptError) {
+          scriptError = e;
+          if (scriptError.stackTrace.length === 0) {
+            scriptError.stackTrace = [...(ctx.stack ?? [])];
+          }
+        } else {
+          scriptError = new ScriptError(e.message ?? String(e), [
+            ...(ctx.stack ?? []),
+          ]);
+        }
+        if (!scriptError.context) {
+          scriptError.context = { op, args };
+        }
+        throw scriptError;
+      }
     } else {
-      throw new ScriptError(`Unknown opcode: ${op}`);
+      throw new ScriptError(`Unknown opcode: ${op}`, [...(ctx.stack ?? [])]);
     }
   }
   return ast as never;
@@ -161,6 +210,7 @@ export function createScriptContext(
     gas: 1000,
     warnings: [],
     vars: {},
+    stack: [],
     ...ctx,
   };
 }

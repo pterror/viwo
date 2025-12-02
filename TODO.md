@@ -1,9 +1,5 @@
 # Viwo TODOs
 
-## Features & Enhancements
-
-- **Scripting**: Better script errors (stack traces, line numbers (optional), diagnostic showing the code that errored, etc.)
-
 ## Documentation
 
 - **Socket**: Verify and implement proper login logic in `apps/discord-bot/src/socket.ts`.
