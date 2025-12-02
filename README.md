@@ -8,13 +8,14 @@ Viwo allows players to explore a persistent world, interact with objects and NPC
 
 ## Key Features
 
-- **Scriptable World**: Everything in the world (rooms, items, NPCs) can be scripted using **ViwoScript**, a custom Lisp-like language.
+- **Scriptable World**: Everything in the world (rooms, items, NPCs) can be scripted using **ViwoScript**, an S-expression language using JSON syntax.
 - **Persistent State**: The world state is persisted in a SQLite database.
 - **Multiplayer**: Real-time interaction with other players.
 - **AI Integration**: Built-in support for AI-driven NPCs and content generation.
 - **Multiple Frontends**:
   - **Web Client**: A modern, responsive web interface with a visual script editor.
   - **TUI**: A terminal user interface for a retro experience.
+  - **CLI**: A command-line interface for direct interaction.
   - **Discord Bot**: Play directly from Discord.
 
 ## Architecture
@@ -26,6 +27,8 @@ The project is organized as a monorepo:
 - **`packages/shared`**: Shared types and utilities (JSON-RPC protocol, etc.).
 - **`apps/web`**: The main web frontend (React/Solid/Vite).
 - **`apps/tui`**: The terminal user interface.
+- **`apps/cli`**: The command-line interface.
+- **`apps/server`**: The standalone server entry point.
 - **`apps/discord-bot`**: The Discord bot integration.
 - **`plugins/ai`**: AI integration plugin.
 
@@ -52,7 +55,7 @@ To start the core server and the web frontend in development mode:
 
 ```bash
 # Start the core server (default port 8080)
-bun run dev:core
+bun run dev:server
 
 # In a separate terminal, start the web client
 bun run dev:web
@@ -62,15 +65,16 @@ Access the web client at `http://localhost:5173`.
 
 ## Scripting
 
-Viwo uses a custom Lisp-like scripting language. Scripts are attached to entities as "verbs".
+Viwo uses **ViwoScript**, an S-expression language that uses JSON as its syntax. It is designed to be easily parsed and manipulated by tools (like the visual editor).
 
-Example script (Greeting):
+Example script (Greeting) represented in JSON:
 
-```lisp
-(seq
-  (let "name" (arg 0))
-  (call (caller) "tell" (str.concat "Hello, " (var "name") "!"))
-)
+```json
+[
+  "seq",
+  ["let", "name", ["arg", 0]],
+  ["call", ["caller"], "tell", ["str.concat", "Hello, ", ["var", "name"], "!"]]
+]
 ```
 
 ## Contributing
