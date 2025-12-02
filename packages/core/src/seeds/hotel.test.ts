@@ -99,10 +99,8 @@ describe("Hotel Seed", () => {
       createScriptContext({
         caller: player,
         this: getEntity(floorLobbyId)!,
-        send: (type: any, payload: any) => {
-          const msg = { type, payload };
-          console.log("DEBUG MSG:", msg);
-          output = JSON.stringify(msg);
+        send: (type, payload) => {
+          output = JSON.stringify({ type, payload });
         },
       }),
     );
@@ -122,10 +120,8 @@ describe("Hotel Seed", () => {
         caller: player,
         this: westWing,
         args: [51],
-        send: (type: any, payload: any) => {
-          const msg = { type, payload };
-          console.log("DEBUG MSG:", msg);
-          output = JSON.stringify(msg);
+        send: (type, payload) => {
+          output = JSON.stringify({ type, payload });
         },
       }),
     );
@@ -181,10 +177,8 @@ describe("Hotel Seed", () => {
       createScriptContext({
         caller: player,
         this: getEntity(floorLobbyId)!,
-        send: (type: any, payload: any) => {
-          const msg = { type, payload };
-          console.log("DEBUG MSG:", msg);
-          output = JSON.stringify(msg);
+        send: (type, payload) => {
+          output = JSON.stringify({ type, payload });
         },
       }),
     );
@@ -203,10 +197,8 @@ describe("Hotel Seed", () => {
         caller: player,
         this: eastWing,
         args: [10],
-        send: (type: any, payload: any) => {
-          const msg = { type, payload };
-          console.log("DEBUG MSG:", msg);
-          output = JSON.stringify(msg);
+        send: (type, payload) => {
+          output = JSON.stringify({ type, payload });
         },
       }),
     );

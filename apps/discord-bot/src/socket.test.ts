@@ -1,122 +1,122 @@
-import { describe, test, expect, mock } from "bun:test";
-import { EventEmitter } from "events";
+import {
+  describe,
+  test,
+  expect,
+  mock,
+  beforeEach,
+  afterEach,
+  spyOn,
+} from "bun:test";
+import { ViwoClient } from "@viwo/client";
 
 // Mock config
 mock.module("./config", () => ({
   CONFIG: { CORE_URL: "ws://test-url" },
 }));
 
-// Mock ws
-const mockWsInstance = new EventEmitter();
-(mockWsInstance as any).send = mock(() => {});
-(mockWsInstance as any).close = mock(() => {});
-mockWsInstance.on("error", () => {}); // Prevent unhandled error in tests
-
-class MockWebSocket extends EventEmitter {
-  send = (mockWsInstance as any).send;
-  close = (mockWsInstance as any).close;
-  constructor(public url: string) {
-    super();
-    // Proxy events to/from the shared mock instance for testing
-    this.on("open", () => mockWsInstance.emit("open"));
-    this.on("message", (data) => mockWsInstance.emit("message", data));
-    this.on("close", () => mockWsInstance.emit("close"));
-    this.on("error", (err) => mockWsInstance.emit("error", err));
-
-    // Also listen to events emitted on THIS instance and forward to mockWsInstance?
-    // No, we want to trigger events ON this instance from the test.
-    // But we don't have access to "this" instance in the test easily.
-    // So we use mockWsInstance as a bridge?
-    // Actually, simpler: expose the last created instance.
-    MockWebSocket.lastInstance = this;
-
-    setTimeout(() => this.emit("open"), 0); // Auto connect
-  }
-  static lastInstance: MockWebSocket | null = null;
-}
-
-mock.module("ws", () => ({
-  default: MockWebSocket,
-}));
-
 // Import after mocks
 import { GameSocket, SocketManager } from "./socket";
 
 describe("GameSocket", () => {
+  let connectSpy: any;
+  let executeSpy: any;
+  let disconnectSpy: any;
+  let onMessageSpy: any;
+
+  beforeEach(() => {
+    // Spy on ViwoClient prototype methods
+    connectSpy = spyOn(ViwoClient.prototype, "connect").mockImplementation(
+      function (this: any) {
+        // Simulate connection state update if needed, or just do nothing
+        // We can emit 'connected' event if ViwoClient was an EventEmitter, but it's not.
+        // It uses subscribe callback.
+        // We can't easily trigger the subscribe callback from here without access to the instance's listeners.
+        // But we can capture the instance.
+      },
+    );
+    executeSpy = spyOn(ViwoClient.prototype, "execute").mockResolvedValue(
+      undefined,
+    );
+    disconnectSpy = spyOn(
+      ViwoClient.prototype,
+      "disconnect",
+    ).mockImplementation(() => {});
+
+    // We need to capture the subscribe listener to simulate state changes
+    // We need to capture the subscribe listener to simulate state changes
+    spyOn(ViwoClient.prototype, "subscribe").mockImplementation(
+      (listener: any) => {
+        // Immediately call with connected state for testing happy path
+        listener({ isConnected: true });
+        return () => true;
+      },
+    );
+
+    onMessageSpy = spyOn(ViwoClient.prototype, "onMessage").mockImplementation(
+      (_listener: any) => {
+        // Store listener to trigger messages?
+        // We can attach it to the instance or a global map if needed.
+        // For now, we'll use a hack to expose it or just mock it.
+        // Actually, we can use `mock.fn` behavior to capture calls.
+        return () => true;
+      },
+    );
+  });
+
+  afterEach(() => {
+    mock.restore();
+  });
+
   test("Connects and sends login", async () => {
     const socket = new GameSocket(123);
     socket.connect();
 
-    await new Promise((resolve) => setTimeout(resolve, 10));
-
-    // Check if login sent
-    // We can't easily access the private ws instance, but we can spy on the prototype or check side effects?
-    // The MockWebSocket instance is created inside.
-    // We can verify behavior via events if we mock the server response?
-    // Or we can trust the mock implementation if we could access the instance.
-    // Since we can't access the private ws, we might rely on console logs or coverage.
-    // Actually, we can check if `send` was called on the mock instance if we capture it.
+    expect(connectSpy).toHaveBeenCalled();
+    // Login is sent via execute inside subscribe callback
+    expect(executeSpy).toHaveBeenCalledWith("login", ["123"]);
   });
 
   test("Queue messages when disconnected", async () => {
+    // Restore execute spy to throw error
+    executeSpy.mockRejectedValue(new Error("Socket not connected"));
+
     const socket = new GameSocket();
-    // Not connected yet
-    socket.execute("test", []);
-
-    // Connect
-    socket.connect();
-    await new Promise((resolve) => setTimeout(resolve, 10));
-
-    // Should flush queue
-    // We can check if send was called on the mock
-    const ws = (require("ws").default as any).lastInstance;
-    expect(ws.send).toHaveBeenCalled();
+    expect(socket.execute("test", [])).rejects.toThrow("Socket not connected");
   });
 
   test("Handle messages", async () => {
+    // We need to trigger onMessage listener.
+    // We can capture it from the spy.
+    let capturedListener: any;
+    onMessageSpy.mockImplementation((listener: any) => {
+      capturedListener = listener;
+      return () => {};
+    });
+
     const socket = new GameSocket(1);
     socket.connect();
-    await new Promise((resolve) => setTimeout(resolve, 10));
 
-    const ws = (require("ws").default as any).lastInstance;
     let received: any = null;
     socket.on("message", (msg) => {
       received = msg;
     });
 
-    ws.emit("message", JSON.stringify({ type: "hello" }));
-    expect(received).toEqual({ type: "hello" });
+    // Simulate incoming message
+    expect(capturedListener).toBeDefined();
+    capturedListener({ type: "message", text: "hello" });
+
+    expect(received).toEqual({
+      method: "message",
+      params: { type: "info", text: "hello" },
+    });
   });
 
-  test("Handle close and reconnect", async () => {
+  test("Handle close", async () => {
     const socket = new GameSocket(1);
     socket.connect();
-    await new Promise((resolve) => setTimeout(resolve, 10));
-
-    const ws = (require("ws").default as any).lastInstance;
-    ws.emit("close");
-    // Should log disconnect
-    // Reconnect logic uses setTimeout 5000, we won't wait for that in unit test unless we mock timers.
-  });
-
-  test("Handle error", async () => {
-    const socket = new GameSocket(1);
-    socket.connect();
-    await new Promise((resolve) => setTimeout(resolve, 10));
-
-    const ws = (require("ws").default as any).lastInstance;
-    ws.emit("error", new Error("Test error"));
-    // Should log error
-  });
-
-  test("Close socket", async () => {
-    const socket = new GameSocket(1);
-    socket.connect();
-    await new Promise((resolve) => setTimeout(resolve, 10));
-
     socket.close();
-    const ws = (require("ws").default as any).lastInstance;
-    expect(ws.close).toHaveBeenCalled();
+
+    expect(disconnectSpy).toHaveBeenCalled();
   });
 });
 

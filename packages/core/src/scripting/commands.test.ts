@@ -40,7 +40,6 @@ describe("Player Commands", () => {
     // Setup Sys Context
     // Setup Send
     send = (type: string, payload: unknown) => {
-      // console.log(`send mock: type=${type}, payload=`, JSON.stringify(payload));
       if (type === "update") {
         // For update, we might want to store the payload or entities?
         // The tests expect sentMessages[0] to be an entity or have a name?
@@ -51,7 +50,6 @@ describe("Player Commands", () => {
         // So we should probably extract the first entity from payload?
         const p = payload as any;
         if (p.entities && p.entities.length > 0) {
-          console.log("send mock: pushing entities", p.entities);
           sentMessages.push(p.entities);
         } else {
           sentMessages.push(payload);
@@ -117,11 +115,9 @@ describe("Player Commands", () => {
     const contents = (freshRoom["contents"] as number[]) || [];
     contents.push(boxId);
     freshRoom["contents"] = contents;
-    console.log("Calling updateEntity(freshRoom)...");
     updateEntity(freshRoom);
 
     await runCommand("look", ["Box"]);
-    console.log("sentMessages:", JSON.stringify(sentMessages, null, 2));
     expect(sentMessages.length).toBeGreaterThan(0);
     expect(Array.isArray(sentMessages[0])).toBe(true);
     expect(sentMessages[0].length).toBeGreaterThan(0);
@@ -153,11 +149,9 @@ describe("Player Commands", () => {
     const contents = (freshPlayer["contents"] as number[]) || [];
     contents.push(backpackId);
     freshPlayer["contents"] = contents;
-    console.log("Calling updateEntity(freshPlayer)...");
     updateEntity(freshPlayer);
 
     await runCommand("inventory", []);
-    console.log("sentMessages:", JSON.stringify(sentMessages, null, 2));
     expect(sentMessages[0]?.[1]?.name).toEqual("Leather Backpack");
   });
 

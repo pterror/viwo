@@ -50,7 +50,7 @@ export class GameSocket extends EventEmitter {
   }
 
   execute(command: string, args: readonly CommandArgument[]) {
-    this.client.execute(command, args);
+    return this.client.execute(command, args);
   }
 
   close() {

@@ -233,7 +233,6 @@ const objSet = defineOpcode<[ScriptValue<object>, ScriptValue<string>, ScriptVal
         throw new ScriptError(`obj.set: disallowed key '${key}'`);
       }
       obj[key] = val;
-      console.log(`obj.set: key=${key}, val=${val}, obj.id=${(obj as any).id}, obj.location=${(obj as any).location}`);
       return obj;
     },
   }

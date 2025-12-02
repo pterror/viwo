@@ -379,20 +379,11 @@ export function seed() {
                   ),
                 ),
               ),
-              // Return RoomChangeMessage and Look result
-              List["list.new"](
-                Core["send"](
-                  "room_id",
-                  Object["obj.new"]("roomId", Core["var"]("destId")),
-                ),
-                Core["log"](
-                  Str["str.concat"](
-                    "move: mover location is ",
-                    Object["obj.get"](Core["var"]("mover"), "location"),
-                  ),
-                ),
-                Core["call"](Core["var"]("mover"), "look"),
+              Core["send"](
+                "room_id",
+                Object["obj.new"]("roomId", Core["var"]("destId")),
               ),
+              Core["call"](Core["var"]("mover"), "look"),
             ),
             Core["send"]("message", "That way leads nowhere."),
           ),
@@ -475,9 +466,6 @@ export function seed() {
     },
     humanoidBaseId,
   );
-  console.log(
-    `seed: Created Player Base with ID ${playerBaseId}, prototype ${humanoidBaseId}`,
-  );
 
   // Add verbs to Player Base
 
@@ -493,24 +481,12 @@ export function seed() {
             Core["entity"](Object["obj.get"](Core["caller"](), "location")),
           ),
         ),
-        Core["log"](
-          Str["str.concat"](
-            "look: room is ",
-            Object["obj.get"](Core["var"]("room"), "name"),
-          ),
-        ),
         Core["let"](
           "contents",
           Object["obj.get"](
             Core["var"]("room"),
             "contents",
             List["list.new"](),
-          ),
-        ),
-        Core["log"](
-          Str["str.concat"](
-            "look: room contents: ",
-            Core["json.stringify"](Core["var"]("contents")),
           ),
         ),
         Core["let"](
@@ -827,14 +803,6 @@ export function seed() {
                     ),
                   ),
                   Core["send"]("message", "Property set."),
-                  Core["log"](
-                    Str["str.concat"](
-                      "set: updated ",
-                      Core["var"]("propName"),
-                      " to ",
-                      Core["var"]("value"),
-                    ),
-                  ),
                 ),
                 Core["send"](
                   "message",
@@ -864,9 +832,6 @@ export function seed() {
       description: "A confused looking guest.",
     },
     playerBaseId,
-  );
-  console.log(
-    `seed: Created Guest with ID ${playerId}, prototype ${playerBaseId}`,
   );
 
   // 5. Create some furniture (Table)
