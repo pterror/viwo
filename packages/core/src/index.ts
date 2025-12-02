@@ -1,5 +1,5 @@
 import { serve } from "bun";
-import { createEntity, getEntity, updateEntity } from "./repo";
+import { createEntity, deleteEntity, getEntity, updateEntity } from "./repo";
 import {
   createScriptContext,
   evaluate,
@@ -24,6 +24,7 @@ import {
   JsonRpcNotification,
   Entity,
 } from "@viwo/shared/jsonrpc";
+import { resolveProps } from "./runtime/utils";
 
 export { PluginManager };
 export type { CommandContext };
@@ -346,35 +347,7 @@ export async function handleJsonRpcRequest(
       }
 
       const player = getEntity(playerId)!;
-      // Create a context for the plugin
-      const ctx: CommandContext = {
-        player: { id: playerId, ws },
-        command: params.method, // Not strictly a command, but useful for logging
-        args: [], // No args for RPC in the traditional sense
-        send: createSendFunction(ws),
-        core: {
-          getEntity,
-          createEntity,
-          updateEntity,
-          deleteEntity: (id) => {
-            /* TODO */
-          },
-          resolveProps: (e) => e, // TODO: Implement
-          getOpcodeMetadata: () => [], // TODO: Implement
-        },
-      };
 
-      // We need to construct a proper context.
-      // The existing createScriptContext is for scripts.
-      // The Plugin system expects a CommandContext.
-      // Let's reuse the one we create for commands, but we need to expose the Core API better.
-      // For now, let's just pass a minimal context that satisfies the type, or improve the context creation.
-
-      // Actually, let's look at how we can get a proper context.
-      // In `index.ts`, we don't have a helper to create CommandContext easily without duplicating logic.
-      // Let's implement a minimal one inline or refactor.
-
-      // Re-implementing minimal context for now to unblock.
       const commandCtx: CommandContext = {
         player: { id: playerId, ws },
         command: params.method,
@@ -384,23 +357,20 @@ export async function handleJsonRpcRequest(
           getEntity,
           createEntity,
           updateEntity,
-          deleteEntity: (id) => {
-            /* TODO */
-          },
-          resolveProps: (e) => e, // TODO: Implement
-          getOpcodeMetadata: () => [], // TODO: Implement
+          deleteEntity,
+          resolveProps: (entity) =>
+            resolveProps(
+              entity,
+              createScriptContext({
+                caller: player,
+                this: player,
+                args: [],
+                send: createSendFunction(ws),
+              }),
+            ),
+          getOpcodeMetadata,
         },
       };
-
-      // Wait, I can't easily implement all core methods here without importing them.
-      // `repo.ts` exports `createEntity`, `getEntity`, `updateEntity`.
-      // Let's check `packages/core/src/index.ts` imports.
-      // It imports `createEntity`, `getEntity` from `./repo`.
-      // It imports `Core` from `./runtime/lib/core`.
-
-      // I should probably just use `pluginManager.handleRpcMethod` and pass a context that I can construct.
-      // The `CommandContext` interface requires `core` object.
-      // I'll define the `core` object using the available imports.
 
       try {
         const result = await pluginManager.handleRpcMethod(
