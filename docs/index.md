@@ -8,10 +8,10 @@ hero:
   actions:
     - theme: brand
       text: Architecture
-      link: /architecture
+      link: /core/architecture
     - theme: alt
       text: Scripting Guide
-      link: /scripting_spec
+      link: /scripting/spec
 
 features:
   - title: Multiplayer

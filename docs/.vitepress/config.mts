@@ -6,31 +6,39 @@ export default defineConfig({
   themeConfig: {
     nav: [
       { text: "Home", link: "/" },
-      { text: "Architecture", link: "/architecture" },
-      { text: "Scripting", link: "/scripting_spec" },
+      { text: "Architecture", link: "/core/architecture" },
+      { text: "Scripting", link: "/scripting/spec" },
     ],
 
     sidebar: [
       {
-        text: "Guide",
+        text: "Core",
         items: [
-          { text: "Architecture", link: "/architecture" },
-          { text: "Codebase Map", link: "/codebase_map" },
-          { text: "Web Frontend", link: "/web_frontend" },
-          { text: "TUI", link: "/tui" },
-          { text: "Discord Bot", link: "/discord_bot" },
+          { text: "Architecture", link: "/core/architecture" },
+          { text: "Codebase Map", link: "/core/codebase_map" },
+          { text: "Scheduler", link: "/core/scheduler" },
+        ],
+      },
+      {
+        text: "Components",
+        items: [
+          { text: "Web Frontend", link: "/components/web_frontend" },
+          { text: "TUI", link: "/components/tui" },
+          { text: "Discord Bot", link: "/components/discord_bot" },
         ],
       },
       {
         text: "Scripting",
         items: [
-          { text: "Specification", link: "/scripting_spec" },
-          { text: "Compiler", link: "/compiler" },
-          { text: "Decompiler", link: "/decompiler" },
-          { text: "Transpiler", link: "/transpiler" },
-          { text: "Scheduler", link: "/scheduler" },
-          { text: "API", link: "/api" },
+          { text: "Specification", link: "/scripting/spec" },
+          { text: "Compiler", link: "/scripting/compiler" },
+          { text: "Decompiler", link: "/scripting/decompiler" },
+          { text: "Transpiler", link: "/scripting/transpiler" },
         ],
+      },
+      {
+        text: "Reference",
+        items: [{ text: "API", link: "/reference/api" }],
       },
       {
         text: "Plugins",
