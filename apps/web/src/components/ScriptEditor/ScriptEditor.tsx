@@ -4,7 +4,7 @@ import { BlockNode } from "./BlockNode";
 import { gameStore } from "../../store/game";
 import { BlockDefinition } from "./types";
 import { MonacoEditor } from "./MonacoEditor";
-import { decompile } from "@viwo/scripting";
+import { decompile, transpile } from "@viwo/scripting";
 
 export const ScriptEditor: Component = () => {
   // Initial script: ["seq"]
@@ -80,6 +80,19 @@ export const ScriptEditor: Component = () => {
     e.preventDefault();
   };
 
+  const handleCodeChange = (newCode: string) => {
+    try {
+      const newScript = transpile(newCode);
+      // Only update if we got a valid script back
+      if (newScript) {
+        setScript(newScript);
+      }
+    } catch {
+      // Ignore transpilation errors while typing
+      // console.warn("Transpilation error:", e);
+    }
+  };
+
   return (
     <div class="script-editor">
       <div class="script-editor__palette">
@@ -107,7 +120,10 @@ export const ScriptEditor: Component = () => {
             class="script-editor__code-preview"
             style={{ flex: 1, height: "100%", overflow: "hidden" }}
           >
-            <MonacoEditor value={decompile(script(), 0, true)} />
+            <MonacoEditor
+              value={decompile(script(), 0, true)}
+              onChange={handleCodeChange}
+            />
           </div>
         </div>
       </div>
