@@ -22,7 +22,8 @@ The system consists of several main parts:
 3.  **TUI Client (`apps/tui`)**: A text-based UI built with **React + Ink**.
 4.  **Discord Bot (`apps/discord-bot`)**: A bridge to play the game via Discord, built with **discord.js**.
 5.  **CLI (`apps/cli`)**: A command-line interface for the game, using **minimist** and **chalk**.
-6.  **Shared Library (`packages/shared`)**: Contains types, schemas, and utility functions shared between the Core and clients.
+6.  **Client SDK (`packages/client`)**: A type-safe TypeScript SDK that handles WebSocket connections, state management, and JSON-RPC communication for all frontends.
+7.  **Shared Library (`packages/shared`)**: Contains types, schemas, and utility functions shared between the Core and clients.
 
 ## Core Concepts
 
@@ -72,6 +73,7 @@ Communication between Client and Server uses the JSON-RPC 2.0 protocol.
   - `server/`: Entry point for the standalone server.
 - `packages/`
   - `core/`: The game server logic.
+  - `client/`: The client SDK.
   - `shared/`: Shared types and schemas.
 - `plugins/`
   - `ai/`: AI integration plugin.

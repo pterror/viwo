@@ -2,6 +2,8 @@
 
 Viwo uses **JSON-RPC 2.0** over WebSockets for communication between the Core Server and Clients (Web, TUI, CLI).
 
+> **Note**: The `@viwo/client` package provides a type-safe TypeScript SDK that implements this protocol. It is recommended to use this SDK for building new frontends.
+
 ## Protocol Basics
 
 All messages are JSON objects.

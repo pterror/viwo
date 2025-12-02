@@ -13,6 +13,11 @@ This document lists key files and directories to help navigation.
 - **`src/scripting/interpreter.ts`**: The custom script interpreter (S-expression evaluator).
 - **`src/scripting/lib/`**: Standard libraries for the scripting language (`core`, `list`, `object`, `string`, `time`).
 
+## Client SDK (`packages/client`)
+
+- **`src/client.ts`**: The main `ViwoClient` class. Handles connection, state, and JSON-RPC.
+- **`src/index.ts`**: Exports.
+
 ## Shared Library (`packages/shared`)
 
 - **`src/jsonrpc.ts`**: JSON-RPC 2.0 type definitions and notification schemas.
