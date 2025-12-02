@@ -359,8 +359,8 @@ export async function handleJsonRpcRequest(
           deleteEntity: (id) => {
             /* TODO */
           },
-          canEdit: (pid, eid) => true, // TODO: Implement permissions
-          resolveProps: async (e) => e, // TODO: Implement
+          resolveProps: (e) => e, // TODO: Implement
+          getOpcodeMetadata: () => [], // TODO: Implement
         },
       };
 
@@ -384,9 +384,11 @@ export async function handleJsonRpcRequest(
           getEntity,
           createEntity,
           updateEntity,
-          deleteEntity: (id) => {},
-          canEdit: (pid, eid) => true,
-          resolveProps: async (e) => e,
+          deleteEntity: (id) => {
+            /* TODO */
+          },
+          resolveProps: (e) => e, // TODO: Implement
+          getOpcodeMetadata: () => [], // TODO: Implement
         },
       };
 

@@ -25,7 +25,6 @@ export interface CommandContext {
     createEntity: (data: Record<string, unknown>) => number;
     updateEntity: (entity: Entity) => void;
     deleteEntity: (id: number) => void;
-    canEdit: (playerId: number, entityId: number) => boolean;
     resolveProps: (entity: Entity) => Entity;
     getOpcodeMetadata: () => readonly OpcodeMetadata[];
   };

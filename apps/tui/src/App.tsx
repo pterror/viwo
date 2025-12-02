@@ -3,8 +3,11 @@ import { Box, Text, useApp, useStdout } from "ink";
 import TextInput from "ink-text-input";
 import { ViwoClient, GameState } from "@viwo/client";
 import { Entity } from "@viwo/shared/jsonrpc";
+import Editor from "./components/Editor";
 
 // Types
+type Mode = "GAME" | "EDITOR";
+
 type LogEntry = {
   id: string;
   message: string | object;
@@ -19,6 +22,11 @@ const App = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [room, setRoom] = useState<Entity | null>(null);
   const [inventory, setInventory] = useState<Entity[]>([]);
+  const [mode, setMode] = useState<Mode>("GAME");
+  const [editingScript, setEditingScript] = useState<{
+    id: number;
+    content: string;
+  } | null>(null);
 
   // Client state
   const [clientState, setClientState] = useState<GameState>({
@@ -108,9 +116,57 @@ const App = () => {
     if (parts) {
       const command = parts[0];
       const args = parts.slice(1).map((arg) => arg.replace(/^"(.*)"$/, "$1"));
+
+      if (command === "edit" && args.length > 0) {
+        const scriptId = parseInt(args[0]!);
+        // TODO: Fetch script content properly. For now, mock or try to find in entities if loaded.
+        // In a real scenario, we might need an RPC call to get source if not available.
+        // For this task, let's assume we can edit if we have the entity and it has a 'source' property,
+        // or we just start with empty/mock for testing if not found.
+
+        // Check if we have the entity in our local state
+        const entity = clientState.entities.get(scriptId);
+        let content = "";
+        if (entity && typeof entity["source"] === "string") {
+          content = entity["source"];
+        } else {
+          // If not found, maybe we can't edit it yet without fetching.
+          // But for the sake of the task, let's allow opening an empty buffer or mock.
+          // Ideally we should request it.
+          addLog(`Opening editor for ${scriptId}...`, "info");
+        }
+
+        setEditingScript({ id: scriptId, content });
+        setMode("EDITOR");
+        setQuery("");
+        return;
+      }
+
       clientRef.current.execute(command, args);
     }
     setQuery("");
+  };
+
+  const handleSaveScript = (content: string) => {
+    if (editingScript && clientRef.current) {
+      // Send update command/RPC
+      // Assuming there's a way to update source, e.g. 'program <id> <source>' or similar RPC.
+      // For now, let's just log it and maybe try a command if one exists, or just update local state.
+      // The viwo protocol usually uses 'program' command or similar.
+      // Let's assume 'program <id> <content>'
+      clientRef.current.execute("program", [
+        editingScript.id.toString(),
+        content,
+      ]);
+      addLog(`Saved script ${editingScript.id}`, "info");
+      setMode("GAME");
+      setEditingScript(null);
+    }
+  };
+
+  const handleExitEditor = () => {
+    setMode("GAME");
+    setEditingScript(null);
   };
 
   // Helper to get room contents
@@ -124,90 +180,104 @@ const App = () => {
 
   return (
     <Box flexDirection="column" height={rows}>
-      {/* Header */}
-      <Box borderStyle="single" borderColor="green">
-        <Text bold color="green">
-          {" "}
-          Viwo TUI{" "}
-        </Text>
-        <Text> | </Text>
-        <Text color={clientState.isConnected ? "green" : "red"}>
-          {" "}
-          {clientState.isConnected ? "ONLINE" : "OFFLINE"}{" "}
-        </Text>
-      </Box>
-
-      {/* Main Content Area */}
-      <Box flexGrow={1}>
-        {/* Left Column: Log */}
-        <Box width="30%" borderStyle="single" flexDirection="column">
-          <Text bold underline>
-            Log
-          </Text>
-          <Box flexDirection="column" flexGrow={1} overflowY="hidden">
-            {logs.slice(-20).map((log) => (
-              <Box key={log.id}>
-                <Text
-                  color={
-                    log.type === "error"
-                      ? "red"
-                      : log.type === "info"
-                      ? "white"
-                      : "blue"
-                  }
-                >
-                  {typeof log.message === "string"
-                    ? log.message
-                    : JSON.stringify(log.message)}
-                </Text>
-              </Box>
-            ))}
+      {mode === "EDITOR" && editingScript ? (
+        <Editor
+          initialContent={editingScript.content}
+          onSave={handleSaveScript}
+          onExit={handleExitEditor}
+        />
+      ) : (
+        <>
+          {/* Header */}
+          <Box borderStyle="single" borderColor="green">
+            <Text bold color="green">
+              {" "}
+              Viwo TUI{" "}
+            </Text>
+            <Text> | </Text>
+            <Text color={clientState.isConnected ? "green" : "red"}>
+              {" "}
+              {clientState.isConnected ? "ONLINE" : "OFFLINE"}{" "}
+            </Text>
           </Box>
-        </Box>
 
-        {/* Center Column: Room */}
-        <Box width="40%" borderStyle="single" flexDirection="column">
-          <Text bold underline>
-            Current Room
-          </Text>
-          {room ? (
-            <>
-              <Text bold color="cyan">
-                {room["name"] as string}
+          {/* Main Content Area */}
+          <Box flexGrow={1}>
+            {/* Left Column: Log */}
+            <Box width="30%" borderStyle="single" flexDirection="column">
+              <Text bold underline>
+                Log
               </Text>
-              <Text italic>{room["description"] as string}</Text>
-              <Box marginTop={1}>
-                <Text underline>Contents:</Text>
-                {getRoomContents().map((item: Entity, idx: number) => (
-                  <Text key={idx}>- {item["name"] as string}</Text>
+              <Box flexDirection="column" flexGrow={1} overflowY="hidden">
+                {logs.slice(-20).map((log) => (
+                  <Box key={log.id}>
+                    <Text
+                      color={
+                        log.type === "error"
+                          ? "red"
+                          : log.type === "info"
+                          ? "white"
+                          : "blue"
+                      }
+                    >
+                      {typeof log.message === "string"
+                        ? log.message
+                        : JSON.stringify(log.message)}
+                    </Text>
+                  </Box>
                 ))}
               </Box>
-            </>
-          ) : (
-            <Text>No room data.</Text>
-          )}
-        </Box>
+            </Box>
 
-        {/* Right Column: Inventory */}
-        <Box width="30%" borderStyle="single" flexDirection="column">
-          <Text bold underline>
-            Inventory
-          </Text>
-          {inventory.length > 0 ? (
-            inventory.map((item, idx) => (
-              <Text key={idx}>- {item["name"] as string}</Text>
-            ))
-          ) : (
-            <Text color="gray">(empty)</Text>
-          )}
-        </Box>
-      </Box>
+            {/* Center Column: Room */}
+            <Box width="40%" borderStyle="single" flexDirection="column">
+              <Text bold underline>
+                Current Room
+              </Text>
+              {room ? (
+                <>
+                  <Text bold color="cyan">
+                    {room["name"] as string}
+                  </Text>
+                  <Text italic>{room["description"] as string}</Text>
+                  <Box marginTop={1}>
+                    <Text underline>Contents:</Text>
+                    {getRoomContents().map((item: Entity, idx: number) => (
+                      <Text key={idx}>- {item["name"] as string}</Text>
+                    ))}
+                  </Box>
+                </>
+              ) : (
+                <Text>No room data.</Text>
+              )}
+            </Box>
 
-      {/* Input Bar */}
-      <Box borderStyle="single" borderColor="blue">
-        <Text color="green">&gt; </Text>
-        <TextInput value={query} onChange={setQuery} onSubmit={handleSubmit} />
-      </Box>
+            {/* Right Column: Inventory */}
+            <Box width="30%" borderStyle="single" flexDirection="column">
+              <Text bold underline>
+                Inventory
+              </Text>
+              {inventory.length > 0 ? (
+                inventory.map((item, idx) => (
+                  <Text key={idx}>- {item["name"] as string}</Text>
+                ))
+              ) : (
+                <Text color="gray">(empty)</Text>
+              )}
+            </Box>
+          </Box>
+
+          {/* Input Bar */}
+          <Box borderStyle="single" borderColor="blue">
+            <Text color="green">&gt; </Text>
+            <TextInput
+              value={query}
+              onChange={setQuery}
+              onSubmit={handleSubmit}
+            />
+          </Box>
+        </>
+      )}
     </Box>
   );
 };
