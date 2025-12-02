@@ -1,17 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Box, Text, useApp, useStdout } from "ink";
-import WebSocket from "ws";
 import TextInput from "ink-text-input";
-import {
-  JsonRpcRequest,
-  JsonRpcResponse,
-  JsonRpcNotification,
-  MessageNotification,
-  UpdateNotification,
-  RoomIdNotification,
-  PlayerIdNotification,
-  Entity,
-} from "@viwo/shared/jsonrpc";
+import { ViwoClient, GameState } from "@viwo/client";
+import { Entity } from "@viwo/shared/jsonrpc";
 
 // Types
 type LogEntry = {
@@ -28,11 +19,18 @@ const App = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [room, setRoom] = useState<Entity | null>(null);
   const [inventory, setInventory] = useState<Entity[]>([]);
-  const [connected, setConnected] = useState(false);
-  const [roomId, setRoomId] = useState<number | null>(null);
-  const [playerId, setPlayerId] = useState<number | null>(null);
-  const [entities, setEntities] = useState<Map<number, Entity>>(new Map());
-  const ws = useRef<WebSocket | null>(null);
+  
+  // Client state
+  const [clientState, setClientState] = useState<GameState>({
+    isConnected: false,
+    messages: [],
+    entities: new Map(),
+    roomId: null,
+    playerId: null,
+    opcodes: null,
+  });
+
+  const clientRef = useRef<ViwoClient | null>(null);
 
   useEffect(() => {
     const onResize = () => setRows(stdout.rows || 24);
@@ -44,6 +42,8 @@ const App = () => {
 
   useEffect(() => {
     // Update room and inventory based on entities and IDs
+    const { roomId, playerId, entities } = clientState;
+    
     if (roomId && entities.has(roomId)) {
       setRoom(entities.get(roomId)!);
     }
@@ -57,61 +57,28 @@ const App = () => {
         setInventory(items);
       }
     }
-  }, [entities, roomId, playerId]);
+  }, [clientState]);
 
   useEffect(() => {
-    const socket = new WebSocket("ws://localhost:8080");
-    ws.current = socket;
+    const client = new ViwoClient("ws://localhost:8080");
+    clientRef.current = client;
 
-    socket.on("open", () => {
-      setConnected(true);
-      sendRequest("get_opcodes", []);
-      sendRequest("whoami", []);
-      sendRequest("look", []);
-      sendRequest("inventory", []);
+    const unsubscribeState = client.subscribe((state) => {
+      setClientState(state);
     });
 
-    socket.on("message", (data) => {
-      try {
-        const message = JSON.parse(data.toString());
-        handleMessage(message);
-      } catch {
-        addLog("Error parsing message.", "error");
-      }
+    const unsubscribeMessage = client.onMessage((msg) => {
+      addLog(msg.text, msg.type === "message" ? "info" : "error");
     });
 
-    socket.on("close", () => {
-      setConnected(false);
-      addLog("Disconnected from server.", "error");
-      // exit(); // Optional: exit on disconnect
-    });
-
-    socket.on("error", (err) => {
-      addLog(`WebSocket error: ${err.message}`, "error");
-    });
+    client.connect();
 
     return () => {
-      socket.close();
+      unsubscribeState();
+      unsubscribeMessage();
+      client.disconnect();
     };
   }, []);
-
-  const sendRequest = (method: string, params: any[]) => {
-    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      const req: JsonRpcRequest = {
-        jsonrpc: "2.0",
-        method: "execute",
-        params: method === "execute" ? params : [method, ...params], // Wrapper for execute command
-        id: Date.now(),
-      };
-      // Special case for get_opcodes which is a direct method
-      if (method === "get_opcodes") {
-        req.method = "get_opcodes";
-        req.params = [];
-      }
-
-      ws.current.send(JSON.stringify(req));
-    }
-  };
 
   const addLog = (
     message: string | object,
@@ -123,55 +90,8 @@ const App = () => {
     ]);
   };
 
-  const handleMessage = (data: any) => {
-    // Basic JSON-RPC validation
-    if (data.jsonrpc !== "2.0") return;
-
-    if ("method" in data) {
-      // Notification
-      const notification = data as JsonRpcNotification;
-      switch (notification.method) {
-        case "message": {
-          const params = (notification as MessageNotification).params;
-          addLog(params.text, params.type === "info" ? "info" : "error");
-          break;
-        }
-        case "update": {
-          const params = (notification as UpdateNotification).params;
-          setEntities((prev) => {
-            const next = new Map(prev);
-            for (const entity of params.entities) {
-              next.set(entity.id, entity);
-            }
-            return next;
-          });
-          break;
-        }
-        case "room_id": {
-          const params = (notification as RoomIdNotification).params;
-          setRoomId(params.roomId);
-          break;
-        }
-        case "player_id": {
-          const params = (notification as PlayerIdNotification).params;
-          setPlayerId(params.playerId);
-          break;
-        }
-      }
-    } else if ("id" in data) {
-      // Response
-      const response = data as JsonRpcResponse;
-      if ("error" in response) {
-        addLog(`Error: ${response.error.message}`, "error");
-      } else {
-        // Success response, maybe log it or handle specific IDs
-        // addLog(`Result: ${JSON.stringify(response.result)}`, "other");
-      }
-    }
-  };
-
   const handleSubmit = (input: string) => {
-    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
+    if (!clientRef.current || !clientState.isConnected) {
       addLog("Not connected.", "error");
       return;
     }
@@ -188,7 +108,7 @@ const App = () => {
     if (parts) {
       const command = parts[0];
       const args = parts.slice(1).map((arg) => arg.replace(/^"(.*)"$/, "$1"));
-      sendRequest(command, args);
+      clientRef.current.execute([command, ...args]);
     }
     setQuery("");
   };
@@ -197,7 +117,7 @@ const App = () => {
   const getRoomContents = () => {
     if (!room || !room.contents || !Array.isArray(room.contents)) return [];
     return room.contents
-      .map((id: number) => entities.get(id))
+      .map((id: number) => clientState.entities.get(id))
       .filter((e: Entity | undefined): e is Entity => !!e);
   };
 
@@ -210,9 +130,9 @@ const App = () => {
           Viwo TUI{" "}
         </Text>
         <Text> | </Text>
-        <Text color={connected ? "green" : "red"}>
+        <Text color={clientState.isConnected ? "green" : "red"}>
           {" "}
-          {connected ? "ONLINE" : "OFFLINE"}{" "}
+          {clientState.isConnected ? "ONLINE" : "OFFLINE"}{" "}
         </Text>
       </Box>
 

@@ -9,11 +9,6 @@ initSchema(db);
 // Mock the db module
 mock.module("../db", () => ({ db }));
 
-// Mock permissions to allow everything
-mock.module("../permissions", () => ({
-  checkPermission: () => true,
-}));
-
 import { evaluate, registerLibrary, createScriptContext } from "./interpreter";
 import * as Core from "./lib/core";
 import * as List from "./lib/list";
@@ -32,8 +27,8 @@ describe("Hotel Scripting", () => {
 
   let hotelLobby: Entity;
   let caller: Entity;
-  let messages: string[] = [];
-  let send: (msg: unknown) => void;
+  let messages: unknown[] = [];
+  let send: (type: string, payload: unknown) => void;
 
   beforeEach(() => {
     // Reset DB state
@@ -45,7 +40,7 @@ describe("Hotel Scripting", () => {
 
     // Setup Sys Context
     // Setup Send
-    send = (type: any, payload: any) => {
+    send = (type: string, payload: unknown) => {
       if (type === "message") {
         messages.push(payload);
       }

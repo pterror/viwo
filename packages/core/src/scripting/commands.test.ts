@@ -26,7 +26,7 @@ describe("Player Commands", () => {
 
   let player: Entity;
   let room: Entity;
-  let send: (msg: unknown) => void;
+  let send: (type: string, payload: unknown) => void;
   let sentMessages: any[] = [];
 
   beforeEach(() => {

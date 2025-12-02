@@ -23,6 +23,7 @@
       "name": "@viwo/cli",
       "version": "0.0.0",
       "dependencies": {
+        "@viwo/client": "workspace:*",
         "@viwo/shared": "workspace:*",
         "chalk": "^5.3.0",
         "minimist": "^1.2.8",
@@ -38,6 +39,7 @@
       "name": "@viwo/discord-bot",
       "version": "0.0.0",
       "dependencies": {
+        "@viwo/client": "workspace:*",
         "discord.js": "^14.16.3",
         "dotenv": "^16.4.5",
         "ws": "^8.18.0",
@@ -63,6 +65,7 @@
       "name": "@viwo/tui",
       "version": "0.0.0",
       "dependencies": {
+        "@viwo/client": "workspace:*",
         "@viwo/shared": "workspace:*",
         "ink": "^5.0.0",
         "ink-text-input": "^6.0.0",
@@ -79,6 +82,7 @@
       "name": "@viwo/web",
       "version": "0.0.0",
       "dependencies": {
+        "@viwo/client": "workspace:*",
         "@viwo/shared": "workspace:*",
         "solid-js": "^1.8.15",
       },
@@ -87,6 +91,19 @@
         "typescript": "^5.3.3",
         "vite": "^5.1.4",
         "vite-plugin-solid": "^2.10.1",
+      },
+    },
+    "packages/client": {
+      "name": "@viwo/client",
+      "version": "0.0.0",
+      "dependencies": {
+        "@viwo/shared": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "typescript": "^5.0.0",
       },
     },
     "packages/core": {
@@ -477,6 +494,8 @@
     "@viwo/admin-cli": ["@viwo/admin-cli@workspace:apps/admin-cli"],
 
     "@viwo/cli": ["@viwo/cli@workspace:apps/cli"],
+
+    "@viwo/client": ["@viwo/client@workspace:packages/client"],
 
     "@viwo/core": ["@viwo/core@workspace:packages/core"],
 
