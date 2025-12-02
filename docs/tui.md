@@ -11,6 +11,7 @@ The TUI is built using [Ink](https://github.com/vadimdemedes/ink), which allows 
 - **Terminal-based**: Runs entirely in the terminal.
 - **React-based**: Built with React components using Ink.
 - **Real-time**: Connects to the server via WebSocket for real-time updates.
+- **Script Editor**: Built-in multi-line script editor with syntax highlighting and AI completion.
 
 ## Getting Started
 
@@ -43,6 +44,7 @@ The TUI application is located in `apps/tui`.
 
 - **`src/index.tsx`**: The entry point of the application. It sets up the Ink render process.
 - **`src/App.tsx`**: The main application component. It handles the WebSocket connection and renders the UI.
+- **`src/components/Editor.tsx`**: The multi-line script editor component.
 - **`src/components/`**: Contains reusable UI components.
 
 ## Development
@@ -58,3 +60,16 @@ To run the TUI with type checking:
 ```bash
 bun run typecheck
 ```
+
+## Script Editor
+
+The TUI includes a powerful script editor that allows you to modify entity scripts directly from the terminal.
+
+### Usage
+
+1.  **Open Editor**: Type `edit <script_id>` to open the editor for a specific script.
+2.  **Navigation**: Use Arrow keys to move the cursor.
+3.  **Editing**: Type to insert text. Use Backspace/Delete to remove text. Enter creates a new line.
+4.  **AI Completion**: Press `Tab` to request AI code completion based on the current context.
+5.  **Save**: Press `Ctrl+S` to save changes to the server.
+6.  **Exit**: Press `Esc` or `Ctrl+C` to close the editor without saving (unless already saved).

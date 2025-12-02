@@ -94,6 +94,7 @@ Builder Mode is a powerful feature that allows users to modify the game world di
 
 4.  **Script Tab** (`src/components/ScriptEditor/`):
     - An integrated code editor for writing and attaching scripts to entities.
+    - **Dual View**: Supports both a block-based visual editor (for beginners) and a TypeScript-based text editor (Monaco) for advanced users.
     - Enables adding behavior and logic to game objects directly within the game.
 
 ## Theming
