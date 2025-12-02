@@ -489,6 +489,9 @@ export const sudo = defineOpcode<
       throw new ScriptError(`sudo: verb '${verb}' not found on ${target.id}`);
     }
 
+    // Capture send function to satisfy TS in closure
+    const originalSend = ctx.send;
+
     // Execute with target as caller AND this
     // This effectively impersonates the user
     return await evaluate(
@@ -497,8 +500,18 @@ export const sudo = defineOpcode<
         caller: target, // Impersonation
         this: target,
         args: evaluatedArgs,
-        ...(ctx.send ? { send: ctx.send } : {}), // Keep original output channel? Or should we capture it?
-        // For now, keep original send so Bot gets the output
+        // If caller is Bot (4), wrap send to forward messages
+        ...(originalSend
+          ? {
+              send: (type: string, payload: unknown) => {
+                if (callerId === 4) {
+                  originalSend("forward", { target: target.id, type, payload });
+                } else {
+                  originalSend(type, payload);
+                }
+              },
+            }
+          : {}),
         warnings: ctx.warnings,
         stack: [
           ...(ctx.stack ?? []),
