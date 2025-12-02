@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeEach, mock } from "bun:test";
 import { Database } from "bun:sqlite";
 import { initSchema } from "./schema";
+import { BooleanLib, StdLib as Std } from "@viwo/scripting";
 
 // Setup in-memory DB
 const db = new Database(":memory:");
@@ -13,17 +14,17 @@ import {
   evaluate,
   createScriptContext,
   registerLibrary,
-} from "./scripting/interpreter";
-import * as Core from "./scripting/lib/core";
-import * as ObjectOp from "./scripting/lib/object";
-import * as List from "./scripting/lib/list";
+  ObjectLib,
+  ListLib as List,
+} from "@viwo/scripting";
 import { Entity } from "@viwo/shared/jsonrpc";
 import { createEntity, getEntity, addVerb, updateEntity } from "./repo";
+import { CoreLib } from ".";
 import { seed } from "./seed";
 
 describe("Mailbox Verification", () => {
-  registerLibrary(Core);
-  registerLibrary(ObjectOp);
+  registerLibrary(Std);
+  registerLibrary(ObjectLib);
   registerLibrary(List);
 
   let sender: Entity;
@@ -78,11 +79,11 @@ describe("Mailbox Verification", () => {
   });
 
   const check = async (actor: Entity, target: Entity, type: string) => {
-    const callScript = Core["call"](
-      Core["entity"](system.id),
+    const callScript = CoreLib["call"](
+      CoreLib["entity"](system.id),
       "can_edit",
-      Core["entity"](actor.id),
-      Core["entity"](target.id),
+      CoreLib["entity"](actor.id),
+      CoreLib["entity"](target.id),
       type,
     );
 
@@ -109,27 +110,27 @@ describe("Mailbox Verification", () => {
   test("should allow deposit via give opcode", async () => {
     // Logic: Check owner, update location, update owner.
 
-    const giveVerb = Core["seq"](
-      Core["let"]("item", Core["arg"](0)),
-      Core["let"]("dest", Core["arg"](1)),
-      Core["if"](
-        Core["=="](
-          ObjectOp["obj.get"](Core["var"]("item"), "owner"),
-          ObjectOp["obj.get"](Core["caller"](), "id"),
+    const giveVerb = Std["seq"](
+      Std["let"]("item", Std["arg"](0)),
+      Std["let"]("dest", Std["arg"](1)),
+      Std["if"](
+        BooleanLib["=="](
+          ObjectLib["obj.get"](Std["var"]("item"), "owner"),
+          ObjectLib["obj.get"](Std["caller"](), "id"),
         ),
-        Core["seq"](
-          Core["let"](
+        Std["seq"](
+          Std["let"](
             "newOwner",
-            ObjectOp["obj.get"](Core["var"]("dest"), "owner"),
+            ObjectLib["obj.get"](Std["var"]("dest"), "owner"),
           ),
-          Core["set_entity"](
-            ObjectOp["obj.merge"](
-              Core["var"]("item"),
-              ObjectOp["obj.new"](
+          CoreLib["set_entity"](
+            ObjectLib["obj.merge"](
+              Std["var"]("item"),
+              ObjectLib["obj.new"](
                 "location",
-                ObjectOp["obj.get"](Core["var"]("dest"), "id"),
+                ObjectLib["obj.get"](Std["var"]("dest"), "id"),
                 "owner",
-                Core["var"]("newOwner"),
+                Std["var"]("newOwner"),
               ),
             ),
           ),
@@ -141,11 +142,11 @@ describe("Mailbox Verification", () => {
 
     addVerb(system.id, "give", giveVerb);
 
-    const callGive = Core["call"](
-      Core["entity"](system.id),
+    const callGive = CoreLib["call"](
+      CoreLib["entity"](system.id),
       "give",
-      Core["entity"](item.id),
-      Core["entity"](mailbox.id),
+      CoreLib["entity"](item.id),
+      CoreLib["entity"](mailbox.id),
     );
 
     const ctx = createScriptContext({
@@ -165,18 +166,18 @@ describe("Mailbox Verification", () => {
   test("should hide contents from sender", async () => {
     // Simulate a 'look' that respects permissions.
 
-    const lookVerb = Core["seq"](
-      Core["let"]("target", Core["arg"](0)),
-      Core["if"](
-        Core["call"](
-          Core["entity"](system.id),
+    const lookVerb = Std["seq"](
+      Std["let"]("target", Std["arg"](0)),
+      Std["if"](
+        CoreLib["call"](
+          CoreLib["entity"](system.id),
           "can_edit",
-          Core["caller"](),
-          Core["var"]("target"),
+          Std["caller"](),
+          Std["var"]("target"),
           "view",
         ),
-        ObjectOp["obj.get"](
-          Core["var"]("target"),
+        ObjectLib["obj.get"](
+          Std["var"]("target"),
           "contents",
           List["list.new"](),
         ),
@@ -186,10 +187,10 @@ describe("Mailbox Verification", () => {
 
     addVerb(system.id, "look_at", lookVerb);
 
-    const callLook = Core["call"](
-      Core["entity"](system.id),
+    const callLook = CoreLib["call"](
+      CoreLib["entity"](system.id),
       "look_at",
-      Core["entity"](mailbox.id),
+      CoreLib["entity"](mailbox.id),
     );
 
     const ctx = createScriptContext({
@@ -203,18 +204,18 @@ describe("Mailbox Verification", () => {
   });
 
   test("should show contents to receiver", async () => {
-    const lookVerb = Core["seq"](
-      Core["let"]("target", Core["arg"](0)),
-      Core["if"](
-        Core["call"](
-          Core["entity"](system.id),
+    const lookVerb = Std["seq"](
+      Std["let"]("target", Std["arg"](0)),
+      Std["if"](
+        CoreLib["call"](
+          CoreLib["entity"](system.id),
           "can_edit",
-          Core["caller"](),
-          Core["var"]("target"),
+          Std["caller"](),
+          Std["var"]("target"),
           "view",
         ),
-        ObjectOp["obj.get"](
-          Core["var"]("target"),
+        ObjectLib["obj.get"](
+          Std["var"]("target"),
           "contents",
           List["list.new"](),
         ),
@@ -224,10 +225,10 @@ describe("Mailbox Verification", () => {
 
     addVerb(system.id, "look_at", lookVerb);
 
-    const callLook = Core["call"](
-      Core["entity"](system.id),
+    const callLook = CoreLib["call"](
+      CoreLib["entity"](system.id),
       "look_at",
-      Core["entity"](mailbox.id),
+      CoreLib["entity"](mailbox.id),
     );
 
     const ctx = createScriptContext({

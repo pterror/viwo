@@ -5,13 +5,17 @@ import {
   registerLibrary,
   createScriptContext,
 } from "../interpreter";
-import * as Core from "./core";
+import * as Core from "./std";
 import * as List from "./list";
+import * as MathLib from "./math";
+import * as BooleanLib from "./boolean";
 import { createLibraryTester } from "./test-utils";
 
 createLibraryTester(List, "List Library", (test) => {
   registerLibrary(Core);
   registerLibrary(List);
+  registerLibrary(MathLib);
+  registerLibrary(BooleanLib);
 
   let ctx: ScriptContext;
 
@@ -152,7 +156,7 @@ createLibraryTester(List, "List Library", (test) => {
   });
 
   test("list.find", async () => {
-    const gt1 = Core["lambda"](["x"], Core[">"](Core["var"]("x"), 1));
+    const gt1 = Core["lambda"](["x"], BooleanLib[">"](Core["var"]("x"), 1));
     expect(
       await evaluate(List["list.find"](List["list.new"](1, 2, 3), gt1), ctx),
     ).toBe(2);
@@ -160,7 +164,7 @@ createLibraryTester(List, "List Library", (test) => {
 
   // HOF tests
   test("list.map", async () => {
-    const inc = Core["lambda"](["x"], Core["+"](Core["var"]("x"), 1));
+    const inc = Core["lambda"](["x"], MathLib["+"](Core["var"]("x"), 1));
     expect(
       await evaluate(List["list.map"](List["list.new"](1, 2, 3), inc), ctx),
     ).toEqual([2, 3, 4]);
@@ -168,7 +172,7 @@ createLibraryTester(List, "List Library", (test) => {
 
   test("list.filter", async () => {
     // (lambda (x) (> x 1))
-    const gt1 = Core["lambda"](["x"], Core[">"](Core["var"]("x"), 1));
+    const gt1 = Core["lambda"](["x"], BooleanLib[">"](Core["var"]("x"), 1));
     expect(
       await evaluate(List["list.filter"](List["list.new"](1, 2, 3), gt1), ctx),
     ).toEqual([2, 3]);
@@ -178,7 +182,7 @@ createLibraryTester(List, "List Library", (test) => {
     // (lambda (acc x) (+ acc x))
     const sum = Core["lambda"](
       ["acc", "x"],
-      Core["+"](Core["var"]("acc"), Core["var"]("x")),
+      MathLib["+"](Core["var"]("acc"), Core["var"]("x")),
     );
     expect(
       await evaluate(
@@ -192,7 +196,7 @@ createLibraryTester(List, "List Library", (test) => {
     // (lambda (x) (list x (+ x 1)))
     const dup = Core["lambda"](
       ["x"],
-      List["list.new"](Core["var"]("x"), Core["+"](Core["var"]("x"), 1)),
+      List["list.new"](Core["var"]("x"), MathLib["+"](Core["var"]("x"), 1)),
     );
     expect(
       await evaluate(List["list.flatMap"](List["list.new"](1, 3), dup), ctx),

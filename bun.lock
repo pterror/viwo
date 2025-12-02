@@ -30,6 +30,7 @@
         "ws": "^8.18.0",
       },
       "devDependencies": {
+        "@tsconfig/strictest": "^2.0.8",
         "@types/minimist": "^1.2.5",
         "@types/ws": "^8.5.13",
         "bun-types": "latest",
@@ -55,8 +56,10 @@
       "dependencies": {
         "@viwo/core": "workspace:*",
         "@viwo/plugin-ai": "workspace:*",
+        "@viwo/scripting": "workspace:*",
       },
       "devDependencies": {
+        "@tsconfig/strictest": "^2.0.8",
         "bun-types": "latest",
         "typescript": "^5.0.0",
       },
@@ -73,6 +76,7 @@
         "ws": "^8.18.0",
       },
       "devDependencies": {
+        "@tsconfig/strictest": "^2.0.8",
         "@types/react": "^18.2.0",
         "@types/ws": "^8.5.13",
         "bun-types": "latest",
@@ -87,6 +91,7 @@
         "solid-js": "^1.8.15",
       },
       "devDependencies": {
+        "@tsconfig/strictest": "^2.0.8",
         "@types/bun": "^1.3.3",
         "typescript": "^5.3.3",
         "vite": "^5.1.4",
@@ -110,11 +115,26 @@
       "name": "@viwo/core",
       "version": "0.0.0",
       "dependencies": {
+        "@viwo/scripting": "workspace:*",
         "@viwo/shared": "workspace:*",
         "ws": "^8.18.0",
       },
       "devDependencies": {
+        "@tsconfig/strictest": "^2.0.8",
         "@types/ws": "^8.5.12",
+        "bun-types": "latest",
+      },
+      "peerDependencies": {
+        "typescript": "^5.0.0",
+      },
+    },
+    "packages/scripting": {
+      "name": "@viwo/scripting",
+      "version": "0.0.0",
+      "dependencies": {
+        "@viwo/shared": "workspace:*",
+      },
+      "devDependencies": {
         "bun-types": "latest",
       },
       "peerDependencies": {
@@ -507,6 +527,8 @@
     "@viwo/discord-bot": ["@viwo/discord-bot@workspace:apps/discord-bot"],
 
     "@viwo/plugin-ai": ["@viwo/plugin-ai@workspace:plugins/ai"],
+
+    "@viwo/scripting": ["@viwo/scripting@workspace:packages/scripting"],
 
     "@viwo/server": ["@viwo/server@workspace:apps/server"],
 

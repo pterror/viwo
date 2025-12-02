@@ -9,12 +9,16 @@ initSchema(db);
 // Mock the db module
 mock.module("../db", () => ({ db }));
 
-import { evaluate, registerLibrary, createScriptContext } from "./interpreter";
+import {
+  evaluate,
+  registerLibrary,
+  createScriptContext,
+  ListLib as List,
+  StringLib as String,
+  ObjectLib,
+  StdLib,
+} from "@viwo/scripting";
 import * as Core from "./lib/core";
-import * as List from "./lib/list";
-import * as String from "./lib/string";
-import * as ObjectLib from "./lib/object";
-import { seed } from "../seed";
 import {
   createEntity,
   getEntity,
@@ -23,6 +27,7 @@ import {
   addVerb,
 } from "../repo";
 import { Entity } from "@viwo/shared/jsonrpc";
+import { seed } from "../seed";
 
 describe("Player Commands", () => {
   registerLibrary(Core);
@@ -275,7 +280,7 @@ describe("Recursive Move Check", () => {
       entityBase.id,
     );
     // Add dummy look verb to Box since move calls it
-    addVerb(boxId, "look", Core["let"]("dummy", 1));
+    addVerb(boxId, "look", StdLib["let"]("dummy", 1));
     const box = getEntity(boxId)!;
 
     // 2. Create an Item inside the Box

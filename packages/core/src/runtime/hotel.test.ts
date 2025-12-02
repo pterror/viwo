@@ -17,19 +17,24 @@ initSchema(db);
 // Mock the db module
 mock.module("../db", () => ({ db }));
 
-import { evaluate, registerLibrary, createScriptContext } from "./interpreter";
-import * as Core from "./lib/core";
-import * as List from "./lib/list";
-import * as String from "./lib/string";
-import * as ObjectLib from "./lib/object";
-import * as Time from "./lib/time";
+import {
+  evaluate,
+  registerLibrary,
+  createScriptContext,
+  StdLib as Std,
+  ListLib as List,
+  StringLib as String,
+  ObjectLib,
+  TimeLib as Time,
+} from "@viwo/scripting";
 import { seedHotel } from "../seeds/hotel";
 import { seed } from "../seed";
 import { createEntity, getEntity, updateEntity, getVerb } from "../repo";
 import { Entity } from "@viwo/shared/jsonrpc";
+import * as CoreLib from "../runtime/lib/core";
 
 describe("Hotel Scripting", () => {
-  registerLibrary(Core);
+  registerLibrary(Std);
   registerLibrary(List);
   registerLibrary(String);
   registerLibrary(ObjectLib);
@@ -251,7 +256,7 @@ describe("Hotel Scripting", () => {
 });
 
 describe("Hotel Seed", () => {
-  registerLibrary(Core);
+  registerLibrary(Std);
   registerLibrary(String);
   registerLibrary(ObjectLib);
   registerLibrary(Time);
@@ -322,7 +327,7 @@ describe("Hotel Seed", () => {
     // TODO: `move` does not support `id`
     let output = "";
     await evaluate(
-      Core["call"](player, "move", floorLobbyId),
+      CoreLib["call"](player, "move", floorLobbyId),
       createScriptContext({ caller: player, this: player }),
     );
 
@@ -397,7 +402,7 @@ describe("Hotel Seed", () => {
 
     // TODO: `move` does not support `id`
     await evaluate(
-      Core["call"](player, "move", floorLobbyId),
+      CoreLib["call"](player, "move", floorLobbyId),
       createScriptContext({
         caller: player,
         this: player,

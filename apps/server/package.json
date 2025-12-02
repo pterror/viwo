@@ -11,9 +11,11 @@
   },
   "dependencies": {
     "@viwo/core": "workspace:*",
-    "@viwo/plugin-ai": "workspace:*"
+    "@viwo/plugin-ai": "workspace:*",
+    "@viwo/scripting": "workspace:*"
   },
   "devDependencies": {
+    "@tsconfig/strictest": "^2.0.8",
     "bun-types": "latest",
     "typescript": "^5.0.0"
   }

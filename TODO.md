@@ -1,7 +1,5 @@
 # Viwo TODOs
 
-## Refactoring & Technical Debt
-
 ## Features & Enhancements
 
 - **Scripting**: Better script errors (stack traces, line numbers (optional), diagnostic showing the code that errored, etc.)
@@ -26,4 +24,3 @@
   - IO, FS, network etc. (these MUST use capability based security)
 - **Compiler**: Compiler from ViwoScript to TypeScript - typechecking should be removed from the runtime for performance reasons. It may be desired to typecheck at the boundary (the very outermost call) for type safety. We should also consider typechecking for areas where TypeScript reports type errors.
 - **Typing**: Add generics to type annotations for ViwoScript.
-- **Packaging**: Extract ViwoScript to a separate package.

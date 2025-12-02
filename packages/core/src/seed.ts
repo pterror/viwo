@@ -1,10 +1,17 @@
-import { createEntity, addVerb, updateEntity, getEntity } from "./repo";
+import {
+  MathLib as Math,
+  StringLib as Str,
+  ListLib as List,
+  TimeLib as Time,
+  ObjectLib as Object,
+  StdLib as Std,
+  BooleanLib as Boolean,
+} from "@viwo/scripting";
+import * as Core from "./runtime/lib/core";
 import { db } from "./db";
-import * as Core from "./scripting/lib/core";
-import * as List from "./scripting/lib/list";
-import * as Str from "./scripting/lib/string";
-import * as Time from "./scripting/lib/time";
-import * as Object from "./scripting/lib/object";
+import { createEntity, addVerb, updateEntity, getEntity } from "./repo";
+import { seedItems } from "./seeds/items";
+import { seedHotel } from "./seeds/hotel";
 
 export function seed() {
   // Check for any row at all.
@@ -39,131 +46,131 @@ export function seed() {
   addVerb(
     systemId,
     "can_edit",
-    Core["seq"](
-      Core["let"]("actor", Core["arg"](0)),
-      Core["let"]("target", Core["arg"](1)),
-      Core["let"]("type", Core["arg"](2)),
-      Core["let"]("allowed", false),
+    Std["seq"](
+      Std["let"]("actor", Std["arg"](0)),
+      Std["let"]("target", Std["arg"](1)),
+      Std["let"]("type", Std["arg"](2)),
+      Std["let"]("allowed", false),
 
       // 1. Admin Check
-      Core["if"](
-        Object["obj.get"](Core["var"]("actor"), "admin", false),
-        Core["set"]("allowed", true),
+      Std["if"](
+        Object["obj.get"](Std["var"]("actor"), "admin", false),
+        Std["set"]("allowed", true),
       ),
 
       // 2. Owner Check
-      Core["if"](
-        Core["=="](
-          Object["obj.get"](Core["var"]("target"), "owner", null),
-          Object["obj.get"](Core["var"]("actor"), "id", null),
+      Std["if"](
+        Boolean["=="](
+          Object["obj.get"](Std["var"]("target"), "owner", null),
+          Object["obj.get"](Std["var"]("actor"), "id", null),
         ),
-        Core["set"]("allowed", true),
+        Std["set"]("allowed", true),
       ),
 
       // 3. Explicit Permissions
-      Core["let"](
+      Std["let"](
         "perms",
-        Object["obj.get"](Core["var"]("target"), "permissions", null),
+        Object["obj.get"](Std["var"]("target"), "permissions", null),
       ),
-      Core["if"](
-        Core["var"]("perms"),
-        Core["seq"](
-          Core["let"](
+      Std["if"](
+        Std["var"]("perms"),
+        Std["seq"](
+          Std["let"](
             "explicit",
-            Object["obj.get"](Core["var"]("perms"), Core["var"]("type"), null),
+            Object["obj.get"](Std["var"]("perms"), Std["var"]("type"), null),
           ),
           // Public check
-          Core["if"](
-            Core["=="](Core["var"]("explicit"), true),
-            Core["set"]("allowed", true),
+          Std["if"](
+            Boolean["=="](Std["var"]("explicit"), true),
+            Std["set"]("allowed", true),
           ),
           // List check
-          Core["if"](
-            Core["=="](Core["typeof"](Core["var"]("explicit")), "array"),
-            Core["if"](
+          Std["if"](
+            Boolean["=="](Std["typeof"](Std["var"]("explicit")), "array"),
+            Std["if"](
               List["list.includes"](
-                Core["var"]("explicit"),
-                Object["obj.get"](Core["var"]("actor"), "id", null),
+                Std["var"]("explicit"),
+                Object["obj.get"](Std["var"]("actor"), "id", null),
               ),
-              Core["set"]("allowed", true),
+              Std["set"]("allowed", true),
             ),
           ),
         ),
       ),
 
       // 4. Cascading (Location Owner)
-      Core["if"](
-        Core["not"](Core["var"]("allowed")),
-        Core["seq"](
-          Core["let"](
+      Std["if"](
+        Boolean["not"](Std["var"]("allowed")),
+        Std["seq"](
+          Std["let"](
             "locId",
-            Object["obj.get"](Core["var"]("target"), "location", null),
+            Object["obj.get"](Std["var"]("target"), "location", null),
           ),
-          Core["if"](
-            Core["var"]("locId"),
-            Core["seq"](
-              Core["let"]("loc", Core["entity"](Core["var"]("locId"))),
-              Core["if"](
-                Core["=="](
-                  Object["obj.get"](Core["var"]("loc"), "owner", null),
-                  Object["obj.get"](Core["var"]("actor"), "id", null),
+          Std["if"](
+            Std["var"]("locId"),
+            Std["seq"](
+              Std["let"]("loc", Core["entity"](Std["var"]("locId"))),
+              Std["if"](
+                Boolean["=="](
+                  Object["obj.get"](Std["var"]("loc"), "owner", null),
+                  Object["obj.get"](Std["var"]("actor"), "id", null),
                 ),
-                Core["set"]("allowed", true),
+                Std["set"]("allowed", true),
               ),
             ),
           ),
         ),
       ),
 
-      Core["var"]("allowed"),
+      Std["var"]("allowed"),
     ),
   );
 
   addVerb(
     systemId,
     "get_available_verbs",
-    Core["seq"](
-      Core["let"]("player", Core["arg"](0)),
-      Core["let"]("verbs", List["list.new"]()),
-      Core["let"]("seen", Object["obj.new"]()),
+    Std["seq"](
+      Std["let"]("player", Std["arg"](0)),
+      Std["let"]("verbs", List["list.new"]()),
+      Std["let"]("seen", Object["obj.new"]()),
 
-      Core["let"](
+      Std["let"](
         "addVerbs",
-        Core["lambda"](
+        Std["lambda"](
           ["entityId"],
-          Core["seq"](
-            Core["let"](
+          Std["seq"](
+            Std["let"](
               "entityVerbs",
-              Core["verbs"](Core["entity"](Core["var"]("entityId"))),
+              Core["verbs"](Core["entity"](Std["var"]("entityId"))),
             ),
-            Core["for"](
+            Std["for"](
               "v",
-              Core["var"]("entityVerbs"),
-              Core["seq"](
-                Core["let"](
+              Std["var"]("entityVerbs"),
+              Std["seq"](
+                Std["let"](
                   "key",
                   Str["str.concat"](
-                    Object["obj.get"](Core["var"]("v"), "name"),
+                    Object["obj.get"](Std["var"]("v"), "name"),
                     ":",
-                    Core["var"]("entityId"),
+                    Std["var"]("entityId"),
                   ),
                 ),
-                Core["if"](
-                  Core["not"](
-                    Object["obj.has"](Core["var"]("seen"), Core["var"]("key")),
+                Std["if"](
+                  Boolean["not"](
+                    Object["obj.has"](Std["var"]("seen"), Std["var"]("key")),
                   ),
-                  Core["seq"](
+                  Std["seq"](
                     Object["obj.set"](
-                      Core["var"]("seen"),
-                      Core["var"]("key"),
+                      Std["var"]("seen"),
+                      Std["var"]("key"),
                       true,
                     ),
                     Object["obj.set"](
-                      Core["var"]("v"),
+                      Std["var"]("v"),
                       "source",
-                      Core["var"]("entityId"),
+                      Std["var"]("entityId"),
                     ),
-                    List["list.push"](Core["var"]("verbs"), Core["var"]("v")),
+                    List["list.push"](Std["var"]("verbs"), Std["var"]("v")),
                   ),
                 ),
               ),
@@ -173,85 +180,78 @@ export function seed() {
       ),
 
       // 1. Player verbs
-      Core["apply"](
-        Core["var"]("addVerbs"),
-        Object["obj.get"](Core["var"]("player"), "id"),
+      Std["apply"](
+        Std["var"]("addVerbs"),
+        Object["obj.get"](Std["var"]("player"), "id"),
       ),
 
       // 2. Room verbs
-      Core["let"](
+      Std["let"](
         "locationId",
-        Object["obj.get"](Core["var"]("player"), "location"),
+        Object["obj.get"](Std["var"]("player"), "location"),
       ),
-      Core["if"](
-        Core["var"]("locationId"),
-        Core["seq"](
-          Core["apply"](Core["var"]("addVerbs"), Core["var"]("locationId")),
+      Std["if"](
+        Std["var"]("locationId"),
+        Std["seq"](
+          Std["apply"](Std["var"]("addVerbs"), Std["var"]("locationId")),
 
           // 3. Items in Room
-          Core["let"]("room", Core["entity"](Core["var"]("locationId"))),
-          Core["let"](
+          Std["let"]("room", Core["entity"](Std["var"]("locationId"))),
+          Std["let"](
             "contents",
             Object["obj.get"](
-              Core["var"]("room"),
+              Std["var"]("room"),
               "contents",
               List["list.new"](),
             ),
           ),
-          Core["for"](
+          Std["for"](
             "itemId",
-            Core["var"]("contents"),
-            Core["apply"](Core["var"]("addVerbs"), Core["var"]("itemId")),
+            Std["var"]("contents"),
+            Std["apply"](Std["var"]("addVerbs"), Std["var"]("itemId")),
           ),
         ),
       ),
 
       // 4. Inventory verbs
-      Core["let"](
+      Std["let"](
         "inventory",
-        Object["obj.get"](
-          Core["var"]("player"),
-          "contents",
-          List["list.new"](),
-        ),
+        Object["obj.get"](Std["var"]("player"), "contents", List["list.new"]()),
       ),
-      Core["for"](
+      Std["for"](
         "itemId",
-        Core["var"]("inventory"),
-        Core["apply"](Core["var"]("addVerbs"), Core["var"]("itemId")),
+        Std["var"]("inventory"),
+        Std["apply"](Std["var"]("addVerbs"), Std["var"]("itemId")),
       ),
 
-      Core["var"]("verbs"),
+      Std["var"]("verbs"),
     ),
   );
 
   addVerb(
     entityBaseId,
     "find",
-    Core["seq"](
-      Core["let"]("query", Core["arg"](0)),
-      Core["let"](
-        "locationId",
-        Object["obj.get"](Core["caller"](), "location"),
-      ),
-      Core["let"]("location", Core["entity"](Core["var"]("locationId"))),
+    Std["seq"](
+      Std["let"]("query", Std["arg"](0)),
+      Std["let"]("locationId", Object["obj.get"](Std["caller"](), "location")),
+      Std["let"]("location", Core["entity"](Std["var"]("locationId"))),
       // Search contents only
       List["list.find"](
         Object["obj.get"](
-          Core["var"]("location"),
+          Std["var"]("location"),
           "contents",
           List["list.new"](),
         ),
-        Core["lambda"](
+        Std["lambda"](
           ["id"],
-          Core["seq"](
-            Core["let"](
+          Std["seq"](
+            Std["let"](
               "props",
-              Core["resolve_props"](Core["entity"](Core["var"]("id"))),
+              Core["resolve_props"](Core["entity"](Std["var"]("id"))),
             ),
-            Core["=="](
-              Object["obj.get"](Core["var"]("props"), "name"),
-              Core["var"]("query"),
+            Boolean["=="](
+              Object["obj.get"](Std["var"]("props"), "name"),
+              Std["var"]("query"),
             ),
           ),
         ),
@@ -262,31 +262,28 @@ export function seed() {
   addVerb(
     entityBaseId,
     "find_exit",
-    Core["seq"](
-      Core["let"]("query", Core["arg"](0)),
-      Core["let"](
-        "locationId",
-        Object["obj.get"](Core["caller"](), "location"),
-      ),
-      Core["let"]("location", Core["entity"](Core["var"]("locationId"))),
+    Std["seq"](
+      Std["let"]("query", Std["arg"](0)),
+      Std["let"]("locationId", Object["obj.get"](Std["caller"](), "location")),
+      Std["let"]("location", Core["entity"](Std["var"]("locationId"))),
       // Search exits
       List["list.find"](
-        Object["obj.get"](Core["var"]("location"), "exits"),
-        Core["lambda"](
+        Object["obj.get"](Std["var"]("location"), "exits"),
+        Std["lambda"](
           ["id"],
-          Core["seq"](
-            Core["let"](
+          Std["seq"](
+            Std["let"](
               "props",
-              Core["resolve_props"](Core["entity"](Core["var"]("id"))),
+              Core["resolve_props"](Core["entity"](Std["var"]("id"))),
             ),
-            Core["or"](
-              Core["=="](
-                Object["obj.get"](Core["var"]("props"), "name"),
-                Core["var"]("query"),
+            Boolean["or"](
+              Boolean["=="](
+                Object["obj.get"](Std["var"]("props"), "name"),
+                Std["var"]("query"),
               ),
-              Core["=="](
-                Object["obj.get"](Core["var"]("props"), "direction"),
-                Core["var"]("query"),
+              Boolean["=="](
+                Object["obj.get"](Std["var"]("props"), "direction"),
+                Std["var"]("query"),
               ),
             ),
           ),
@@ -298,59 +295,57 @@ export function seed() {
   addVerb(
     entityBaseId,
     "move",
-    Core["seq"](
-      Core["let"]("arg", Core["arg"](0)),
-      Core["if"](
-        Core["not"](Core["var"]("arg")),
-        Core["send"]("message", "Where do you want to go?"),
-        Core["seq"](
-          Core["let"]("destId", null),
-          Core["if"](
-            Core["=="](Core["typeof"](Core["var"]("arg")), "number"),
-            Core["let"]("destId", Core["var"]("arg")),
-            Core["seq"](
-              Core["let"](
+    Std["seq"](
+      Std["let"]("arg", Std["arg"](0)),
+      Std["if"](
+        Boolean["not"](Std["var"]("arg")),
+        Std["send"]("message", "Where do you want to go?"),
+        Std["seq"](
+          Std["let"]("destId", null),
+          Std["if"](
+            Boolean["=="](Std["typeof"](Std["var"]("arg")), "number"),
+            Std["let"]("destId", Std["var"]("arg")),
+            Std["seq"](
+              Std["let"](
                 "exitId",
-                Core["call"](Core["this"](), "find_exit", Core["var"]("arg")),
+                Core["call"](Std["this"](), "find_exit", Std["var"]("arg")),
               ),
-              Core["if"](
-                Core["var"]("exitId"),
-                Core["let"](
+              Std["if"](
+                Std["var"]("exitId"),
+                Std["let"](
                   "destId",
                   Object["obj.get"](
-                    Core["resolve_props"](
-                      Core["entity"](Core["var"]("exitId")),
-                    ),
+                    Core["resolve_props"](Core["entity"](Std["var"]("exitId"))),
                     "destination",
                   ),
                 ),
               ),
             ),
           ),
-          Core["if"](
-            Core["var"]("destId"),
-            Core["seq"](
-              Core["let"]("mover", Core["caller"]()),
+          Std["if"](
+            Std["var"]("destId"),
+            Std["seq"](
+              Std["let"]("mover", Std["caller"]()),
               // Recursive Check
-              Core["let"]("checkId", Core["var"]("destId")),
-              Core["let"]("isRecursive", false),
-              Core["while"](
-                Core["var"]("checkId"),
-                Core["seq"](
-                  Core["if"](
-                    Core["=="](
-                      Core["var"]("checkId"),
-                      Object["obj.get"](Core["var"]("mover"), "id"),
+              Std["let"]("checkId", Std["var"]("destId")),
+              Std["let"]("isRecursive", false),
+              Std["while"](
+                Std["var"]("checkId"),
+                Std["seq"](
+                  Std["if"](
+                    Boolean["=="](
+                      Std["var"]("checkId"),
+                      Object["obj.get"](Std["var"]("mover"), "id"),
                     ),
-                    Core["seq"](
-                      Core["set"]("isRecursive", true),
-                      Core["set"]("checkId", null), // Break
+                    Std["seq"](
+                      Std["set"]("isRecursive", true),
+                      Std["set"]("checkId", null), // Break
                     ),
                     // Step up
-                    Core["set"](
+                    Std["set"](
                       "checkId",
                       Object["obj.get"](
-                        Core["entity"](Core["var"]("checkId")),
+                        Core["entity"](Std["var"]("checkId")),
                         "location",
                         null,
                       ),
@@ -358,73 +353,70 @@ export function seed() {
                   ),
                 ),
               ),
-              Core["if"](
-                Core["var"]("isRecursive"),
-                Core["send"](
+              Std["if"](
+                Std["var"]("isRecursive"),
+                Std["send"](
                   "message",
                   "You can't put something inside itself.",
                 ),
-                Core["seq"](
-                  Core["let"](
+                Std["seq"](
+                  Std["let"](
                     "oldLocId",
-                    Object["obj.get"](Core["var"]("mover"), "location"),
+                    Object["obj.get"](Std["var"]("mover"), "location"),
                   ),
-                  Core["let"](
-                    "oldLoc",
-                    Core["entity"](Core["var"]("oldLocId")),
-                  ),
-                  Core["let"]("newLoc", Core["entity"](Core["var"]("destId"))),
+                  Std["let"]("oldLoc", Core["entity"](Std["var"]("oldLocId"))),
+                  Std["let"]("newLoc", Core["entity"](Std["var"]("destId"))),
                   Core["set_entity"](
                     // Update mover
                     Object["obj.set"](
-                      Core["var"]("mover"),
+                      Std["var"]("mover"),
                       "location",
-                      Core["var"]("destId"),
+                      Std["var"]("destId"),
                     ),
                     // Update old location
                     Object["obj.set"](
-                      Core["var"]("oldLoc"),
+                      Std["var"]("oldLoc"),
                       "contents",
                       List["list.filter"](
                         Object["obj.get"](
-                          Core["var"]("oldLoc"),
+                          Std["var"]("oldLoc"),
                           "contents",
                           List["list.new"](),
                         ),
-                        Core["lambda"](
+                        Std["lambda"](
                           ["id"],
-                          Core["!="](
-                            Core["var"]("id"),
-                            Object["obj.get"](Core["var"]("mover"), "id"),
+                          Boolean["!="](
+                            Std["var"]("id"),
+                            Object["obj.get"](Std["var"]("mover"), "id"),
                           ),
                         ),
                       ),
                     ),
                     // Update new location
                     Object["obj.set"](
-                      Core["var"]("newLoc"),
+                      Std["var"]("newLoc"),
                       "contents",
                       List["list.concat"](
                         Object["obj.get"](
-                          Core["var"]("newLoc"),
+                          Std["var"]("newLoc"),
                           "contents",
                           List["list.new"](),
                         ),
                         List["list.new"](
-                          Object["obj.get"](Core["var"]("mover"), "id"),
+                          Object["obj.get"](Std["var"]("mover"), "id"),
                         ),
                       ),
                     ),
                   ),
-                  Core["send"](
+                  Std["send"](
                     "room_id",
-                    Object["obj.new"]("roomId", Core["var"]("destId")),
+                    Object["obj.new"]("roomId", Std["var"]("destId")),
                   ),
-                  Core["call"](Core["var"]("mover"), "look"),
+                  Core["call"](Std["var"]("mover"), "look"),
                 ),
               ),
             ),
-            Core["send"]("message", "That way leads nowhere."),
+            Std["send"]("message", "That way leads nowhere."),
           ),
         ),
       ),
@@ -434,15 +426,15 @@ export function seed() {
   addVerb(
     entityBaseId,
     "say",
-    Core["send"]("message", "Say is not yet implemented."),
+    Std["send"]("message", "Say is not yet implemented."),
   );
 
   addVerb(
     entityBaseId,
     "tell",
-    Core["seq"](
-      Core["let"]("msg", Core["arg"](0)),
-      Core["send"]("message", Core["var"]("msg")),
+    Std["seq"](
+      Std["let"]("msg", Std["arg"](0)),
+      Std["send"]("message", Std["var"]("msg")),
     ),
   );
 
@@ -511,83 +503,79 @@ export function seed() {
   addVerb(
     playerBaseId,
     "look",
-    Core["if"](
-      List["list.empty"](Core["args"]()),
-      Core["seq"](
-        Core["let"](
+    Std["if"](
+      List["list.empty"](Std["args"]()),
+      Std["seq"](
+        Std["let"](
           "room",
           Core["resolve_props"](
-            Core["entity"](Object["obj.get"](Core["caller"](), "location")),
+            Core["entity"](Object["obj.get"](Std["caller"](), "location")),
           ),
         ),
-        Core["let"](
+        Std["let"](
           "contents",
-          Object["obj.get"](
-            Core["var"]("room"),
-            "contents",
-            List["list.new"](),
-          ),
+          Object["obj.get"](Std["var"]("room"), "contents", List["list.new"]()),
         ),
-        Core["let"](
+        Std["let"](
           "exits",
-          Object["obj.get"](Core["var"]("room"), "exits", List["list.new"]()),
+          Object["obj.get"](Std["var"]("room"), "exits", List["list.new"]()),
         ),
-        Core["let"](
+        Std["let"](
           "resolvedContents",
           List["list.map"](
-            Core["var"]("contents"),
-            Core["lambda"](
+            Std["var"]("contents"),
+            Std["lambda"](
               ["id"],
-              Core["resolve_props"](Core["entity"](Core["var"]("id"))),
+              Core["resolve_props"](Core["entity"](Std["var"]("id"))),
             ),
           ),
         ),
-        Core["let"](
+        Std["let"](
           "resolvedExits",
           List["list.map"](
-            Core["var"]("exits"),
-            Core["lambda"](
+            Std["var"]("exits"),
+            Std["lambda"](
               ["id"],
-              Core["resolve_props"](Core["entity"](Core["var"]("id"))),
+              Core["resolve_props"](Core["entity"](Std["var"]("id"))),
             ),
           ),
         ),
-        Core["send"](
+        Std["send"](
           "update",
           Object["obj.new"](
             "entities",
             List["list.concat"](
-              List["list.new"](Core["var"]("room")),
+              List["list.new"](Std["var"]("room")),
               List["list.concat"](
-                Core["var"]("resolvedContents"),
-                Core["var"]("resolvedExits"),
+                Std["var"]("resolvedContents"),
+                Std["var"]("resolvedExits"),
               ),
             ),
           ),
         ),
       ),
-      Core["seq"](
-        Core["let"]("targetName", Core["arg"](0)),
-        Core["let"](
+      Std["seq"](
+        Std["let"]("targetName", Std["arg"](0)),
+        Std["let"](
           "targetId",
-          Core["call"](Core["caller"](), "find", Core["var"]("targetName")),
+          Core["call"](Std["caller"](), "find", Std["var"]("targetName")),
         ),
-        Core["if"](
-          Core["var"]("targetId"),
-          Core["seq"](
-            Core["let"](
+        Std["if"](
+          Std["var"]("targetId"),
+          Std["seq"](
+            Std["let"](
               "target",
-              Core["resolve_props"](Core["entity"](Core["var"]("targetId"))),
+              Core["resolve_props"](Core["entity"](Std["var"]("targetId"))),
             ),
-            Core["send"](
+            Std["send"](
               "update",
               Object["obj.new"](
                 "entities",
-                List["list.new"](Core["var"]("target")),
+                List["list.new"](Std["var"]("target")),
               ),
             ),
           ),
-          Core["send"]("message", "You don't see that here."),
+          Std["send"]("message", "You don't see that here."),
         ),
       ),
     ),
@@ -596,36 +584,32 @@ export function seed() {
   addVerb(
     playerBaseId,
     "inventory",
-    Core["seq"](
-      Core["let"]("player", Core["resolve_props"](Core["caller"]())),
-      Core["let"](
+    Std["seq"](
+      Std["let"]("player", Core["resolve_props"](Std["caller"]())),
+      Std["let"](
         "contents",
-        Object["obj.get"](
-          Core["var"]("player"),
-          "contents",
-          List["list.new"](),
-        ),
+        Object["obj.get"](Std["var"]("player"), "contents", List["list.new"]()),
       ),
-      Core["let"](
+      Std["let"](
         "resolvedItems",
         List["list.map"](
-          Core["var"]("contents"),
-          Core["lambda"](
+          Std["var"]("contents"),
+          Std["lambda"](
             ["id"],
-            Core["resolve_props"](Core["entity"](Core["var"]("id"))),
+            Core["resolve_props"](Core["entity"](Std["var"]("id"))),
           ),
         ),
       ),
-      Core["let"](
+      Std["let"](
         "finalList",
         List["list.concat"](
-          List["list.new"](Core["var"]("player")),
-          Core["var"]("resolvedItems"),
+          List["list.new"](Std["var"]("player")),
+          Std["var"]("resolvedItems"),
         ),
       ),
-      Core["send"](
+      Std["send"](
         "update",
-        Object["obj.new"]("entities", Core["var"]("finalList")),
+        Object["obj.new"]("entities", Std["var"]("finalList")),
       ),
     ),
   );
@@ -633,98 +617,98 @@ export function seed() {
   addVerb(
     playerBaseId,
     "whoami",
-    Core["send"](
+    Std["send"](
       "player_id",
-      Object["obj.new"]("playerId", Object["obj.get"](Core["caller"](), "id")),
+      Object["obj.new"]("playerId", Object["obj.get"](Std["caller"](), "id")),
     ),
   );
 
   addVerb(
     playerBaseId,
     "dig",
-    Core["seq"](
-      Core["let"]("direction", Core["arg"](0)),
-      Core["let"](
+    Std["seq"](
+      Std["let"]("direction", Std["arg"](0)),
+      Std["let"](
         "roomName",
-        Str["str.join"](List["list.slice"](Core["args"](), 1), " "),
+        Str["str.join"](List["list.slice"](Std["args"](), 1), " "),
       ),
-      Core["if"](
-        Core["not"](Core["var"]("direction")),
-        Core["send"]("message", "Where do you want to dig?"),
-        Core["seq"](
-          Core["if"](
+      Std["if"](
+        Boolean["not"](Std["var"]("direction")),
+        Std["send"]("message", "Where do you want to dig?"),
+        Std["seq"](
+          Std["if"](
             Core["call"](
               Core["entity"](systemId),
               "can_edit",
-              Core["caller"](),
-              Core["entity"](Object["obj.get"](Core["caller"](), "location")),
+              Std["caller"](),
+              Core["entity"](Object["obj.get"](Std["caller"](), "location")),
               "edit",
             ),
-            Core["seq"](
-              Core["let"]("newRoomData", Object["obj.new"]()),
+            Std["seq"](
+              Std["let"]("newRoomData", Object["obj.new"]()),
               Object["obj.set"](
-                Core["var"]("newRoomData"),
+                Std["var"]("newRoomData"),
                 "name",
-                Core["var"]("roomName"),
+                Std["var"]("roomName"),
               ),
-              Core["let"](
+              Std["let"](
                 "newRoomId",
-                Core["create"](Core["var"]("newRoomData")),
+                Core["create"](Std["var"]("newRoomData")),
               ),
 
               // Create exit
-              Core["let"]("exitData", Object["obj.new"]()),
+              Std["let"]("exitData", Object["obj.new"]()),
               Object["obj.set"](
-                Core["var"]("exitData"),
+                Std["var"]("exitData"),
                 "name",
-                Core["var"]("direction"),
+                Std["var"]("direction"),
               ),
               Object["obj.set"](
-                Core["var"]("exitData"),
+                Std["var"]("exitData"),
                 "location",
-                Object["obj.get"](Core["caller"](), "location"),
+                Object["obj.get"](Std["caller"](), "location"),
               ),
               Object["obj.set"](
-                Core["var"]("exitData"),
+                Std["var"]("exitData"),
                 "direction",
-                Core["var"]("direction"),
+                Std["var"]("direction"),
               ),
               Object["obj.set"](
-                Core["var"]("exitData"),
+                Std["var"]("exitData"),
                 "destination",
-                Core["var"]("newRoomId"),
+                Std["var"]("newRoomId"),
               ),
-              Core["let"]("exitId", Core["create"](Core["var"]("exitData"))),
+              Std["let"]("exitId", Core["create"](Std["var"]("exitData"))),
 
               // Update current room exits
-              Core["let"](
+              Std["let"](
                 "currentRoom",
-                Core["entity"](Object["obj.get"](Core["caller"](), "location")),
+                Core["entity"](Object["obj.get"](Std["caller"](), "location")),
               ),
-              Core["let"](
+              Std["let"](
                 "currentExits",
                 Object["obj.get"](
-                  Core["var"]("currentRoom"),
+                  Std["var"]("currentRoom"),
                   "exits",
                   List["list.new"](),
                 ),
               ),
               List["list.push"](
-                Core["var"]("currentExits"),
-                Core["var"]("exitId"),
+                Std["var"]("currentExits"),
+                Std["var"]("exitId"),
               ),
               Core["set_entity"](
                 Object["obj.set"](
-                  Core["var"]("currentRoom"),
+                  Std["var"]("currentRoom"),
                   "exits",
-                  Core["var"]("currentExits"),
+                  Std["var"]("currentExits"),
                 ),
               ),
 
               // Move player
-              Core["call"](Core["caller"](), "move", Core["var"]("direction")),
+              Core["call"](Std["caller"](), "move", Std["var"]("direction")),
             ),
-            Core["send"]("message", "You do not have permission to dig here."),
+            Std["send"]("message", "You do not have permission to dig here."),
           ),
         ),
       ),
@@ -734,65 +718,65 @@ export function seed() {
   addVerb(
     playerBaseId,
     "create",
-    Core["seq"](
-      Core["let"]("name", Core["arg"](0)),
-      Core["if"](
-        Core["not"](Core["var"]("name")),
-        Core["send"]("message", "What do you want to create?"),
-        Core["seq"](
-          Core["if"](
+    Std["seq"](
+      Std["let"]("name", Std["arg"](0)),
+      Std["if"](
+        Boolean["not"](Std["var"]("name")),
+        Std["send"]("message", "What do you want to create?"),
+        Std["seq"](
+          Std["if"](
             Core["call"](
               Core["entity"](systemId),
               "can_edit",
-              Core["caller"](),
-              Core["entity"](Object["obj.get"](Core["caller"](), "location")),
+              Std["caller"](),
+              Core["entity"](Object["obj.get"](Std["caller"](), "location")),
               "edit",
             ),
-            Core["seq"](
-              Core["let"]("itemData", Object["obj.new"]()),
+            Std["seq"](
+              Std["let"]("itemData", Object["obj.new"]()),
               Object["obj.set"](
-                Core["var"]("itemData"),
+                Std["var"]("itemData"),
                 "name",
-                Core["var"]("name"),
+                Std["var"]("name"),
               ),
               Object["obj.set"](
-                Core["var"]("itemData"),
+                Std["var"]("itemData"),
                 "location",
-                Object["obj.get"](Core["caller"](), "location"),
+                Object["obj.get"](Std["caller"](), "location"),
               ),
-              Core["let"]("itemId", Core["create"](Core["var"]("itemData"))),
+              Std["let"]("itemId", Core["create"](Std["var"]("itemData"))),
 
               // Update room contents
-              Core["let"](
+              Std["let"](
                 "room",
-                Core["entity"](Object["obj.get"](Core["caller"](), "location")),
+                Core["entity"](Object["obj.get"](Std["caller"](), "location")),
               ),
-              Core["let"](
+              Std["let"](
                 "contents",
                 Object["obj.get"](
-                  Core["var"]("room"),
+                  Std["var"]("room"),
                   "contents",
                   List["list.new"](),
                 ),
               ),
-              List["list.push"](Core["var"]("contents"), Core["var"]("itemId")),
+              List["list.push"](Std["var"]("contents"), Std["var"]("itemId")),
               Core["set_entity"](
                 Object["obj.set"](
-                  Core["var"]("room"),
+                  Std["var"]("room"),
                   "contents",
-                  Core["var"]("contents"),
+                  Std["var"]("contents"),
                 ),
               ),
 
-              Core["send"](
+              Std["send"](
                 "message",
-                Str["str.concat"]("You create ", Core["var"]("name"), "."),
+                Str["str.concat"]("You create ", Std["var"]("name"), "."),
               ),
-              Core["call"](Core["caller"](), "look"),
+              Core["call"](Std["caller"](), "look"),
               // Return item ID
-              Core["var"]("itemId"),
+              Std["var"]("itemId"),
             ),
-            Core["send"](
+            Std["send"](
               "message",
               "You do not have permission to create here.",
             ),
@@ -805,51 +789,51 @@ export function seed() {
   addVerb(
     playerBaseId,
     "set",
-    Core["seq"](
-      Core["let"]("targetName", Core["arg"](0)),
-      Core["let"]("propName", Core["arg"](1)),
-      Core["let"]("value", Core["arg"](2)),
-      Core["if"](
-        Core["or"](
-          Core["not"](Core["var"]("targetName")),
-          Core["not"](Core["var"]("propName")),
+    Std["seq"](
+      Std["let"]("targetName", Std["arg"](0)),
+      Std["let"]("propName", Std["arg"](1)),
+      Std["let"]("value", Std["arg"](2)),
+      Std["if"](
+        Boolean["or"](
+          Boolean["not"](Std["var"]("targetName")),
+          Boolean["not"](Std["var"]("propName")),
         ),
-        Core["send"]("message", "Usage: set <target> <prop> <value>"),
-        Core["seq"](
-          Core["let"](
+        Std["send"]("message", "Usage: set <target> <prop> <value>"),
+        Std["seq"](
+          Std["let"](
             "targetId",
-            Core["call"](Core["this"](), "find", Core["var"]("targetName")),
+            Core["call"](Std["this"](), "find", Std["var"]("targetName")),
           ),
-          Core["if"](
-            Core["var"]("targetId"),
-            Core["seq"](
-              Core["if"](
+          Std["if"](
+            Std["var"]("targetId"),
+            Std["seq"](
+              Std["if"](
                 Core["call"](
                   Core["entity"](systemId),
                   "can_edit",
-                  Core["caller"](),
-                  Core["entity"](Core["var"]("targetId")),
+                  Std["caller"](),
+                  Core["entity"](Std["var"]("targetId")),
                   "edit",
                 ),
-                Core["seq"](
+                Std["seq"](
                   Core["set_entity"](
                     Object["obj.merge"](
-                      Core["entity"](Core["var"]("targetId")),
+                      Core["entity"](Std["var"]("targetId")),
                       Object["obj.new"](
-                        Core["var"]("propName"),
-                        Core["var"]("value"),
+                        Std["var"]("propName"),
+                        Std["var"]("value"),
                       ),
                     ),
                   ),
-                  Core["send"]("message", "Property set."),
+                  Std["send"]("message", "Property set."),
                 ),
-                Core["send"](
+                Std["send"](
                   "message",
                   "You do not have permission to edit this object.",
                 ),
               ),
             ),
-            Core["send"]("message", "I don't see that here."),
+            Std["send"]("message", "I don't see that here."),
           ),
         ),
       ),
@@ -1093,7 +1077,7 @@ export function seed() {
   addVerb(
     watchId,
     "tell",
-    Core["send"]("message", Time["time.format"](Time["time.now"](), "time")),
+    Std["send"]("message", Time["time.format"](Time["time.now"](), "time")),
   );
 
   // Teleporter Item
@@ -1110,33 +1094,33 @@ export function seed() {
   addVerb(
     teleporterId,
     "teleport",
-    Core["seq"](
-      Core["let"]("mover", Core["caller"]()),
-      Core["let"]("destId", Object["obj.get"](Core["this"](), "destination")),
-      Core["let"](
+    Std["seq"](
+      Std["let"]("mover", Std["caller"]()),
+      Std["let"]("destId", Object["obj.get"](Std["this"](), "destination")),
+      Std["let"](
         "oldLocId",
-        Object["obj.get"](Core["var"]("mover"), "location"),
+        Object["obj.get"](Std["var"]("mover"), "location"),
       ),
-      Core["let"]("oldLoc", Core["entity"](Core["var"]("oldLocId"))),
-      Core["let"]("newLoc", Core["entity"](Core["var"]("destId"))),
+      Std["let"]("oldLoc", Core["entity"](Std["var"]("oldLocId"))),
+      Std["let"]("newLoc", Core["entity"](Std["var"]("destId"))),
       Core["set_entity"](
         // Update mover
         Object["obj.merge"](
-          Core["var"]("mover"),
-          Object["obj.new"]("location", Core["var"]("destId")),
+          Std["var"]("mover"),
+          Object["obj.new"]("location", Std["var"]("destId")),
         ),
         // Update old location
         Object["obj.merge"](
-          Core["var"]("oldLoc"),
+          Std["var"]("oldLoc"),
           Object["obj.new"](
             "contents",
             List["list.filter"](
-              Object["obj.get"](Core["var"]("oldLoc"), "contents"),
-              Core["lambda"](
+              Object["obj.get"](Std["var"]("oldLoc"), "contents"),
+              Std["lambda"](
                 ["id"],
-                Core["!="](
-                  Core["var"]("id"),
-                  Object["obj.get"](Core["var"]("mover"), "id"),
+                Boolean["!="](
+                  Std["var"]("id"),
+                  Object["obj.get"](Std["var"]("mover"), "id"),
                 ),
               ),
             ),
@@ -1144,17 +1128,17 @@ export function seed() {
         ),
         // Update new location
         Object["obj.merge"](
-          Core["var"]("newLoc"),
+          Std["var"]("newLoc"),
           Object["obj.new"](
             "contents",
             List["list.concat"](
-              Object["obj.get"](Core["var"]("newLoc"), "contents"),
-              List["list.new"](Object["obj.get"](Core["var"]("mover"), "id")),
+              Object["obj.get"](Std["var"]("newLoc"), "contents"),
+              List["list.new"](Object["obj.get"](Std["var"]("mover"), "id")),
             ),
           ),
         ),
       ),
-      Core["send"]("message", "Whoosh! You have been teleported."),
+      Std["send"]("message", "Whoosh! You have been teleported."),
     ),
   );
 
@@ -1172,7 +1156,7 @@ export function seed() {
     statusId,
     "check",
     // world.entities missing
-    Core["send"]("message", "Status check disabled."),
+    Std["send"]("message", "Status check disabled."),
   );
 
   console.log("Seeding complete!");
@@ -1199,12 +1183,12 @@ export function seed() {
     colorLibId,
     "random_color",
     List["list.get"](
-      Object["obj.get"](Core["this"](), "colors"),
+      Object["obj.get"](Std["this"](), "colors"),
       // random(0, len-1)
-      Core["random"](
+      Math["random"](
         0,
-        Core["-"](
-          List["list.len"](Object["obj.get"](Core["this"](), "colors")),
+        Math["-"](
+          List["list.len"](Object["obj.get"](Std["this"](), "colors")),
           1,
         ),
       ),
@@ -1227,18 +1211,15 @@ export function seed() {
   addVerb(
     moodRingId,
     "update_color",
-    Core["seq"](
-      Core["let"]("libId", Object["obj.get"](Core["this"](), "color_lib")),
-      Core["let"](
-        "newColor",
-        Core["call"](Core["var"]("libId"), "random_color"),
-      ),
+    Std["seq"](
+      Std["let"]("libId", Object["obj.get"](Std["this"](), "color_lib")),
+      Std["let"]("newColor", Core["call"](Std["var"]("libId"), "random_color")),
       Core["set_entity"](
         Object["obj.set"](
-          Core["this"](),
+          Std["this"](),
           "adjectives",
           List["list.new"](
-            Str["str.concat"]("color:", Core["var"]("newColor")),
+            Str["str.concat"]("color:", Std["var"]("newColor")),
             "material:silver",
           ),
         ),
@@ -1277,7 +1258,7 @@ export function seed() {
       Str["str.concat"](
         "color:hsl(",
         Str["str.concat"](
-          Core["*"](Time["time.to_timestamp"](Time["time.now"]()), 0.1),
+          Math["*"](Time["time.to_timestamp"](Time["time.now"]()), 0.1),
           ", 100%, 50%)",
         ),
       ), // Rotating hue
@@ -1295,9 +1276,9 @@ export function seed() {
   addVerb(
     specialWatchId,
     "tick",
-    Core["seq"](
+    Std["seq"](
       // broadcast missing
-      Core["send"](
+      Std["send"](
         "message",
         Str["str.concat"](
           "Tick Tock: ",
@@ -1325,9 +1306,9 @@ export function seed() {
   addVerb(
     clockId,
     "tick",
-    Core["seq"](
+    Std["seq"](
       // broadcast missing
-      Core["send"](
+      Std["send"](
         "message",
         Str["str.concat"](
           "BONG! It is ",
@@ -1349,9 +1330,9 @@ export function seed() {
   addVerb(
     towerId,
     "toll",
-    Core["seq"](
+    Std["seq"](
       // broadcast missing
-      Core["send"](
+      Std["send"](
         "message",
         Str["str.concat"](
           "The Clock Tower tolls: ",
@@ -1380,7 +1361,7 @@ export function seed() {
     mailboxProtoId,
     "deposit",
     // give missing
-    Core["send"]("message", "Deposit disabled."),
+    Std["send"]("message", "Deposit disabled."),
     { call: "public" },
   ); // Anyone can call deposit
 
@@ -1393,4 +1374,11 @@ export function seed() {
     },
     mailboxProtoId,
   );
+  // 5. Create Items
+  seedItems(voidId);
+
+  // 6. Create Hotel
+  seedHotel(voidId, voidId);
+
+  console.log("Database seeded successfully.");
 }

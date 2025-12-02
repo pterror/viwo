@@ -5,15 +5,16 @@ import {
   evaluate,
   getOpcodeMetadata,
   registerLibrary,
-} from "./scripting/interpreter";
-import * as Core from "./scripting/lib/core";
-import * as List from "./scripting/lib/list";
-import * as ObjectLib from "./scripting/lib/object";
-import * as StringLib from "./scripting/lib/string";
-import * as Time from "./scripting/lib/time";
-import * as MathOps from "./scripting/lib/math";
-import * as BooleanOps from "./scripting/lib/boolean";
-import { seed } from "./seed";
+  ListLib,
+  ObjectLib,
+  StringLib,
+  TimeLib,
+  MathLib,
+  BooleanLib,
+  StdLib,
+} from "@viwo/scripting";
+import * as Core from "./runtime/lib/core";
+
 import { PluginManager, CommandContext } from "./plugin";
 import { scheduler } from "./scheduler";
 import {
@@ -26,19 +27,23 @@ import {
 export { PluginManager };
 export type { CommandContext };
 export type { Plugin, PluginContext } from "./plugin";
+export { Core as CoreLib };
+export { db } from "./db";
+export { createEntity, getEntity, addVerb, updateEntity } from "./repo";
 
 export const pluginManager = new PluginManager();
 
 // Registry of connected clients: PlayerID -> WebSocket
 const clients = new Map<number, Bun.ServerWebSocket<{ userId: number }>>();
 
+registerLibrary(StdLib);
 registerLibrary(Core);
-registerLibrary(List);
+registerLibrary(ListLib);
 registerLibrary(ObjectLib);
 registerLibrary(StringLib);
-registerLibrary(Time);
-registerLibrary(MathOps);
-registerLibrary(BooleanOps);
+registerLibrary(TimeLib);
+registerLibrary(MathLib);
+registerLibrary(BooleanLib);
 
 // Initialize scheduler
 // Initialize scheduler
@@ -57,11 +62,11 @@ scheduler.setSendFactory((entityId: number) => {
   };
 });
 
-// Start scheduler
-scheduler.start(100);
+// Scheduler is started by the application (server/client)
+export { scheduler } from "./scheduler";
 
 // Seed the database
-seed();
+export { seed } from "./seed";
 
 /**
  * Starts the Viwo Core Server.

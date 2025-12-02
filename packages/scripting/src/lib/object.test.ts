@@ -6,15 +6,19 @@ import {
   ScriptError,
   createScriptContext,
 } from "../interpreter";
-import * as Core from "./core";
+import * as Core from "./std";
 import * as ObjectLib from "./object";
-import * as String from "./string"; // Needed for str.concat in flatMap test
+import * as String from "./string";
+import * as MathLib from "./math";
+import * as BooleanLib from "./boolean";
 import { createLibraryTester } from "./test-utils";
 
 createLibraryTester(ObjectLib, "Object Library", (test) => {
   registerLibrary(Core);
   registerLibrary(ObjectLib);
   registerLibrary(String);
+  registerLibrary(MathLib);
+  registerLibrary(BooleanLib);
 
   let ctx: ScriptContext;
 
@@ -96,7 +100,7 @@ createLibraryTester(ObjectLib, "Object Library", (test) => {
     // (lambda (val key) (+ val 1))
     const inc = Core["lambda"](
       ["val", "key"],
-      Core["+"](Core["var"]("val"), 1),
+      MathLib["+"](Core["var"]("val"), 1),
     );
     expect(
       await evaluate(ObjectLib["obj.map"]({ a: 1, b: 2 }, inc), ctx),
@@ -110,7 +114,7 @@ createLibraryTester(ObjectLib, "Object Library", (test) => {
     // (lambda (val key) (> val 1))
     const gt1 = Core["lambda"](
       ["val", "key"],
-      Core[">"](Core["var"]("val"), 1),
+      BooleanLib[">"](Core["var"]("val"), 1),
     );
     expect(
       await evaluate(ObjectLib["obj.filter"]({ a: 1, b: 2 }, gt1), ctx),
@@ -123,7 +127,7 @@ createLibraryTester(ObjectLib, "Object Library", (test) => {
     // (lambda (acc val key) (+ acc val))
     const sum = Core["lambda"](
       ["acc", "val", "key"],
-      Core["+"](Core["var"]("acc"), Core["var"]("val")),
+      MathLib["+"](Core["var"]("acc"), Core["var"]("val")),
     );
     expect(
       await evaluate(ObjectLib["obj.reduce"]({ a: 1, b: 2 }, sum, 0), ctx),

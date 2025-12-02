@@ -1,14 +1,20 @@
 import { describe, it, expect, beforeEach } from "bun:test";
-import { createScriptContext, evaluate, registerLibrary } from "./interpreter";
-import * as Core from "./lib/core";
-import * as List from "./lib/list";
-import * as String from "./lib/string";
-import * as Object from "./lib/object";
+import {
+  createScriptContext,
+  evaluate,
+  registerLibrary,
+  StdLib as Std,
+  ListLib as List,
+  StringLib as String,
+  ObjectLib as Object,
+  BooleanLib,
+} from "@viwo/scripting";
 import { Entity } from "@viwo/shared/jsonrpc";
 import { addVerb, createEntity, getEntity } from "../repo";
+import * as CoreLib from "../runtime/lib/core";
 
 describe("Book Item Scripting", () => {
-  registerLibrary(Core);
+  registerLibrary(Std);
   registerLibrary(List);
   registerLibrary(String);
   registerLibrary(Object);
@@ -38,19 +44,19 @@ describe("Book Item Scripting", () => {
     caller = getEntity(callerId)!;
 
     // Add tell verb
-    addVerb(callerId, "tell", Core["send"]("message", Core["arg"](0)));
+    addVerb(callerId, "tell", Std["send"]("message", Std["arg"](0)));
   });
 
   it("should list chapters", async () => {
-    const script = Core["seq"](
-      Core["let"]("chapters", Object["obj.get"](Core["this"](), "chapters")),
-      Core["call"](
-        Core["caller"](),
+    const script = Std["seq"](
+      Std["let"]("chapters", Object["obj.get"](Std["this"](), "chapters")),
+      CoreLib["call"](
+        Std["caller"](),
         "tell",
         String["str.join"](
           List["list.map"](
-            Core["var"]("chapters"),
-            Core["lambda"](["c"], Object["obj.get"](Core["var"]("c"), "title")),
+            Std["var"]("chapters"),
+            Std["lambda"](["c"], Object["obj.get"](Std["var"]("c"), "title")),
           ),
           "\n",
         ),
@@ -69,26 +75,26 @@ describe("Book Item Scripting", () => {
   });
 
   it("should read a chapter", async () => {
-    const script = Core["seq"](
-      Core["let"]("index", Core["arg"](0)),
-      Core["let"]("chapters", Object["obj.get"](Core["this"](), "chapters")),
-      Core["let"](
+    const script = Std["seq"](
+      Std["let"]("index", Std["arg"](0)),
+      Std["let"]("chapters", Object["obj.get"](Std["this"](), "chapters")),
+      Std["let"](
         "chapter",
-        List["list.get"](Core["var"]("chapters"), Core["var"]("index")),
+        List["list.get"](Std["var"]("chapters"), Std["var"]("index")),
       ),
-      Core["if"](
-        Core["var"]("chapter"),
-        Core["call"](
-          Core["caller"](),
+      Std["if"](
+        Std["var"]("chapter"),
+        CoreLib["call"](
+          Std["caller"](),
           "tell",
           String["str.concat"](
             "Chapter: ",
-            Object["obj.get"](Core["var"]("chapter"), "title"),
+            Object["obj.get"](Std["var"]("chapter"), "title"),
             "\n\n",
-            Object["obj.get"](Core["var"]("chapter"), "content"),
+            Object["obj.get"](Std["var"]("chapter"), "content"),
           ),
         ),
-        Core["call"](Core["caller"](), "tell", "Chapter not found."),
+        CoreLib["call"](Std["caller"](), "tell", "Chapter not found."),
       ),
     );
 
@@ -120,26 +126,22 @@ describe("Book Item Scripting", () => {
   });
 
   it("should add a chapter", async () => {
-    const script = Core["seq"](
-      Core["let"]("title", Core["arg"](0)),
-      Core["let"]("content", Core["arg"](1)),
-      Core["let"]("chapters", Object["obj.get"](Core["this"](), "chapters")),
-      Core["let"]("newChapter", {}),
+    const script = Std["seq"](
+      Std["let"]("title", Std["arg"](0)),
+      Std["let"]("content", Std["arg"](1)),
+      Std["let"]("chapters", Object["obj.get"](Std["this"](), "chapters")),
+      Std["let"]("newChapter", {}),
+      Object["obj.set"](Std["var"]("newChapter"), "title", Std["var"]("title")),
       Object["obj.set"](
-        Core["var"]("newChapter"),
-        "title",
-        Core["var"]("title"),
-      ),
-      Object["obj.set"](
-        Core["var"]("newChapter"),
+        Std["var"]("newChapter"),
         "content",
-        Core["var"]("content"),
+        Std["var"]("content"),
       ),
-      List["list.push"](Core["var"]("chapters"), Core["var"]("newChapter")),
-      Core["set_entity"](
-        Object["obj.set"](Core["this"](), "chapters", Core["var"]("chapters")),
+      List["list.push"](Std["var"]("chapters"), Std["var"]("newChapter")),
+      CoreLib["set_entity"](
+        Object["obj.set"](Std["this"](), "chapters", Std["var"]("chapters")),
       ),
-      Core["call"](Core["caller"](), "tell", "Chapter added."),
+      CoreLib["call"](Std["caller"](), "tell", "Chapter added."),
     );
 
     await evaluate(
@@ -157,46 +159,43 @@ describe("Book Item Scripting", () => {
   });
 
   it("should search chapters", async () => {
-    const script = Core["seq"](
-      Core["let"]("query", Core["arg"](0)),
-      Core["let"]("chapters", Object["obj.get"](Core["this"](), "chapters")),
-      Core["let"](
+    const script = Std["seq"](
+      Std["let"]("query", Std["arg"](0)),
+      Std["let"]("chapters", Object["obj.get"](Std["this"](), "chapters")),
+      Std["let"](
         "results",
         List["list.filter"](
-          Core["var"]("chapters"),
-          Core["lambda"](
+          Std["var"]("chapters"),
+          Std["lambda"](
             ["c"],
-            Core["or"](
+            BooleanLib["or"](
               String["str.includes"](
                 String["str.lower"](
-                  Object["obj.get"](Core["var"]("c"), "title"),
+                  Object["obj.get"](Std["var"]("c"), "title"),
                 ),
-                String["str.lower"](Core["var"]("query")),
+                String["str.lower"](Std["var"]("query")),
               ),
               String["str.includes"](
                 String["str.lower"](
-                  Object["obj.get"](Core["var"]("c"), "content"),
+                  Object["obj.get"](Std["var"]("c"), "content"),
                 ),
-                String["str.lower"](Core["var"]("query")),
+                String["str.lower"](Std["var"]("query")),
               ),
             ),
           ),
         ),
       ),
-      Core["call"](
-        Core["caller"](),
+      CoreLib["call"](
+        Std["caller"](),
         "tell",
         String["str.concat"](
           "Found ",
-          List["list.len"](Core["var"]("results")),
+          List["list.len"](Std["var"]("results")),
           " matches:\n",
           String["str.join"](
             List["list.map"](
-              Core["var"]("results"),
-              Core["lambda"](
-                ["c"],
-                Object["obj.get"](Core["var"]("c"), "title"),
-              ),
+              Std["var"]("results"),
+              Std["lambda"](["c"], Object["obj.get"](Std["var"]("c"), "title")),
             ),
             "\n",
           ),

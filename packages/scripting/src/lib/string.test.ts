@@ -6,15 +6,19 @@ import {
   ScriptError,
   createScriptContext,
 } from "../interpreter";
-import * as Core from "./core";
+import * as Core from "./std";
 import * as StringLib from "./string";
 import * as List from "./list";
+import * as MathLib from "./math";
+import * as BooleanLib from "./boolean";
 import { createLibraryTester } from "./test-utils";
 
 createLibraryTester(StringLib, "String Library", (test) => {
   registerLibrary(Core);
   registerLibrary(StringLib);
-  registerLibrary(List); // Needed for str.join test
+  registerLibrary(List);
+  registerLibrary(MathLib);
+  registerLibrary(BooleanLib);
 
   let ctx: ScriptContext;
 

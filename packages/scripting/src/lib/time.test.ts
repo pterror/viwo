@@ -6,7 +6,7 @@ import {
   ScriptError,
   createScriptContext,
 } from "../interpreter";
-import * as Core from "./core";
+import * as Core from "./std";
 import * as Time from "./time";
 import { createLibraryTester } from "./test-utils";
 

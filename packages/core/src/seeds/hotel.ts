@@ -1,8 +1,12 @@
 import { createEntity, addVerb, updateVerb, getVerb } from "../repo";
-import * as Core from "../scripting/lib/core";
-import * as Object from "../scripting/lib/object";
-import * as String from "../scripting/lib/string";
-import * as List from "../scripting/lib/list";
+import {
+  StdLib as Std,
+  ObjectLib as Object,
+  StringLib as String,
+  ListLib as List,
+  BooleanLib,
+} from "@viwo/scripting";
+import * as CoreLib from "../runtime/lib/core";
 
 export function seedHotel(lobbyId: number, voidId: number) {
   // 7. Hotel Implementation
@@ -50,50 +54,50 @@ export function seedHotel(lobbyId: number, voidId: number) {
   addVerb(
     hotelRoomProtoId,
     "leave",
-    Core["seq"](
-      Core["call"](Core["caller"](), "move", hotelLobbyId), // Move player out first
-      Core["call"](
-        Core["caller"](),
+    Std["seq"](
+      CoreLib["call"](Std["caller"](), "move", hotelLobbyId), // Move player out first
+      CoreLib["call"](
+        Std["caller"](),
         "tell",
         "You leave the room and it fades away behind you.",
       ),
-      Core["destroy"](Core["this"]()), // Destroy the room
+      CoreLib["destroy"](Std["this"]()), // Destroy the room
     ),
   );
 
   // Update 'leave' verb to use prop
   updateVerb(
     getVerb(hotelRoomProtoId, "leave")!.id,
-    Core["seq"](
-      Core["let"]("lobbyId", Object["obj.get"](Core["this"](), "lobby_id")),
-      Core["call"](Core["caller"](), "move", Core["var"]("lobbyId")),
-      Core["call"](
-        Core["caller"](),
+    Std["seq"](
+      Std["let"]("lobbyId", Object["obj.get"](Std["this"](), "lobby_id")),
+      CoreLib["call"](Std["caller"](), "move", Std["var"]("lobbyId")),
+      CoreLib["call"](
+        Std["caller"](),
         "tell",
         "You leave the room and it fades away behind you.",
       ),
       // Destroy contents (furnishings)
-      Core["let"](
+      Std["let"](
         "freshThis",
-        Core["entity"](Object["obj.get"](Core["this"](), "id")),
+        CoreLib["entity"](Object["obj.get"](Std["this"](), "id")),
       ),
-      Core["let"](
+      Std["let"](
         "contents",
         Object["obj.get"](
-          Core["var"]("freshThis"),
+          Std["var"]("freshThis"),
           "contents",
           List["list.new"](),
         ),
       ),
-      Core["for"](
+      Std["for"](
         "itemId",
-        Core["var"]("contents"),
-        Core["seq"](
-          Core["let"]("item", Core["entity"](Core["var"]("itemId"))),
-          Core["if"](Core["var"]("item"), Core["destroy"](Core["var"]("item"))),
+        Std["var"]("contents"),
+        Std["seq"](
+          Std["let"]("item", CoreLib["entity"](Std["var"]("itemId"))),
+          Std["if"](Std["var"]("item"), CoreLib["destroy"](Std["var"]("item"))),
         ),
       ),
-      Core["destroy"](Core["this"]()),
+      CoreLib["destroy"](Std["this"]()),
     ),
   );
 
@@ -139,16 +143,16 @@ export function seedHotel(lobbyId: number, voidId: number) {
   addVerb(
     elevatorId,
     "push",
-    Core["seq"](
-      Core["let"]("floor", Core["arg"](0)),
-      Object["obj.set"](Core["this"](), "current_floor", Core["var"]("floor")),
-      Core["set_entity"](Core["this"]()),
-      Core["call"](
-        Core["caller"](),
+    Std["seq"](
+      Std["let"]("floor", Std["arg"](0)),
+      Object["obj.set"](Std["this"](), "current_floor", Std["var"]("floor")),
+      CoreLib["set_entity"](Std["this"]()),
+      CoreLib["call"](
+        Std["caller"](),
         "tell",
         String["str.concat"](
           "The elevator hums and moves to floor ",
-          Core["var"]("floor"),
+          Std["var"]("floor"),
           ".",
         ),
       ),
@@ -159,61 +163,57 @@ export function seedHotel(lobbyId: number, voidId: number) {
   addVerb(
     elevatorId,
     "out",
-    Core["seq"](
-      Core["let"]("floor", Object["obj.get"](Core["this"](), "current_floor")),
+    Std["seq"](
+      Std["let"]("floor", Object["obj.get"](Std["this"](), "current_floor")),
       // If floor 1, go to Main Hotel Lobby? Or just create Floor 1 Lobby?
       // Let's say Floor 1 is the Main Lobby.
-      Core["if"](
-        Core["=="](Core["var"]("floor"), 1),
-        Core["seq"](
-          Core["call"](Core["caller"](), "move", hotelLobbyId),
-          Core["call"](
-            Core["caller"](),
+      Std["if"](
+        BooleanLib["=="](Std["var"]("floor"), 1),
+        Std["seq"](
+          CoreLib["call"](Std["caller"](), "move", hotelLobbyId),
+          CoreLib["call"](
+            Std["caller"](),
             "tell",
             "The doors open to the Grand Lobby.",
           ),
         ),
-        Core["seq"](
+        Std["seq"](
           // Create Ephemeral Floor Lobby
-          Core["let"]("lobbyData", {}),
+          Std["let"]("lobbyData", {}),
           Object["obj.set"](
-            Core["var"]("lobbyData"),
+            Std["var"]("lobbyData"),
             "name",
-            String["str.concat"]("Floor ", Core["var"]("floor"), " Lobby"),
+            String["str.concat"]("Floor ", Std["var"]("floor"), " Lobby"),
           ),
-          Object["obj.set"](Core["var"]("lobbyData"), "kind", "ROOM"),
+          Object["obj.set"](Std["var"]("lobbyData"), "kind", "ROOM"),
 
           Object["obj.set"](
-            Core["var"]("lobbyData"),
+            Std["var"]("lobbyData"),
             "description",
             String["str.concat"](
               "The lobby of floor ",
-              Core["var"]("floor"),
+              Std["var"]("floor"),
               ". West and East wings extend from here.",
             ),
           ),
           Object["obj.set"](
-            Core["var"]("lobbyData"),
+            Std["var"]("lobbyData"),
             "floor",
-            Core["var"]("floor"),
+            Std["var"]("floor"),
           ),
-          Object["obj.set"](
-            Core["var"]("lobbyData"),
-            "elevator_id",
-            elevatorId,
-          ),
-          Core["let"]("lobbyId", Core["create"](Core["var"]("lobbyData"))),
-          Core["set_prototype"](
-            Core["entity"](Core["var"]("lobbyId")),
+          Object["obj.set"](Std["var"]("lobbyData"), "elevator_id", elevatorId),
+          Std["let"]("lobbyId", CoreLib["create"](Std["var"]("lobbyData"))),
+          CoreLib["set_prototype"](
+            CoreLib["entity"](Std["var"]("lobbyId")),
             floorLobbyProtoId,
           ),
-          Core["call"](Core["caller"](), "move", Core["var"]("lobbyId")),
-          Core["call"](
-            Core["caller"](),
+          CoreLib["call"](Std["caller"](), "move", Std["var"]("lobbyId")),
+          CoreLib["call"](
+            Std["caller"](),
             "tell",
             String["str.concat"](
               "The doors open to Floor ",
-              Core["var"]("floor"),
+              Std["var"]("floor"),
               ".",
             ),
           ),
@@ -228,15 +228,15 @@ export function seedHotel(lobbyId: number, voidId: number) {
   addVerb(
     floorLobbyProtoId,
     "elevator",
-    Core["seq"](
-      Core["let"]("elevId", Object["obj.get"](Core["this"](), "elevator_id")),
-      Core["call"](Core["caller"](), "move", Core["var"]("elevId")),
-      Core["call"](
-        Core["caller"](),
+    Std["seq"](
+      Std["let"]("elevId", Object["obj.get"](Std["this"](), "elevator_id")),
+      CoreLib["call"](Std["caller"](), "move", Std["var"]("elevId")),
+      CoreLib["call"](
+        Std["caller"](),
         "tell",
         "You step back into the elevator.",
       ),
-      Core["destroy"](Core["this"]()),
+      CoreLib["destroy"](Std["this"]()),
     ),
   );
 
@@ -244,32 +244,35 @@ export function seedHotel(lobbyId: number, voidId: number) {
   addVerb(
     floorLobbyProtoId,
     "west",
-    Core["seq"](
-      Core["let"]("floor", Object["obj.get"](Core["this"](), "floor")),
-      Core["let"]("wingData", {}),
+    Std["seq"](
+      Std["let"]("floor", Object["obj.get"](Std["this"](), "floor")),
+      Std["let"]("wingData", {}),
       Object["obj.set"](
-        Core["var"]("wingData"),
+        Std["var"]("wingData"),
         "name",
-        String["str.concat"]("Floor ", Core["var"]("floor"), " West Wing"),
+        String["str.concat"]("Floor ", Std["var"]("floor"), " West Wing"),
       ),
-      Object["obj.set"](Core["var"]("wingData"), "kind", "ROOM"),
+      Object["obj.set"](Std["var"]("wingData"), "kind", "ROOM"),
 
       Object["obj.set"](
-        Core["var"]("wingData"),
+        Std["var"]("wingData"),
         "description",
         "A long hallway. Rooms 01-50 are here.",
       ),
-      Object["obj.set"](Core["var"]("wingData"), "floor", Core["var"]("floor")),
-      Object["obj.set"](Core["var"]("wingData"), "side", "West"),
+      Object["obj.set"](Std["var"]("wingData"), "floor", Std["var"]("floor")),
+      Object["obj.set"](Std["var"]("wingData"), "side", "West"),
       Object["obj.set"](
-        Core["var"]("wingData"),
+        Std["var"]("wingData"),
         "return_id",
-        Object["obj.get"](Core["this"](), "id"),
+        Object["obj.get"](Std["this"](), "id"),
       ), // Return to THIS lobby
-      Core["let"]("wingId", Core["create"](Core["var"]("wingData"))),
-      Core["set_prototype"](Core["entity"](Core["var"]("wingId")), wingProtoId),
-      Core["call"](Core["caller"](), "move", Core["var"]("wingId")),
-      Core["call"](Core["caller"](), "tell", "You walk down the West Wing."),
+      Std["let"]("wingId", CoreLib["create"](Std["var"]("wingData"))),
+      CoreLib["set_prototype"](
+        CoreLib["entity"](Std["var"]("wingId")),
+        wingProtoId,
+      ),
+      CoreLib["call"](Std["caller"](), "move", Std["var"]("wingId")),
+      CoreLib["call"](Std["caller"](), "tell", "You walk down the West Wing."),
     ),
   );
 
@@ -277,32 +280,35 @@ export function seedHotel(lobbyId: number, voidId: number) {
   addVerb(
     floorLobbyProtoId,
     "east",
-    Core["seq"](
-      Core["let"]("floor", Object["obj.get"](Core["this"](), "floor")),
-      Core["let"]("wingData", Object["obj.new"]()),
+    Std["seq"](
+      Std["let"]("floor", Object["obj.get"](Std["this"](), "floor")),
+      Std["let"]("wingData", Object["obj.new"]()),
       Object["obj.set"](
-        Core["var"]("wingData"),
+        Std["var"]("wingData"),
         "name",
-        String["str.concat"]("Floor ", Core["var"]("floor"), " East Wing"),
+        String["str.concat"]("Floor ", Std["var"]("floor"), " East Wing"),
       ),
-      Object["obj.set"](Core["var"]("wingData"), "kind", "ROOM"),
+      Object["obj.set"](Std["var"]("wingData"), "kind", "ROOM"),
 
       Object["obj.set"](
-        Core["var"]("wingData"),
+        Std["var"]("wingData"),
         "description",
         "A long hallway. Rooms 51-99 are here.",
       ),
-      Object["obj.set"](Core["var"]("wingData"), "floor", Core["var"]("floor")),
-      Object["obj.set"](Core["var"]("wingData"), "side", "East"),
+      Object["obj.set"](Std["var"]("wingData"), "floor", Std["var"]("floor")),
+      Object["obj.set"](Std["var"]("wingData"), "side", "East"),
       Object["obj.set"](
-        Core["var"]("wingData"),
+        Std["var"]("wingData"),
         "return_id",
-        Object["obj.get"](Core["this"](), "id"),
+        Object["obj.get"](Std["this"](), "id"),
       ),
-      Core["let"]("wingId", Core["create"](Core["var"]("wingData"))),
-      Core["set_prototype"](Core["entity"](Core["var"]("wingId")), wingProtoId),
-      Core["call"](Core["caller"](), "move", Core["var"]("wingId")),
-      Core["call"](Core["caller"](), "tell", "You walk down the East Wing."),
+      Std["let"]("wingId", CoreLib["create"](Std["var"]("wingData"))),
+      CoreLib["set_prototype"](
+        CoreLib["entity"](Std["var"]("wingId")),
+        wingProtoId,
+      ),
+      CoreLib["call"](Std["caller"](), "move", Std["var"]("wingId")),
+      CoreLib["call"](Std["caller"](), "tell", "You walk down the East Wing."),
     ),
   );
 
@@ -331,11 +337,11 @@ export function seedHotel(lobbyId: number, voidId: number) {
   addVerb(
     wingProtoId,
     "back",
-    Core["seq"](
-      Core["let"]("returnId", Object["obj.get"](Core["this"](), "return_id")),
-      Core["call"](Core["caller"](), "move", Core["var"]("returnId")),
-      Core["call"](Core["caller"](), "tell", "You head back to the lobby."),
-      Core["destroy"](Core["this"]()),
+    Std["seq"](
+      Std["let"]("returnId", Object["obj.get"](Std["this"](), "return_id")),
+      CoreLib["call"](Std["caller"](), "move", Std["var"]("returnId")),
+      CoreLib["call"](Std["caller"](), "tell", "You head back to the lobby."),
+      CoreLib["destroy"](Std["this"]()),
     ),
   );
 
@@ -343,135 +349,131 @@ export function seedHotel(lobbyId: number, voidId: number) {
   addVerb(
     wingProtoId,
     "enter",
-    Core["seq"](
-      Core["let"]("roomNum", Core["arg"](0)),
-      Core["let"]("valid", true),
+    Std["seq"](
+      Std["let"]("roomNum", Std["arg"](0)),
+      Std["let"]("valid", true),
       // Validate room number matches wing side
-      Core["let"]("side", Object["obj.get"](Core["this"](), "side")),
-      Core["if"](
-        Core["=="](Core["var"]("side"), "West"),
-        Core["if"](
-          Core["or"](
-            Core["<"](Core["var"]("roomNum"), 1),
-            Core[">"](Core["var"]("roomNum"), 50),
+      Std["let"]("side", Object["obj.get"](Std["this"](), "side")),
+      Std["if"](
+        BooleanLib["=="](Std["var"]("side"), "West"),
+        Std["if"](
+          BooleanLib["or"](
+            BooleanLib["<"](Std["var"]("roomNum"), 1),
+            BooleanLib[">"](Std["var"]("roomNum"), 50),
           ),
-          Core["seq"](
-            Core["call"](
-              Core["caller"](),
+          Std["seq"](
+            CoreLib["call"](
+              Std["caller"](),
               "tell",
               "Room numbers in the West Wing are 1-50.",
             ),
-            Core["set"]("valid", false),
+            Std["set"]("valid", false),
           ),
         ),
       ),
-      Core["if"](
-        Core["=="](Core["var"]("side"), "East"),
-        Core["if"](
-          Core["or"](
-            Core["<"](Core["var"]("roomNum"), 51),
-            Core[">"](Core["var"]("roomNum"), 99),
+      Std["if"](
+        BooleanLib["=="](Std["var"]("side"), "East"),
+        Std["if"](
+          BooleanLib["or"](
+            BooleanLib["<"](Std["var"]("roomNum"), 51),
+            BooleanLib[">"](Std["var"]("roomNum"), 99),
           ),
-          Core["seq"](
-            Core["call"](
-              Core["caller"](),
+          Std["seq"](
+            CoreLib["call"](
+              Std["caller"](),
               "tell",
               "Room numbers in the East Wing are 51-99.",
             ),
-            Core["set"]("valid", false),
+            Std["set"]("valid", false),
           ),
         ),
       ),
       // Execute if valid
-      Core["if"](
-        Core["var"]("valid"),
-        Core["seq"](
-          Core["let"]("roomData", Object["obj.new"]()),
+      Std["if"](
+        Std["var"]("valid"),
+        Std["seq"](
+          Std["let"]("roomData", Object["obj.new"]()),
           Object["obj.set"](
-            Core["var"]("roomData"),
+            Std["var"]("roomData"),
             "name",
-            String["str.concat"]("Room ", Core["var"]("roomNum")),
+            String["str.concat"]("Room ", Std["var"]("roomNum")),
           ),
-          Object["obj.set"](Core["var"]("roomData"), "kind", "ROOM"),
+          Object["obj.set"](Std["var"]("roomData"), "kind", "ROOM"),
 
           Object["obj.set"](
-            Core["var"]("roomData"),
+            Std["var"]("roomData"),
             "description",
             "A standard hotel room.",
           ),
           Object["obj.set"](
-            Core["var"]("roomData"),
+            Std["var"]("roomData"),
             "lobby_id",
-            Object["obj.get"](Core["this"](), "id"),
+            Object["obj.get"](Std["this"](), "id"),
           ), // Return to THIS wing
-          Core["let"]("roomId", Core["create"](Core["var"]("roomData"))),
-          Core["set_prototype"](
-            Core["entity"](Core["var"]("roomId")),
+          Std["let"]("roomId", CoreLib["create"](Std["var"]("roomData"))),
+          CoreLib["set_prototype"](
+            CoreLib["entity"](Std["var"]("roomId")),
             hotelRoomProtoId,
           ),
           // Furnish the room
-          Core["let"]("bedData", Object["obj.new"]()),
-          Object["obj.set"](Core["var"]("bedData"), "name", "Bed"),
-          Object["obj.set"](Core["var"]("bedData"), "kind", "ITEM"),
+          Std["let"]("bedData", Object["obj.new"]()),
+          Object["obj.set"](Std["var"]("bedData"), "name", "Bed"),
+          Object["obj.set"](Std["var"]("bedData"), "kind", "ITEM"),
           Object["obj.set"](
-            Core["var"]("bedData"),
+            Std["var"]("bedData"),
             "location",
-            Core["var"]("roomId"),
+            Std["var"]("roomId"),
           ),
-          Core["let"]("bedId", Core["create"](Core["var"]("bedData"))),
-          Core["set_prototype"](
-            Core["entity"](Core["var"]("bedId")),
+          Std["let"]("bedId", CoreLib["create"](Std["var"]("bedData"))),
+          CoreLib["set_prototype"](
+            CoreLib["entity"](Std["var"]("bedId")),
             bedProtoId,
           ),
-          Core["let"]("lampData", Object["obj.new"]()),
-          Object["obj.set"](Core["var"]("lampData"), "name", "Lamp"),
-          Object["obj.set"](Core["var"]("lampData"), "kind", "ITEM"),
+          Std["let"]("lampData", Object["obj.new"]()),
+          Object["obj.set"](Std["var"]("lampData"), "name", "Lamp"),
+          Object["obj.set"](Std["var"]("lampData"), "kind", "ITEM"),
           Object["obj.set"](
-            Core["var"]("lampData"),
+            Std["var"]("lampData"),
             "location",
-            Core["var"]("roomId"),
+            Std["var"]("roomId"),
           ),
-          Core["let"]("lampId", Core["create"](Core["var"]("lampData"))),
-          Core["set_prototype"](
-            Core["entity"](Core["var"]("lampId")),
+          Std["let"]("lampId", CoreLib["create"](Std["var"]("lampData"))),
+          CoreLib["set_prototype"](
+            CoreLib["entity"](Std["var"]("lampId")),
             lampProtoId,
           ),
-          Core["let"]("chairData", Object["obj.new"]()),
-          Object["obj.set"](Core["var"]("chairData"), "name", "Chair"),
-          Object["obj.set"](Core["var"]("chairData"), "kind", "ITEM"),
+          Std["let"]("chairData", Object["obj.new"]()),
+          Object["obj.set"](Std["var"]("chairData"), "name", "Chair"),
+          Object["obj.set"](Std["var"]("chairData"), "kind", "ITEM"),
           Object["obj.set"](
-            Core["var"]("chairData"),
+            Std["var"]("chairData"),
             "location",
-            Core["var"]("roomId"),
+            Std["var"]("roomId"),
           ),
-          Core["let"]("chairId", Core["create"](Core["var"]("chairData"))),
-          Core["set_prototype"](
-            Core["entity"](Core["var"]("chairId")),
+          Std["let"]("chairId", CoreLib["create"](Std["var"]("chairData"))),
+          CoreLib["set_prototype"](
+            CoreLib["entity"](Std["var"]("chairId")),
             chairProtoId,
           ),
 
           // Update Room Contents
-          Core["let"]("room", Core["entity"](Core["var"]("roomId"))),
-          Core["let"]("contents", List["list.new"]()),
-          List["list.push"](Core["var"]("contents"), Core["var"]("bedId")),
-          List["list.push"](Core["var"]("contents"), Core["var"]("lampId")),
-          List["list.push"](Core["var"]("contents"), Core["var"]("chairId")),
+          Std["let"]("room", CoreLib["entity"](Std["var"]("roomId"))),
+          Std["let"]("contents", List["list.new"]()),
+          List["list.push"](Std["var"]("contents"), Std["var"]("bedId")),
+          List["list.push"](Std["var"]("contents"), Std["var"]("lampId")),
+          List["list.push"](Std["var"]("contents"), Std["var"]("chairId")),
           Object["obj.set"](
-            Core["var"]("room"),
+            Std["var"]("room"),
             "contents",
-            Core["var"]("contents"),
+            Std["var"]("contents"),
           ),
-          Core["set_entity"](Core["var"]("room")),
+          CoreLib["set_entity"](Std["var"]("room")),
 
-          Core["call"](Core["caller"](), "move", Core["var"]("roomId")),
-          Core["call"](
-            Core["caller"](),
+          CoreLib["call"](Std["caller"](), "move", Std["var"]("roomId")),
+          CoreLib["call"](
+            Std["caller"](),
             "tell",
-            String["str.concat"](
-              "You enter Room ",
-              Core["var"]("roomNum"),
-              ".",
-            ),
+            String["str.concat"]("You enter Room ", Std["var"]("roomNum"), "."),
           ),
         ),
       ),
@@ -490,25 +492,22 @@ export function seedHotel(lobbyId: number, voidId: number) {
   addVerb(
     receptionistId,
     "on_hear",
-    Core["seq"](
-      Core["let"]("msg", Core["arg"](0)),
-      Core["let"]("speakerId", Core["arg"](1)),
+    Std["seq"](
+      Std["let"]("msg", Std["arg"](0)),
+      Std["let"]("speakerId", Std["arg"](1)),
       // Simple heuristics
-      Core["if"](
-        String["str.includes"](String["str.lower"](Core["var"]("msg")), "room"),
-        Core["call"](
-          Core["caller"](),
+      Std["if"](
+        String["str.includes"](String["str.lower"](Std["var"]("msg")), "room"),
+        CoreLib["call"](
+          Std["caller"](),
           "say",
           "We have lovely rooms available on floors 1-100. Just use the elevator!",
         ),
       ),
-      Core["if"](
-        String["str.includes"](
-          String["str.lower"](Core["var"]("msg")),
-          "hello",
-        ),
-        Core["call"](
-          Core["caller"](),
+      Std["if"](
+        String["str.includes"](String["str.lower"](Std["var"]("msg")), "hello"),
+        CoreLib["call"](
+          Std["caller"](),
           "say",
           "Welcome to the Grand Hotel! How may I help you?",
         ),
@@ -527,15 +526,15 @@ export function seedHotel(lobbyId: number, voidId: number) {
   addVerb(
     golemId,
     "on_hear",
-    Core["seq"](
-      Core["let"]("msg", Core["arg"](0)),
-      Core["let"]("type", Core["arg"](2)),
-      Core["if"](
-        Core["=="](Core["var"]("type"), "tell"),
-        Core["call"](
-          Core["caller"](),
+    Std["seq"](
+      Std["let"]("msg", Std["arg"](0)),
+      Std["let"]("type", Std["arg"](2)),
+      Std["if"](
+        BooleanLib["=="](Std["var"]("type"), "tell"),
+        CoreLib["call"](
+          Std["caller"](),
           "say",
-          String["str.concat"]("Golem echoes: ", Core["var"]("msg")),
+          String["str.concat"]("Golem echoes: ", Std["var"]("msg")),
         ),
       ),
     ),

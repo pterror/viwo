@@ -13,17 +13,18 @@ import {
   evaluate,
   createScriptContext,
   registerLibrary,
-} from "./scripting/interpreter";
-import * as Core from "./scripting/lib/core";
-import * as ObjectOp from "./scripting/lib/object";
-import * as List from "./scripting/lib/list";
+  StdLib as Std,
+  ObjectLib,
+  ListLib as List,
+} from "@viwo/scripting";
 import { Entity } from "@viwo/shared/jsonrpc";
 import { createEntity, getEntity } from "./repo";
+import { CoreLib } from ".";
 import { seed } from "./seed";
 
 describe("Scripted Permissions", () => {
-  registerLibrary(Core);
-  registerLibrary(ObjectOp);
+  registerLibrary(Std);
+  registerLibrary(ObjectLib);
   registerLibrary(List);
 
   let owner: Entity;
@@ -98,11 +99,11 @@ describe("Scripted Permissions", () => {
 
   const check = async (actor: Entity, target: Entity, type: string) => {
     // Construct a script to call sys.can_edit(actor, target, type)
-    const callScript = Core["call"](
-      Core["entity"](system.id),
+    const callScript = CoreLib["call"](
+      CoreLib["entity"](system.id),
       "can_edit",
-      Core["entity"](actor.id),
-      Core["entity"](target.id),
+      CoreLib["entity"](actor.id),
+      CoreLib["entity"](target.id),
       type,
     );
 

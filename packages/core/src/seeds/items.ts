@@ -1,8 +1,12 @@
 import { createEntity, addVerb } from "../repo";
-import * as Core from "../scripting/lib/core";
-import * as String from "../scripting/lib/string";
-import * as Object from "../scripting/lib/object";
-import * as List from "../scripting/lib/list";
+import {
+  StdLib as Std,
+  StringLib as String,
+  ObjectLib as Object,
+  ListLib as List,
+  BooleanLib as Boolean,
+} from "@viwo/scripting";
+import * as CoreLib from "../runtime/lib/core";
 
 export function seedItems(locationId: number) {
   // 6. Book Item
@@ -19,29 +23,29 @@ export function seedItems(locationId: number) {
   addVerb(
     bookId,
     "read",
-    Core["seq"](
-      Core["let"]("index", Core["arg"](0)),
-      Core["if"](
-        Core["not"](Core["var"]("index")),
-        Core["throw"]("Please specify a chapter index (0-based)."),
+    Std["seq"](
+      Std["let"]("index", Std["arg"](0)),
+      Std["if"](
+        Boolean["not"](Std["var"]("index")),
+        Std["throw"]("Please specify a chapter index (0-based)."),
       ),
-      Core["let"]("chapters", Object["obj.get"](Core["this"](), "chapters")),
-      Core["let"](
+      Std["let"]("chapters", Object["obj.get"](Std["this"](), "chapters")),
+      Std["let"](
         "chapter",
-        List["list.get"](Core["var"]("chapters"), Core["var"]("index")),
+        List["list.get"](Std["var"]("chapters"), Std["var"]("index")),
       ),
-      Core["if"](
-        Core["not"](Core["var"]("chapter")),
-        Core["throw"]("Chapter not found."),
+      Std["if"](
+        Boolean["not"](Std["var"]("chapter")),
+        Std["throw"]("Chapter not found."),
       ),
-      Core["call"](
-        Core["caller"](),
+      CoreLib["call"](
+        Std["caller"](),
         "tell",
         String["str.concat"](
           "Reading: ",
-          Object["obj.get"](Core["var"]("chapter"), "title"),
+          Object["obj.get"](Std["var"]("chapter"), "title"),
           "\n\n",
-          Object["obj.get"](Core["var"]("chapter"), "content"),
+          Object["obj.get"](Std["var"]("chapter"), "content"),
         ),
       ),
     ),
@@ -50,20 +54,17 @@ export function seedItems(locationId: number) {
   addVerb(
     bookId,
     "list_chapters",
-    Core["seq"](
-      Core["let"]("chapters", Object["obj.get"](Core["this"](), "chapters")),
-      Core["call"](
-        Core["caller"](),
+    Std["seq"](
+      Std["let"]("chapters", Object["obj.get"](Std["this"](), "chapters")),
+      CoreLib["call"](
+        Std["caller"](),
         "tell",
         String["str.concat"](
           "Chapters:\n",
           String["str.join"](
             List["list.map"](
-              Core["var"]("chapters"),
-              Core["lambda"](
-                ["c"],
-                Object["obj.get"](Core["var"]("c"), "title"),
-              ),
+              Std["var"]("chapters"),
+              Std["lambda"](["c"], Object["obj.get"](Std["var"]("c"), "title")),
             ),
             "\n",
           ),
@@ -75,83 +76,78 @@ export function seedItems(locationId: number) {
   addVerb(
     bookId,
     "add_chapter",
-    Core["seq"](
-      Core["let"]("title", Core["arg"](0)),
-      Core["let"]("content", Core["arg"](1)),
-      Core["if"](
-        Core["not"](Core["and"](Core["var"]("title"), Core["var"]("content"))),
-        Core["throw"]("Usage: add_chapter <title> <content>"),
+    Std["seq"](
+      Std["let"]("title", Std["arg"](0)),
+      Std["let"]("content", Std["arg"](1)),
+      Std["if"](
+        Boolean["not"](
+          Boolean["and"](Std["var"]("title"), Std["var"]("content")),
+        ),
+        Std["throw"]("Usage: add_chapter <title> <content>"),
       ),
-      Core["let"]("chapters", Object["obj.get"](Core["this"](), "chapters")),
+      Std["let"]("chapters", Object["obj.get"](Std["this"](), "chapters")),
 
       // Construct new chapter object
-      Core["let"]("newChapter", {}),
+      Std["let"]("newChapter", {}),
+      Object["obj.set"](Std["var"]("newChapter"), "title", Std["var"]("title")),
       Object["obj.set"](
-        Core["var"]("newChapter"),
-        "title",
-        Core["var"]("title"),
-      ),
-      Object["obj.set"](
-        Core["var"]("newChapter"),
+        Std["var"]("newChapter"),
         "content",
-        Core["var"]("content"),
+        Std["var"]("content"),
       ),
 
-      List["list.push"](Core["var"]("chapters"), Core["var"]("newChapter")),
-      Object["obj.set"](Core["this"](), "chapters", Core["var"]("chapters")), // Save back to entity
-      Core["call"](Core["caller"](), "tell", "Chapter added."),
+      List["list.push"](Std["var"]("chapters"), Std["var"]("newChapter")),
+      Object["obj.set"](Std["this"](), "chapters", Std["var"]("chapters")), // Save back to entity
+      CoreLib["call"](Std["caller"](), "tell", "Chapter added."),
     ),
   );
 
   addVerb(
     bookId,
     "search_chapters",
-    Core["seq"](
-      Core["let"]("query", String["str.lower"](Core["arg"](0))),
-      Core["let"]("chapters", Object["obj.get"](Core["this"](), "chapters")),
-      Core["let"](
+    Std["seq"](
+      Std["let"]("query", String["str.lower"](Std["arg"](0))),
+      Std["let"]("chapters", Object["obj.get"](Std["this"](), "chapters")),
+      Std["let"](
         "results",
         List["list.filter"](
-          Core["var"]("chapters"),
-          Core["lambda"](
+          Std["var"]("chapters"),
+          Std["lambda"](
             ["c"],
-            Core["or"](
+            Boolean["or"](
               String["str.includes"](
                 String["str.lower"](
-                  Object["obj.get"](Core["var"]("c"), "title"),
+                  Object["obj.get"](Std["var"]("c"), "title"),
                 ),
-                Core["var"]("query"),
+                Std["var"]("query"),
               ),
               String["str.includes"](
                 String["str.lower"](
-                  Object["obj.get"](Core["var"]("c"), "title"),
+                  Object["obj.get"](Std["var"]("c"), "title"),
                 ),
-                Core["var"]("query"),
+                Std["var"]("query"),
               ),
               String["str.includes"](
                 String["str.lower"](
-                  Object["obj.get"](Core["var"]("c"), "content"),
+                  Object["obj.get"](Std["var"]("c"), "content"),
                 ),
-                Core["var"]("query"),
+                Std["var"]("query"),
               ),
             ),
           ),
         ),
       ),
-      Core["call"](
-        Core["caller"](),
+      CoreLib["call"](
+        Std["caller"](),
         "tell",
         String["str.concat"](
           "Found ",
-          List["list.len"](Core["var"]("results")),
+          List["list.len"](Std["var"]("results")),
           " matches:\n",
           String["str.join"](
             List["list.map"](
-              Core["var"]("results"),
-              Core["lambda"](
-                ["c"],
-                Object["obj.get"](Core["var"]("c"), "title"),
-              ),
+              Std["var"]("results"),
+              Std["lambda"](["c"], Object["obj.get"](Std["var"]("c"), "title")),
             ),
             "\n",
           ),

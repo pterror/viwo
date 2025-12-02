@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { getEntity, getVerb } from "./repo";
-import { evaluate, createScriptContext } from "./scripting/interpreter";
+import { evaluate, createScriptContext } from "@viwo/scripting";
 
 /**
  * Manages scheduled tasks (delayed verb executions).

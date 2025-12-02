@@ -15,12 +15,16 @@ mock.module("./db", () => ({ db }));
 // Import modules AFTER mocking
 import { scheduler } from "./scheduler";
 import { createEntity, addVerb, getEntity } from "./repo";
-import { registerLibrary } from "./scripting/interpreter";
-import * as Core from "./scripting/lib/core";
-import * as Object from "./scripting/lib/object";
+import {
+  registerLibrary,
+  StdLib as Std,
+  ObjectLib as Object,
+  MathLib,
+} from "@viwo/scripting";
+import { CoreLib } from ".";
 
 describe("Scheduler Verification", () => {
-  registerLibrary(Core);
+  registerLibrary(Std);
   registerLibrary(Object);
 
   // Start Scheduler
@@ -43,11 +47,11 @@ describe("Scheduler Verification", () => {
     addVerb(
       entityId,
       "increment",
-      Core["set_entity"](
+      CoreLib["set_entity"](
         Object["obj.set"](
-          Core["this"](),
+          Std["this"](),
           "count",
-          Core["+"](Object["obj.get"](Core["this"](), "count"), 1),
+          MathLib["+"](Object["obj.get"](Std["this"](), "count"), 1),
         ),
       ),
     );

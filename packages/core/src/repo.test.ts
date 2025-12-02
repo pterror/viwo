@@ -23,7 +23,8 @@ import {
   getVerb,
   updateVerb,
 } from "./repo";
-import * as Core from "./scripting/lib/core";
+import { StdLib } from "@viwo/scripting";
+import { CoreLib } from ".";
 
 describe("Repo", () => {
   test("createEntity", () => {
@@ -34,11 +35,11 @@ describe("Repo", () => {
   test("Verb Inheritance", () => {
     // 1. Create Prototype
     const protoId = createEntity({ name: "Proto" });
-    addVerb(protoId, "protoVerb", Core["seq"]());
+    addVerb(protoId, "protoVerb", StdLib["seq"]());
 
     // 2. Create Instance
     const instanceId = createEntity({ name: "Instance" }, protoId);
-    addVerb(instanceId, "instanceVerb", Core["seq"]());
+    addVerb(instanceId, "instanceVerb", StdLib["seq"]());
 
     // 3. Get Verbs
     const verbs = getVerbs(instanceId);
@@ -51,11 +52,11 @@ describe("Repo", () => {
   test("Verb Override", () => {
     // 1. Create Prototype
     const protoId = createEntity({ name: "ProtoOverride" });
-    addVerb(protoId, "common", Core["seq"]("proto"));
+    addVerb(protoId, "common", StdLib["seq"]("proto"));
 
     // 2. Create Instance
     const instanceId = createEntity({ name: "InstanceOverride" }, protoId);
-    addVerb(instanceId, "common", Core["seq"]("instance"));
+    addVerb(instanceId, "common", StdLib["seq"]("instance"));
 
     // 3. Get Verbs
     const verbs = getVerbs(instanceId);
@@ -63,7 +64,7 @@ describe("Repo", () => {
 
     expect(common).toBeDefined();
     // Should be the instance one
-    expect(common?.code).toEqual(Core["seq"]("instance"));
+    expect(common?.code).toEqual(StdLib["seq"]("instance"));
   });
 
   test("updateEntity", () => {
@@ -94,7 +95,7 @@ describe("Repo", () => {
     addVerb(
       entity,
       "jump",
-      Core["call"](Core["caller"](), "tell", "You jumped"),
+      CoreLib["call"](StdLib["caller"](), "tell", "You jumped"),
     );
 
     const verb = getVerb(entity, "jump");
@@ -107,7 +108,11 @@ describe("Repo", () => {
 
   test("getVerb Inheritance", () => {
     const proto = createEntity({ name: "Proto" });
-    addVerb(proto, "fly", Core["call"](Core["caller"](), "tell", "You flew"));
+    addVerb(
+      proto,
+      "fly",
+      CoreLib["call"](StdLib["caller"](), "tell", "You flew"),
+    );
 
     const instance = createEntity({ name: "Instance" }, proto);
 

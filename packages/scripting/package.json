@@ -1,5 +1,5 @@
 {
-  "name": "@viwo/core",
+  "name": "@viwo/scripting",
   "version": "0.0.0",
   "module": "src/index.ts",
   "exports": {
@@ -7,20 +7,14 @@
   },
   "type": "module",
   "scripts": {
-    "dev": "bun run --watch src/dev.ts",
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
-    "db:wipe": "rm -f world.sqlite"
+    "test": "bun test"
   },
   "dependencies": {
-    "ws": "^8.18.0",
-    "@viwo/shared": "workspace:*",
-    "@viwo/scripting": "workspace:*"
+    "@viwo/shared": "workspace:*"
   },
   "devDependencies": {
-    "@tsconfig/strictest": "^2.0.8",
-    "@types/ws": "^8.5.12",
     "bun-types": "latest"
   },
   "peerDependencies": {
