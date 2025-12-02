@@ -2,8 +2,6 @@
 
 ## Refactoring & Technical Debt
 
-- [ ] **Core/Scripting**: Move `getAvailableVerbs` from `packages/core/src/index.ts` to scripting.
-- [ ] **Core/Repo**: When implementing `move` in scripting, ensure it disallows a box to be put inside itself (recursive check). (Ref: `packages/core/src/repo.test.ts`)
 - [ ] **Core/Scripting**: Consider splitting math and boolean operations out from `packages/core/src/scripting/lib/core.ts` (and extract tests as appropriate).
 
 ## Features & Enhancements

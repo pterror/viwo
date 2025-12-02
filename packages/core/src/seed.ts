@@ -331,59 +331,97 @@ export function seed() {
             Core["var"]("destId"),
             Core["seq"](
               Core["let"]("mover", Core["caller"]()),
-              Core["let"](
-                "oldLocId",
-                Object["obj.get"](Core["var"]("mover"), "location"),
-              ),
-              Core["let"]("oldLoc", Core["entity"](Core["var"]("oldLocId"))),
-              Core["let"]("newLoc", Core["entity"](Core["var"]("destId"))),
-              Core["set_entity"](
-                // Update mover
-                Object["obj.set"](
-                  Core["var"]("mover"),
-                  "location",
-                  Core["var"]("destId"),
-                ),
-                // Update old location
-                Object["obj.set"](
-                  Core["var"]("oldLoc"),
-                  "contents",
-                  List["list.filter"](
-                    Object["obj.get"](
-                      Core["var"]("oldLoc"),
-                      "contents",
-                      List["list.new"](),
+              // Recursive Check
+              Core["let"]("checkId", Core["var"]("destId")),
+              Core["let"]("isRecursive", false),
+              Core["while"](
+                Core["var"]("checkId"),
+                Core["seq"](
+                  Core["if"](
+                    Core["=="](
+                      Core["var"]("checkId"),
+                      Object["obj.get"](Core["var"]("mover"), "id"),
                     ),
-                    Core["lambda"](
-                      ["id"],
-                      Core["!="](
-                        Core["var"]("id"),
-                        Object["obj.get"](Core["var"]("mover"), "id"),
+                    Core["seq"](
+                      Core["set"]("isRecursive", true),
+                      Core["set"]("checkId", null), // Break
+                    ),
+                    // Step up
+                    Core["set"](
+                      "checkId",
+                      Object["obj.get"](
+                        Core["entity"](Core["var"]("checkId")),
+                        "location",
                       ),
                     ),
                   ),
                 ),
-                // Update new location
-                Object["obj.set"](
-                  Core["var"]("newLoc"),
-                  "contents",
-                  List["list.concat"](
-                    Object["obj.get"](
+              ),
+              Core["if"](
+                Core["var"]("isRecursive"),
+                Core["send"](
+                  "message",
+                  "You can't put something inside itself.",
+                ),
+                Core["seq"](
+                  Core["let"](
+                    "oldLocId",
+                    Object["obj.get"](Core["var"]("mover"), "location"),
+                  ),
+                  Core["let"](
+                    "oldLoc",
+                    Core["entity"](Core["var"]("oldLocId")),
+                  ),
+                  Core["let"]("newLoc", Core["entity"](Core["var"]("destId"))),
+                  Core["set_entity"](
+                    // Update mover
+                    Object["obj.set"](
+                      Core["var"]("mover"),
+                      "location",
+                      Core["var"]("destId"),
+                    ),
+                    // Update old location
+                    Object["obj.set"](
+                      Core["var"]("oldLoc"),
+                      "contents",
+                      List["list.filter"](
+                        Object["obj.get"](
+                          Core["var"]("oldLoc"),
+                          "contents",
+                          List["list.new"](),
+                        ),
+                        Core["lambda"](
+                          ["id"],
+                          Core["!="](
+                            Core["var"]("id"),
+                            Object["obj.get"](Core["var"]("mover"), "id"),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Update new location
+                    Object["obj.set"](
                       Core["var"]("newLoc"),
                       "contents",
-                      List["list.new"](),
-                    ),
-                    List["list.new"](
-                      Object["obj.get"](Core["var"]("mover"), "id"),
+                      List["list.concat"](
+                        Object["obj.get"](
+                          Core["var"]("newLoc"),
+                          "contents",
+                          List["list.new"](),
+                        ),
+                        List["list.new"](
+                          Object["obj.get"](Core["var"]("mover"), "id"),
+                        ),
+                      ),
                     ),
                   ),
+                  Core["send"](
+                    "room_id",
+                    Object["obj.new"]("roomId", Core["var"]("destId")),
+                  ),
+                  Core["call"](Core["var"]("mover"), "look"),
                 ),
               ),
-              Core["send"](
-                "room_id",
-                Object["obj.new"]("roomId", Core["var"]("destId")),
-              ),
-              Core["call"](Core["var"]("mover"), "look"),
             ),
             Core["send"]("message", "That way leads nowhere."),
           ),
