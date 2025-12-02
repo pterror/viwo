@@ -22,10 +22,7 @@ const client = new ViwoClient("ws://localhost:8080");
 
 client.subscribe((state: GameState) => {
   if (state.isConnected) {
-    // We could log connection status, but maybe only once?
-    // The original code logged "Connected to Viwo Core." on open.
-    // ViwoClient doesn't expose an event for "just connected", but state change.
-    // We can track it locally if needed, or just rely on messages.
+    // Connection status is tracked via state change below.
   }
 });
 

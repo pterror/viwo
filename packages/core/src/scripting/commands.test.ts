@@ -41,13 +41,7 @@ describe("Player Commands", () => {
     // Setup Send
     send = (type: string, payload: unknown) => {
       if (type === "update") {
-        // For update, we might want to store the payload or entities?
-        // The tests expect sentMessages[0] to be an entity or have a name?
-        // "should look at room": expect(sentMessages[0]?.name).toEqual(room["name"]);
-        // If payload is { entities: [...] }, then sentMessages[0] should be... ?
-        // The test seems to assume sentMessages[0] IS the room entity.
-        // But 'look' sends { entities: [room, ...contents] }.
-        // So we should probably extract the first entity from payload?
+        // 'look' sends { entities: [room, ...contents] }.
         const p = payload as any;
         if (p.entities && p.entities.length > 0) {
           sentMessages.push(p.entities);
@@ -55,12 +49,7 @@ describe("Player Commands", () => {
           sentMessages.push(payload);
         }
       } else if (type === "message") {
-        // For message, payload is string.
-        // Tests might expect object with name?
-        // "should inspect item": expect(sentMessages[0]?.name).toEqual("Box");
-        // If inspect uses 'look', it sends 'update'.
-        // If inspect uses 'message', it sends string.
-        // 'look' verb sends 'update'.
+        // 'inspect' can send 'update' or 'message' depending on implementation.
         sentMessages.push({ type, payload });
       } else {
         sentMessages.push(payload);
@@ -130,21 +119,7 @@ describe("Player Commands", () => {
       location: player.id,
     });
     const freshPlayer = getEntity(player.id)!;
-    // Assuming inventory verb checks location?
-    // Or contents?
-    // Inventory usually checks items where location = player.id.
-    // But 'inventory' verb implementation in seed.ts uses 'find' or 'contents'?
-
-    // Let's check inventory verb in seed.ts:
-    // It uses 'contents' property of player?
-    // Or it searches for entities with location = player.id?
-
-    // If it uses 'contents' property, we need to update it.
-    // If it uses 'find' (db query), then createEntity is enough (if location is set).
-
-    // But 'inventory' verb in seed.ts:
-    // Core["let"]("items", Object["obj.get"](Core["caller"](), "contents", List["list.new"]()))
-    // It uses 'contents' property!
+    // 'inventory' verb uses 'contents' property.
 
     const contents = (freshPlayer["contents"] as number[]) || [];
     contents.push(backpackId);

@@ -1161,9 +1161,6 @@ export function seed() {
     "random_color",
     List["list.get"](
       Object["obj.get"](Core["this"](), "colors"),
-      // floor missing? Math.floor?
-      // seed.ts used "floor". core.ts doesn't have it.
-      // I'll use random(min, max) which floors if ints.
       // random(0, len-1)
       Core["random"](
         0,

@@ -109,8 +109,8 @@ export class AiPlugin implements Plugin {
     ctx.registerCommand("gen", this.handleGen.bind(this));
     ctx.registerCommand("image", this.handleImage.bind(this));
 
-    // Note: Type assertions are currently unsafe. Tracked in docs/TODO.md.
-    // Note: Future improvement: Switch `handleGen` to use `generateObject`. Tracked in docs/TODO.md.
+    // Note: Type assertions are currently unsafe. Tracked in TODO.md.
+    // Note: Future improvement: Switch `handleGen` to use `generateObject`. Tracked in TODO.md.
     // Register default templates
     this.registerTemplate({
       name: "item",
@@ -243,11 +243,6 @@ Keep your response short and in character.`,
 
       if (templateName === "room") {
         // Create room and exit
-        // This logic is similar to 'dig' but AI generated
-        // For now, just create a room and move player there?
-        // Or create an item that IS a room?
-        // Let's just create a room and connect it via a portal or just teleport?
-        // Simpler: Create a room and move player there.
         const newRoomId = ctx.core.createEntity({
           name: data.name,
           description: data.description,
@@ -320,22 +315,7 @@ Keep your response short and in character.`,
 
       await Bun.write(filepath, buffer);
 
-      // Update current room or item?
-      // For now, let's update the current room's image if no target specified?
-      // Or maybe just return the URL?
-      // The user wants to "expose some way to generate images".
-      // Let's assume we want to set it on the current room or a target.
-      // Let's try to find a target like 'look' does, or default to room.
-
-      const playerEntity = ctx.core.getEntity(ctx.player.id);
-      if (!playerEntity || !playerEntity["location"]) return;
-
-      // Simple logic: If args start with "room", update room. If "item <name>", update item.
-      // But the instruction is the prompt.
-      // Let's just update the current room for now as a demo, or maybe add a flag?
-      // Actually, let's make it: image <target> <prompt>
-      // If target is "room" or "here", update room.
-      // If target matches an item, update item.
+      // Update current room or item
 
       // Re-parsing args for target
       const targetName = ctx.args[0];

@@ -135,10 +135,7 @@ describe("Hotel Scripting", () => {
     let elevator = getEntity(elevatorData.id)!;
     expect(elevator).toBeDefined();
 
-    // 0. Enter Hotel Lobby (from Main Lobby)
-    // Caller starts in Hotel Lobby from beforeEach
-
-    // 1. Enter Elevator
+    // 0. Enter Hotel Lobby (from Main Lobby). 1. Enter Elevator.
     updateEntity({ ...caller, location: elevator.id });
     caller = getEntity(caller.id)!; // Refresh
 
@@ -217,12 +214,6 @@ describe("Hotel Scripting", () => {
     expect(getEntity(roomId as never)).toBeNull(); // Room destroyed
 
     // Verify furnishings destroyed (by checking if they exist in DB)
-    // Since we don't have IDs, we can check count of entities or just assume if room is gone and we used destroy, they are gone.
-    // But we implemented explicit destroy loop.
-    // Let's check if any "Bed" exists that was in that room.
-    // Actually, since we are in-memory and reset DB, we can check total entity count or query by name.
-    // But simpler: just trust the script logic if test passes.
-    // Or we can capture IDs before leaving.
     const bed = contents.find((e) => e["name"] === "Bed")!;
     expect(getEntity(bed.id)).toBeNull();
 

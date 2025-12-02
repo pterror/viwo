@@ -33,15 +33,12 @@ export const ScriptEditor: Component = () => {
 
     const index = path[path.length - 1]!;
 
-    // Check if parent is a sequence (array starting with "seq")
-    // OR if we are at the root (which is implicitly a seq/array)
-    // Actually, our root is ["seq", ...].
-    // If current is an array, check its first element.
+    // Check if parent is a sequence (array starting with "seq") or root.
+    // In "seq" blocks, children start at index 1.
     const isSeq = Array.isArray(current) && current[0] === "seq";
 
     // If it's a sequence, we splice (remove).
     // If it's a fixed slot (e.g. "if" args), we replace with null.
-    // Note: In "seq" blocks, children start at index 1.
 
     if (isSeq && index > 0) {
       current.splice(index, 1);

@@ -30,9 +30,7 @@ describe("Interpreter Libraries", () => {
     });
 
     test("closure capture", async () => {
-      // (let x 10)
-      // (let addX (lambda (y) (+ x y)))
-      // (apply addX 5) -> 15
+      // (let x 10); (let addX (lambda (y) (+ x y))); (apply addX 5) -> 15
       expect(
         await evaluate(
           Core["seq"](

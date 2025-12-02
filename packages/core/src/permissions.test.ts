@@ -97,12 +97,7 @@ describe("Scripted Permissions", () => {
   });
 
   const check = async (actor: Entity, target: Entity, type: string) => {
-    // We need to call sys.can_edit
-    // The 'code' for this call is effectively:
-    // sys.can_edit(actor, target, type)
-
-    // Since we can't easily invoke a verb directly without an opcode or helper,
-    // we'll construct a small script to call it.
+    // Construct a script to call sys.can_edit(actor, target, type)
     const callScript = Core["call"](
       Core["entity"](system.id),
       "can_edit",

@@ -30,11 +30,6 @@ export class GameSocket extends EventEmitter {
 
     this.client.onMessage((msg) => {
       // Emit message for external listeners (like the bot)
-      // The bot expects the raw JSON-RPC message or something similar?
-      // The original code emitted the parsed JSON.
-      // ViwoClient.onMessage gives GameMessage { type, text }.
-      // We might need to adapt or just emit what we have.
-      // The bot likely uses this to send messages to Discord.
       this.emit("message", {
         method: "message",
         params: {

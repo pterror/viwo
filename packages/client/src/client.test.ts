@@ -49,12 +49,7 @@ describe("ViwoClient", () => {
   });
 
   it("should send requests", async () => {
-    // We don't call ws.onopen() here to avoid the initial flood of requests
-    // or we mock the initial requests if we did.
-    // For this test, we just want to verify execute() sends data.
-
-    // Manually set connected state if needed, but sendRequest only checks readyState
-    // which is 1 in MockWebSocket.
+    // Verify execute() sends data without full connection setup.
 
     const promise = client.execute("look", []);
 

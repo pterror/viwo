@@ -303,8 +303,6 @@ createLibraryTester(Core, "Core Library", (test) => {
 
   test("call", async () => {
     // Mock getVerb to return something executable
-    // This is hard to test with simple mocks, might need more setup
-    // For now we test failure case or mock getVerb properly
     expect(evaluate(Core["call"]({ id: 1 }, "missing"), ctx)).rejects.toThrow();
   });
 

@@ -18,6 +18,7 @@
 
 - [ ] **Socket**: Verify and implement proper login logic in `apps/discord-bot/src/socket.ts`.
 - [ ] **Web**: Document web frontend more comprehensively (layout, builder mode, etc).
+- [ ] **Discord Bot**: Implement a way to route Core -> Discord messages more intelligently. Currently relies on socketManager, but might need reverse lookup for Entity -> (DiscordUser, Channel). (Ref: `apps/discord-bot/src/index.ts`)
 
 ## Long-term Vision
 

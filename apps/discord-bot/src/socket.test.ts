@@ -27,11 +27,7 @@ describe("GameSocket", () => {
     // Spy on ViwoClient prototype methods
     connectSpy = spyOn(ViwoClient.prototype, "connect").mockImplementation(
       function (this: any) {
-        // Simulate connection state update if needed, or just do nothing
-        // We can emit 'connected' event if ViwoClient was an EventEmitter, but it's not.
-        // It uses subscribe callback.
-        // We can't easily trigger the subscribe callback from here without access to the instance's listeners.
-        // But we can capture the instance.
+        // Capture the instance.
       },
     );
     executeSpy = spyOn(ViwoClient.prototype, "execute").mockResolvedValue(
@@ -54,10 +50,7 @@ describe("GameSocket", () => {
 
     onMessageSpy = spyOn(ViwoClient.prototype, "onMessage").mockImplementation(
       (_listener: any) => {
-        // Store listener to trigger messages?
-        // We can attach it to the instance or a global map if needed.
-        // For now, we'll use a hack to expose it or just mock it.
-        // Actually, we can use `mock.fn` behavior to capture calls.
+        // Use `mock.fn` behavior to capture calls.
         return () => true;
       },
     );

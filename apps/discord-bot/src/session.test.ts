@@ -54,14 +54,6 @@ describe("Session Manager", () => {
     mockSystemSocket.off.mockClear();
 
     // Spy on socketManager methods
-    // We need to restore mocks if they exist?
-    // spyOn returns a mock function.
-    // If we run this multiple times, we might be spying on a spy.
-    // Ideally we should restore in afterEach, but bun test doesn't auto-restore?
-    // We can use mock.restore() if we saved the spy.
-    // Or just re-mock return values.
-
-    // Check if already mocked
     if (!socketManager.getSystemSocket.mock) {
       spyOn(socketManager, "getSystemSocket");
     }

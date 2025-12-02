@@ -123,9 +123,7 @@ describe("Interpreter", () => {
   });
 
   test("loops", async () => {
-    // for loop
-    // sum = 0
-    // for x in [1, 2, 3]: sum = sum + x
+    // sum = 0; for x in [1, 2, 3]: sum += x
     const script = Core["seq"](
       Core["let"]("sum", 0),
       Core["for"](

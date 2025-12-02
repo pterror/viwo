@@ -11,9 +11,7 @@ ws.onmessage = (event) => {
   if (data.type === "message" && data.text.includes("Welcome")) {
     // Logged in
     console.log("Sending talk command...");
-    // Note: "guest" is the player name, but we need to talk to someone else.
-    // But for testing, we can try to talk to ourselves or just check if command is handled.
-    // If we talk to ourselves, it might work if we are in the room.
+    // Note: "guest" is the player name. We talk to ourselves for testing.
     ws.send(JSON.stringify(["talk", "guest", "hello"]));
 
     setTimeout(() => {

@@ -107,11 +107,7 @@ describe("Mailbox Verification", () => {
   });
 
   test("should allow deposit via give opcode", async () => {
-    // Define a 'give' verb on the system or base entity for testing purposes
-    // Logic:
-    // 1. Check if caller owns the item
-    // 2. Update item location to destination
-    // 3. Update item owner to destination's owner
+    // Logic: Check owner, update location, update owner.
 
     const giveVerb = Core["seq"](
       Core["let"]("item", Core["arg"](0)),
@@ -167,11 +163,7 @@ describe("Mailbox Verification", () => {
   });
 
   test("should hide contents from sender", async () => {
-    // If we use 'look' or similar, it should filter.
-    // For now, let's just verify that 'view' permission is denied, which implies
-    // any properly implemented 'look' verb would hide it.
-    // We already verified 'view' is denied in the first test.
-    // Let's try to simulate a 'look' that respects permissions.
+    // Simulate a 'look' that respects permissions.
 
     const lookVerb = Core["seq"](
       Core["let"]("target", Core["arg"](0)),
