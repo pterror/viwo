@@ -1,11 +1,4 @@
-export interface OpcodeMetadata {
-  opcode: string;
-  label: string;
-  category: string;
-  description?: string;
-  parameters?: { name: string; type: string }[];
-  returnType?: string;
-}
+import { OpcodeMetadata } from "./interpreter";
 
 const RESERVED_TYPESCRIPT_KEYWORDS = new Set([
   "if",

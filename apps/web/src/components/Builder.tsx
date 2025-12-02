@@ -3,10 +3,11 @@ import { gameStore } from "../store/game";
 import ItemCreator from "./ItemCreator";
 import ItemEditor from "./ItemEditor";
 import { ScriptEditor } from "./ScriptEditor/ScriptEditor";
+import { MonacoEditor } from "./ScriptEditor/MonacoEditor";
 
 export default function Builder() {
   const [activeTab, setActiveTab] = createSignal<
-    "room" | "create" | "edit" | "script"
+    "room" | "create" | "edit" | "script" | "script-code"
   >("room");
   const [description, setDescription] = createSignal("");
 
@@ -16,6 +17,10 @@ export default function Builder() {
     gameStore.execute("set", ["here", "description", description()]);
     setDescription("");
   };
+
+  const [scriptCode, setScriptCode] = createSignal(
+    "// Start typing your script here...\n\n",
+  );
 
   return (
     <div class="builder">
@@ -50,7 +55,15 @@ export default function Builder() {
             activeTab() === "script" ? "builder__tab--active" : ""
           }`}
         >
-          Script
+          Script (Blocks)
+        </button>
+        <button
+          onClick={() => setActiveTab("script-code")}
+          class={`builder__tab ${
+            activeTab() === "script-code" ? "builder__tab--active" : ""
+          }`}
+        >
+          Script (Code)
         </button>
       </div>
 
@@ -83,6 +96,15 @@ export default function Builder() {
       <Show when={activeTab() === "script"}>
         <div class="builder__script-panel">
           <ScriptEditor />
+        </div>
+      </Show>
+
+      <Show when={activeTab() === "script-code"}>
+        <div class="builder__script-panel">
+          <MonacoEditor
+            value={scriptCode()}
+            onChange={(val) => setScriptCode(val)}
+          />
         </div>
       </Show>
     </div>
