@@ -24,12 +24,6 @@ export class GameSocket extends EventEmitter {
       } else if (!state.isConnected && this.connected) {
         this.connected = false;
         console.log(`Socket disconnected (Entity: ${this.entityId})`);
-        // Reconnect logic is handled by ViwoClient? No, ViwoClient doesn't auto-reconnect yet.
-        // We might need to implement it or just let it be.
-        // For now, let's assume ViwoClient doesn't auto-reconnect, so we might need to re-instantiate or call connect again.
-        // But ViwoClient.connect() is one-off.
-        // Let's just call connect again after timeout if disconnected.
-        setTimeout(() => this.client.connect(), 5000);
       }
     });
 

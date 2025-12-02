@@ -46,19 +46,29 @@ export class ViwoClient {
   private idCounter = 1;
   private stateListeners: Set<StateListener> = new Set();
   private messageListeners: Set<MessageListener> = new Set();
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private reconnectInterval: number;
   private url: string;
 
-  constructor(url: string = "ws://localhost:8080") {
+  constructor(
+    url: string = "ws://localhost:8080",
+    reconnectInterval: number = 2000,
+  ) {
     this.url = url;
+    this.reconnectInterval = reconnectInterval;
   }
 
   public connect() {
-    if (this.state.isConnected) return;
+    if (this.state.isConnected || this.socket) return;
 
     this.socket = new WebSocket(this.url);
 
     this.socket.onopen = () => {
       this.updateState({ isConnected: true });
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
 
       // Initial fetch
       this.execute("whoami", []);
@@ -70,16 +80,14 @@ export class ViwoClient {
     };
 
     this.socket.onclose = () => {
-      this.updateState({ isConnected: false });
-      this.addMessage({
-        type: "error",
-        text: "Disconnected from server.",
-      });
-      this.socket = null;
+      this.cleanupSocket();
+      this.scheduleReconnect();
     };
 
     this.socket.onerror = (err) => {
       console.error("WebSocket error:", err);
+      // onerror is usually followed by onclose, so we don't need to reconnect here explicitly
+      // unless onclose isn't called, but standard WS behavior says it should be.
     };
 
     this.socket.onmessage = (event) => {
@@ -93,9 +101,30 @@ export class ViwoClient {
   }
 
   public disconnect() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     if (this.socket) {
+      // Prevent onclose from triggering reconnect
+      this.socket.onclose = null;
       this.socket.close();
-      this.socket = null;
+      this.cleanupSocket();
+    }
+  }
+
+  private cleanupSocket() {
+    this.updateState({ isConnected: false });
+    this.socket = null;
+  }
+
+  private scheduleReconnect() {
+    if (!this.reconnectTimer) {
+      console.log(`Reconnecting in ${this.reconnectInterval}ms...`);
+      this.reconnectTimer = setTimeout(() => {
+        this.reconnectTimer = null;
+        this.connect();
+      }, this.reconnectInterval);
     }
   }
 

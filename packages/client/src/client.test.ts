@@ -56,7 +56,7 @@ describe("ViwoClient", () => {
     // Manually set connected state if needed, but sendRequest only checks readyState
     // which is 1 in MockWebSocket.
 
-    const promise = client.execute(["look"]);
+    const promise = client.execute("look", []);
 
     // Check if send was called
     expect(ws.send).toHaveBeenCalled();
