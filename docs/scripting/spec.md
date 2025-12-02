@@ -28,11 +28,11 @@ Example:
 - **Arrays**: The first element is treated as the opcode. If the opcode is registered, the function is executed with the evaluated arguments (unless the opcode is a special form like `if` or `let` which might handle evaluation differently).
 - **Unknown Opcodes**: If an array starts with a string that is not a known opcode, a `ScriptError` is thrown.
 
-## Core Library
+## Std Library
 
-_Defined in: `packages/core/src/scripting/lib/core.ts`_
+_Defined in: `packages/scripting/src/lib/std.ts`_
 
-The core library provides essential control flow, variable management, arithmetic, logic, and system interaction.
+The standard library provides essential control flow, variable management, and system interaction tools.
 
 ### Context
 
@@ -54,7 +54,41 @@ The core library provides essential control flow, variable management, arithmeti
 - `["var", name]`: Retrieves a variable's value.
 - `["set", name, value]`: Updates an existing variable.
 
-### Comparison
+### System & Debugging
+
+- `["log", ...msgs]`: Logs messages to the server console.
+- `["warn", msg]`: Adds a warning to the context.
+- `["send", type, payload]`: Sends a system message (notification) to the caller.
+- `["arg", index]`: Gets a script argument by index.
+- `["args"]`: Gets all script arguments.
+- `["typeof", value]`: Returns the type of the value ("string", "number", "boolean", "object", "null", "array").
+- `["quote", value]`: Returns the value unevaluated.
+
+### Functions & Calls
+
+- `["lambda", [argNames], body]`: Creates a lambda function.
+- `["apply", func, ...args]`: Calls a lambda function.
+
+### Data Structures
+
+- `["json.stringify", value]`: Converts value to JSON string.
+- `["json.parse", string]`: Parses JSON string.
+
+## Math Library
+
+_Defined in: `packages/scripting/src/lib/math.ts`_
+
+- `["+", a, b, ...]`: Addition.
+- `["-", a, b, ...]`: Subtraction.
+- `["*", a, b, ...]`: Multiplication.
+- `["/", a, b, ...]`: Division.
+- `["%", a, b]`: Modulo.
+- `["^", a, b, ...]`: Exponentiation.
+- `["random", min?, max?]`: Generates a random number.
+
+## Boolean Library
+
+_Defined in: `packages/scripting/src/lib/boolean.ts`_
 
 All comparison operators support chaining (e.g., `["<", 1, 2, 3]` checks `1 < 2` AND `2 < 3`).
 
@@ -64,31 +98,15 @@ All comparison operators support chaining (e.g., `["<", 1, 2, 3]` checks `1 < 2`
 - `[">", a, b, ...]`: Greater than.
 - `["<=", a, b, ...]`: Less than or equal.
 - `[">=", a, b, ...]`: Greater than or equal.
-
-### Arithmetic
-
-- `["+", a, b, ...]`: Addition.
-- `["-", a, b, ...]`: Subtraction.
-- `["*", a, b, ...]`: Multiplication.
-- `["/", a, b, ...]`: Division.
-- `["%", a, b]`: Modulo.
-- `["^", a, b, ...]`: Exponentiation.
-
-### Logic
-
 - `["and", ...args]`: Logical AND.
 - `["or", ...args]`: Logical OR.
 - `["not", arg]`: Logical NOT.
 
-### System & Debugging
+## Core Library (DB & Entity)
 
-- `["log", ...msgs]`: Logs messages to the server console.
-- `["warn", msg]`: Adds a warning to the context.
-- `["send", msg]`: Sends a system message (notification) to the caller.
-- `["random", min?, max?]`: Generates a random number.
-- `["arg", index]`: Gets a script argument by index.
-- `["args"]`: Gets all script arguments.
-- `["typeof", value]`: Returns the type of the value ("string", "number", "boolean", "object", "null", "array").
+_Defined in: `packages/core/src/runtime/lib/core.ts`_
+
+The core library provides interaction with the game world, database, and entities.
 
 ### Entity Interaction
 
@@ -100,22 +118,17 @@ All comparison operators support chaining (e.g., `["<", 1, 2, 3]` checks `1 < 2`
 - `["set_prototype", entity, protoId]`: Sets the prototype ID of an entity.
 - `["resolve_props", entity]`: Returns an entity with all properties resolved (merged with prototype).
 - `["verbs", entity]`: Gets a list of verbs available on an entity.
+- `["get_verb", entity, name]`: Gets a specific verb from an entity.
 
-### Functions & Calls
+### Calls & Scheduling
 
-- `["lambda", [argNames], body]`: Creates a lambda function.
-- `["apply", func, ...args]`: Calls a lambda function.
 - `["call", target, verb, ...args]`: Calls a verb on an entity.
 - `["schedule", verb, args, delay]`: Schedules a verb call on `this` entity after `delay` milliseconds.
-
-### Data Structures
-
-- `["json.stringify", value]`: Converts value to JSON string.
-- `["json.parse", string]`: Parses JSON string.
+- `["sudo", target, verb, args]`: Executes a verb as another entity (System/Bot only).
 
 ## List Library
 
-_Defined in: `packages/core/src/scripting/lib/list.ts`_
+_Defined in: `packages/scripting/src/lib/list.ts`_
 
 - `["list.new", ...items]`: Creates a list.
 - `["list.len", list]`: Returns the length of a list.
@@ -141,9 +154,9 @@ _Defined in: `packages/core/src/scripting/lib/list.ts`_
 
 ## Object Library
 
-_Defined in: `packages/core/src/scripting/lib/object.ts`_
+_Defined in: `packages/scripting/src/lib/object.ts`_
 
-- `["obj.new", key1, val1, ...]`: Creates an object.
+- `["obj.new", [key1, val1], [key2, val2], ...]`: Creates an object from key-value pairs.
 - `["obj.keys", obj]`: Returns keys.
 - `["obj.values", obj]`: Returns values.
 - `["obj.entries", obj]`: Returns entries.
@@ -159,7 +172,7 @@ _Defined in: `packages/core/src/scripting/lib/object.ts`_
 
 ## String Library
 
-_Defined in: `packages/core/src/scripting/lib/string.ts`_
+_Defined in: `packages/scripting/src/lib/string.ts`_
 
 - `["str.len", str]`: Returns length.
 - `["str.concat", ...strs]`: Concatenates strings.
@@ -174,7 +187,7 @@ _Defined in: `packages/core/src/scripting/lib/string.ts`_
 
 ## Time Library
 
-_Defined in: `packages/core/src/scripting/lib/time.ts`_
+_Defined in: `packages/scripting/src/lib/time.ts`_
 
 - `["time.now"]`: Returns current ISO timestamp.
 - `["time.format", timestamp]`: Formats a timestamp.
