@@ -169,6 +169,26 @@ const App = () => {
     setEditingScript(null);
   };
 
+  const handleCompletion = async (
+    code: string,
+    position: { lineNumber: number; column: number },
+  ) => {
+    if (!clientRef.current) return null;
+    try {
+      const completion = await clientRef.current.callPluginMethod(
+        "ai_completion",
+        {
+          code,
+          position,
+        },
+      );
+      return typeof completion === "string" ? completion : null;
+    } catch (e) {
+      addLog(`AI Error: ${e}`, "error");
+      return null;
+    }
+  };
+
   // Helper to get room contents
   const getRoomContents = () => {
     if (!room || !room["contents"] || !Array.isArray(room["contents"]))
@@ -185,6 +205,7 @@ const App = () => {
           initialContent={editingScript.content}
           onSave={handleSaveScript}
           onExit={handleExitEditor}
+          onCompletion={handleCompletion}
         />
       ) : (
         <>

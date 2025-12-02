@@ -5,12 +5,22 @@ interface EditorProps {
   initialContent: string;
   onSave: (content: string) => void;
   onExit: () => void;
+  onCompletion: (
+    code: string,
+    position: { lineNumber: number; column: number },
+  ) => Promise<string | null>;
 }
 
-const Editor: React.FC<EditorProps> = ({ initialContent, onSave, onExit }) => {
+const Editor: React.FC<EditorProps> = ({
+  initialContent,
+  onSave,
+  onExit,
+  onCompletion,
+}) => {
   const [lines, setLines] = useState<string[]>(initialContent.split("\n"));
   const [cursor, setCursor] = useState({ x: 0, y: 0 });
   const [offset, setOffset] = useState(0); // Vertical scroll offset
+  const [isLoading, setIsLoading] = useState(false);
 
   useInput((input, key) => {
     if (key.escape || (key.ctrl && input === "c")) {
@@ -91,6 +101,28 @@ const Editor: React.FC<EditorProps> = ({ initialContent, onSave, onExit }) => {
           y: prev.y - 1,
         }));
       }
+    } else if (key.tab) {
+      if (isLoading) return;
+      setIsLoading(true);
+      // 1-based line number for API, 0-based for internal state
+      onCompletion(lines.join("\n"), {
+        lineNumber: cursor.y + 1,
+        column: cursor.x + 1,
+      })
+        .then((completion) => {
+          if (completion) {
+            setLines((prev) => {
+              const line = prev[cursor.y] || "";
+              const newLine =
+                line.slice(0, cursor.x) + completion + line.slice(cursor.x);
+              const newLines = [...prev];
+              newLines[cursor.y] = newLine;
+              return newLines;
+            });
+            setCursor((prev) => ({ ...prev, x: prev.x + completion.length }));
+          }
+        })
+        .finally(() => setIsLoading(false));
     } else {
       // Regular typing
       setLines((prev) => {
@@ -119,7 +151,10 @@ const Editor: React.FC<EditorProps> = ({ initialContent, onSave, onExit }) => {
   return (
     <Box flexDirection="column" borderStyle="single" borderColor="yellow">
       <Box justifyContent="space-between">
-        <Text bold> Script Editor </Text>
+        <Text bold>
+          {" "}
+          Script Editor {isLoading ? "(AI Generating...)" : ""}{" "}
+        </Text>
         <Text>
           {" "}
           Ln {cursor.y + 1}, Col {cursor.x + 1}{" "}
@@ -151,7 +186,7 @@ const Editor: React.FC<EditorProps> = ({ initialContent, onSave, onExit }) => {
       </Box>
       <Box marginTop={1}>
         <Text dimColor>
-          Ctrl+S: Save | Esc: Exit | Arrows: Move | Enter: New Line
+          Ctrl+S: Save | Esc: Exit | Arrows: Move | Enter: New Line | Tab: AI
         </Text>
       </Box>
     </Box>
