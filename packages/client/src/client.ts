@@ -153,6 +153,16 @@ export class ViwoClient {
   }
 
   /**
+   * Calls a plugin RPC method.
+   * @param method The RPC method name.
+   * @param params The parameters for the method.
+   * @returns A promise that resolves with the result.
+   */
+  public callPluginMethod(method: string, params: any): Promise<any> {
+    return this.sendRequest("plugin_rpc", { method, params });
+  }
+
+  /**
    * Sends a generic JSON-RPC request.
    * @param method The JSON-RPC method.
    * @param params The parameters for the method.

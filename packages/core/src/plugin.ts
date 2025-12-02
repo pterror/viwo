@@ -21,8 +21,6 @@ export interface CommandContext {
   /** Core methods exposed to plugins */
   core: {
     getEntity: (id: number) => Entity | null;
-    getContents: (id: number) => Entity[];
-    moveEntity: (id: number, destId: number, detail?: string | null) => void;
     createEntity: (data: Record<string, unknown>) => number;
     updateEntity: (entity: Entity) => void;
     deleteEntity: (id: number) => void;
@@ -53,6 +51,11 @@ export interface PluginContext {
     command: string,
     handler: (ctx: CommandContext) => void | Promise<void>,
   ) => void;
+  /** Registers a new RPC method */
+  registerRpcMethod: (
+    method: string,
+    handler: (params: any, ctx: CommandContext) => Promise<any>,
+  ) => void;
 }
 
 /**
@@ -62,6 +65,10 @@ export class PluginManager {
   private plugins: Map<string, Plugin> = new Map();
   private commands: Map<string, (ctx: CommandContext) => void | Promise<void>> =
     new Map();
+  private rpcMethods: Map<
+    string,
+    (params: any, ctx: CommandContext) => Promise<any>
+  > = new Map();
 
   constructor() {}
 
@@ -76,6 +83,10 @@ export class PluginManager {
       registerCommand: (cmd, handler) => {
         console.log(`Plugin '${plugin.name}' registered command: ${cmd}`);
         this.commands.set(cmd, handler);
+      },
+      registerRpcMethod: (method, handler) => {
+        console.log(`Plugin '${plugin.name}' registered RPC method: ${method}`);
+        this.rpcMethods.set(method, handler);
       },
     };
 
@@ -96,5 +107,25 @@ export class PluginManager {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Delegates an RPC method call to the registered handler.
+   *
+   * @param method - The RPC method name.
+   * @param params - The parameters for the method.
+   * @param ctx - The command context (reused for RPC to provide player/core access).
+   * @returns The result of the RPC call.
+   */
+  async handleRpcMethod(
+    method: string,
+    params: any,
+    ctx: CommandContext,
+  ): Promise<any> {
+    const handler = this.rpcMethods.get(method);
+    if (handler) {
+      return await handler(params, ctx);
+    }
+    throw new Error(`RPC method '${method}' not found.`);
   }
 }

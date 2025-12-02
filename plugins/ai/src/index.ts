@@ -141,10 +141,64 @@ export class AiPlugin implements Plugin {
         You are a creative game master. Create a room based on the description: "${instruction}".
       `,
     });
+    ctx.registerRpcMethod("ai_completion", this.handleCompletion.bind(this));
   }
 
   registerTemplate(template: GenerationTemplate) {
     this.templates.set(template.name, template);
+  }
+
+  async handleCompletion(params: any, _ctx: CommandContext) {
+    const { code, position } = params; // position is { lineNumber, column }
+
+    // TODO: Use getOpcodeMetadata to provide context about available functions
+    // const opcodes = getOpcodeMetadata();
+
+    try {
+      const model = await getModel();
+
+      // Construct a prompt that asks for completion
+      const prompt = `
+        You are an expert ViwoScript developer. ViwoScript is a Lisp-like language using JSON arrays.
+        Provide code completion suggestions for the following code at the cursor position.
+        
+        Code:
+        ${code}
+        
+        Cursor Position: Line ${position.lineNumber}, Column ${position.column}
+        
+        Return a list of suggestions. Each suggestion should have a label (display text), insertText (what to insert), and detail (description).
+        Focus on valid opcodes and common patterns.
+        
+        Example structure:
+        {
+          "suggestions": [
+            { "label": "seq", "insertText": "[\\"seq\\", \\n\\t$0\\n]", "detail": "Sequence of commands", "kind": 14 },
+            { "label": "print", "insertText": "[\\"print\\", \\"$1\\"]", "detail": "Print a message", "kind": 2 }
+          ]
+        }
+      `;
+
+      const { object: data } = await generateObject({
+        model,
+        schema: z.object({
+          suggestions: z.array(
+            z.object({
+              label: z.string(),
+              insertText: z.string(),
+              detail: z.string().optional(),
+              kind: z.number().optional(), // Monaco completion item kind
+            }),
+          ),
+        }),
+        prompt: prompt,
+      });
+
+      return data.suggestions;
+    } catch (error: any) {
+      console.error("AI Completion Error:", error);
+      return [];
+    }
   }
 
   async handleTalk(ctx: CommandContext) {

@@ -31,6 +31,7 @@ client.subscribe((newState) => {
 
 export const gameStore = {
   state,
+  client, // Expose the client instance
   connect: client.connect.bind(client),
   execute: client.execute.bind(client),
 };

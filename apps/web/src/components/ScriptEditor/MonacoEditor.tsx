@@ -40,6 +40,45 @@ export const MonacoEditor: Component<MonacoEditorProps> = (props) => {
         }
       });
 
+      // Register AI Completion Provider
+      monaco.languages.registerCompletionItemProvider("javascript", {
+        triggerCharacters: [" "], // Trigger on space to help with arguments
+        provideCompletionItems: async (model, position) => {
+          const code = model.getValue();
+          const { lineNumber, column } = position;
+
+          try {
+            // Call AI plugin via RPC
+            const suggestions = await gameStore.client.callPluginMethod(
+              "ai_completion",
+              {
+                code,
+                position: { lineNumber, column },
+              },
+            );
+
+            if (!suggestions || !Array.isArray(suggestions)) {
+              return { suggestions: [] };
+            }
+
+            return {
+              suggestions: suggestions.map((s: any) => ({
+                label: s.label,
+                kind: s.kind || monaco.languages.CompletionItemKind.Function,
+                insertText: s.insertText,
+                detail: s.detail,
+                documentation: s.detail,
+                insertTextRules:
+                  monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              })),
+            };
+          } catch (e) {
+            console.error("AI Completion Failed:", e);
+            return { suggestions: [] };
+          }
+        },
+      });
+
       editorInstance = monaco.editor.create(containerRef, {
         value: props.value || "// Start typing your script here...\n\n",
         language: "javascript",
@@ -47,6 +86,33 @@ export const MonacoEditor: Component<MonacoEditorProps> = (props) => {
         automaticLayout: true,
         minimap: { enabled: false },
         fontSize: 14,
+        suggest: {
+          showMethods: true,
+          showFunctions: true,
+          showConstructors: true,
+          showFields: true,
+          showVariables: true,
+          showClasses: true,
+          showStructs: true,
+          showInterfaces: true,
+          showModules: true,
+          showProperties: true,
+          showEvents: true,
+          showOperators: true,
+          showUnits: true,
+          showValues: true,
+          showConstants: true,
+          showEnums: true,
+          showEnumMembers: true,
+          showKeywords: true,
+          showWords: true,
+          showColors: true,
+          showFiles: true,
+          showReferences: true,
+          showFolders: true,
+          showTypeParameters: true,
+          showSnippets: true,
+        },
       });
 
       editorInstance.onDidChangeModelContent(() => {
