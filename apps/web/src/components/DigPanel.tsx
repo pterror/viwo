@@ -18,10 +18,10 @@ export default function DigPanel(props: DigPanelProps) {
     e.preventDefault();
     if (mode() === "new") {
       if (!roomName()) return;
-      gameStore.execute(["dig", direction(), roomName()]);
+      gameStore.execute("dig", [direction(), roomName()]);
     } else {
       if (!targetRoom()) return;
-      gameStore.execute(["dig", direction(), targetRoom()]);
+      gameStore.execute("dig", [direction(), targetRoom()]);
     }
 
     setRoomName("");

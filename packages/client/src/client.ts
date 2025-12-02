@@ -9,6 +9,13 @@ import {
   Entity,
 } from "@viwo/shared/jsonrpc";
 
+export type CommandArgument =
+  | string
+  | number
+  | boolean
+  | null
+  | readonly CommandArgument[];
+
 export type GameMessage =
   | { type: "message"; text: string }
   | { type: "error"; text: string };
@@ -54,9 +61,9 @@ export class ViwoClient {
       this.updateState({ isConnected: true });
 
       // Initial fetch
-      this.execute(["whoami"]);
-      this.execute(["look"]);
-      this.execute(["inventory"]);
+      this.execute("whoami", []);
+      this.execute("look", []);
+      this.execute("inventory", []);
 
       // Fetch opcodes
       this.fetchOpcodes();
@@ -92,8 +99,11 @@ export class ViwoClient {
     }
   }
 
-  public execute(command: readonly string[]): Promise<any> {
-    return this.sendRequest("execute", command);
+  public execute(
+    command: string,
+    args: readonly CommandArgument[],
+  ): Promise<any> {
+    return this.sendRequest("execute", [command, ...args]);
   }
 
   public sendRequest(method: string, params: any): Promise<any> {

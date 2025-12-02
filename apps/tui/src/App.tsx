@@ -19,7 +19,7 @@ const App = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [room, setRoom] = useState<Entity | null>(null);
   const [inventory, setInventory] = useState<Entity[]>([]);
-  
+
   // Client state
   const [clientState, setClientState] = useState<GameState>({
     isConnected: false,
@@ -43,7 +43,7 @@ const App = () => {
   useEffect(() => {
     // Update room and inventory based on entities and IDs
     const { roomId, playerId, entities } = clientState;
-    
+
     if (roomId && entities.has(roomId)) {
       setRoom(entities.get(roomId)!);
     }
@@ -108,7 +108,7 @@ const App = () => {
     if (parts) {
       const command = parts[0];
       const args = parts.slice(1).map((arg) => arg.replace(/^"(.*)"$/, "$1"));
-      clientRef.current.execute([command, ...args]);
+      clientRef.current.execute(command, args);
     }
     setQuery("");
   };

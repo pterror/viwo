@@ -4,7 +4,7 @@ import { gameStore, Entity } from "../store/game";
 const ItemView = (props: { item: Entity }) => (
   <div class="room-panel__item">
     <span
-      onClick={() => gameStore.execute(["look", props.item["name"] as string])}
+      onClick={() => gameStore.execute("look", [props.item["name"] as string])}
       class={`room-panel__item-link ${
         (props.item["adjectives"] as readonly string[])
           ?.map((a) => `attribute-${a.replace(/:/g, "-").replace(/ /g, "-")}`)
@@ -27,7 +27,7 @@ const ItemView = (props: { item: Entity }) => (
             <button
               class="room-panel__verb-btn"
               onClick={() =>
-                gameStore.execute([verb, props.item["name"] as string])
+                gameStore.execute(verb, [props.item["name"] as string])
               }
             >
               {verb}
@@ -82,7 +82,7 @@ export default function RoomPanel() {
               {(exit) => (
                 <span
                   onClick={() =>
-                    gameStore.execute(["move", exit["name"] as string])
+                    gameStore.execute("move", [exit["name"] as string])
                   }
                   class="room-panel__exit-tag"
                 >

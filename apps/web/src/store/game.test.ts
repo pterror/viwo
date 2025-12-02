@@ -85,7 +85,7 @@ describe("Game Store", () => {
     }
 
     const socket = mockSockets[0];
-    gameStore.execute(["look"]);
+    gameStore.execute("look", []);
     expect(socket?.send).toHaveBeenCalled();
     expect(socket?.send.mock.lastCall?.[0]).toContain(JSON.stringify(["look"]));
   });

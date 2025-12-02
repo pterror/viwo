@@ -72,7 +72,9 @@ export class DiscordBot {
 
         // 4. Send Message to Core (assuming raw input for now)
         const parts = message.content.split(" ");
-        socket.send(parts);
+        if (parts[0]) {
+          socket.execute(parts[0], parts.slice(1));
+        }
       } catch (error) {
         console.error("Error handling message:", error);
         // message.reply("Something went wrong.");

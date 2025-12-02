@@ -65,20 +65,9 @@ rl.prompt();
 rl.on("line", (line) => {
   const result = parseCommand(line);
   if (result) {
-    // client.execute expects readonly string[]
-    // result.args is any[], we need to convert to string[]
-    const stringArgs = result.args.map((arg) => String(arg));
-    if (result.command === "execute") {
-      // If command is execute, params are [cmd, ...args]
-      // But parseCommand returns { command: "look", args: [] }
-      // So we just pass [command, ...args]
-      client.execute([result.command, ...stringArgs]);
-    } else {
-      // If it's a direct method like get_opcodes, we might need sendRequest.
-      // But parseCommand usually handles game commands.
-      // If the user types "look", result.command is "look".
-      client.execute([result.command, ...stringArgs]);
-    }
+    client.execute(result.command, result.args);
+  } else {
+    console.log(chalk.red("Invalid command."));
   }
   rl.prompt();
 });

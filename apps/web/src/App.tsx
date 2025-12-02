@@ -41,22 +41,22 @@ function App() {
       e.preventDefault();
       switch (action) {
         case "north":
-          gameStore.execute(["move", "north"]);
+          gameStore.execute("move", ["north"]);
           break;
         case "south":
-          gameStore.execute(["move", "south"]);
+          gameStore.execute("move", ["south"]);
           break;
         case "east":
-          gameStore.execute(["move", "east"]);
+          gameStore.execute("move", ["east"]);
           break;
         case "west":
-          gameStore.execute(["move", "west"]);
+          gameStore.execute("move", ["west"]);
           break;
         case "look":
-          gameStore.execute(["look"]);
+          gameStore.execute("look", []);
           break;
         case "inventory":
-          gameStore.execute(["inventory"]);
+          gameStore.execute("inventory", []);
           break;
       }
     }

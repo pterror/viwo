@@ -44,7 +44,7 @@ export class SessionManager {
       };
 
       sys.on("message", handler);
-      sys.send(["create_player", name]);
+      sys.execute("create_player", [name]);
 
       // Timeout
       setTimeout(() => {

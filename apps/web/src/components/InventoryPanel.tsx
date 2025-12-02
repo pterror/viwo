@@ -26,7 +26,7 @@ const ItemView = (props: { item: Entity }) => {
           </button>
         </Show>
         <span
-          onClick={() => gameStore.lookAt(props.item.id)}
+          onClick={() => gameStore.execute("look", [props.item.id])}
           class={`inventory-panel__item-link ${
             (props.item["adjectives"] as readonly string[])
               ?.map(
@@ -55,7 +55,7 @@ const ItemView = (props: { item: Entity }) => {
                 <button
                   class="inventory-panel__verb-btn"
                   onClick={() =>
-                    gameStore.execute([verb, props.item["name"] as string])
+                    gameStore.execute(verb, [props.item["name"] as string])
                   }
                 >
                   {verb}

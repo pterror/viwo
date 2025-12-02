@@ -1,4 +1,4 @@
-import { ViwoClient } from "@viwo/client";
+import { CommandArgument, ViwoClient } from "@viwo/client";
 import { CONFIG } from "./config";
 import { EventEmitter } from "events";
 
@@ -18,7 +18,8 @@ export class GameSocket extends EventEmitter {
         console.log(`Socket connected (Entity: ${this.entityId})`);
 
         if (this.entityId) {
-          this.send(["login", this.entityId.toString()]);
+          // TODO: Is this even correct?
+          this.execute("login", [this.entityId.toString()]);
         }
       } else if (!state.isConnected && this.connected) {
         this.connected = false;
@@ -53,8 +54,8 @@ export class GameSocket extends EventEmitter {
     this.client.connect();
   }
 
-  send(command: readonly string[]) {
-    this.client.execute(command);
+  execute(command: string, args: readonly CommandArgument[]) {
+    this.client.execute(command, args);
   }
 
   close() {

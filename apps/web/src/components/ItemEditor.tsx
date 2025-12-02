@@ -94,16 +94,14 @@ export default function ItemEditor() {
     if (!item) return;
 
     if (description()) {
-      gameStore.execute([
-        "set",
+      gameStore.execute("set", [
         item["name"] as string,
         "description",
         description(),
       ]);
     }
 
-    gameStore.execute([
-      "set",
+    gameStore.execute("set", [
       item["name"] as string,
       "adjectives",
       selectedAdjectives(),

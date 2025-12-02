@@ -61,7 +61,7 @@ describe("GameSocket", () => {
   test("Queue messages when disconnected", async () => {
     const socket = new GameSocket();
     // Not connected yet
-    socket.send(["test"]);
+    socket.execute("test", []);
 
     // Connect
     socket.connect();

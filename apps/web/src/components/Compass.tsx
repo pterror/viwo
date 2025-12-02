@@ -20,7 +20,7 @@ export default function Compass() {
   const handleDir = (dir: string) => {
     const exit = getExit(dir);
     if (exit) {
-      gameStore.execute(["move", dir]);
+      gameStore.execute("move", [dir]);
     }
   };
 

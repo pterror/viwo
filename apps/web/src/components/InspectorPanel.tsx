@@ -7,7 +7,7 @@ const ItemView = (props: { item: number }) => {
     <Show when={item}>
       <div class="inspector-panel__item">
         <span
-          onClick={() => gameStore.execute(["look", item["name"] as string])}
+          onClick={() => gameStore.execute("look", [item["name"] as string])}
           class={`inspector-panel__item-link ${
             (item["adjectives"] as readonly string[])
               ?.map((a) => `attribute-${a.replace(/[: ]/g, "-")}`)
