@@ -41,8 +41,7 @@ const read = defineOpcode<[Capability | null, string], Promise<string>>("fs.read
     ],
     returnType: "Promise<string>",
   },
-  handler: async (args, ctx) => {
-    const [cap, filePath] = args as [Capability | null, string];
+  handler: async ([cap, filePath], ctx) => {
     if (!cap) {
       throw new ScriptError("fs.read: missing capability");
     }
@@ -79,8 +78,7 @@ const write = defineOpcode<[Capability | null, string, string], Promise<null>>("
     ],
     returnType: "Promise<null>",
   },
-  handler: async (args, ctx) => {
-    const [cap, filePath, content] = args as [Capability | null, string, string];
+  handler: async ([cap, filePath, content], ctx) => {
     if (!cap) {
       throw new ScriptError("fs.write: missing capability");
     }
@@ -119,8 +117,7 @@ const list = defineOpcode<[Capability | null, string], Promise<readonly string[]
     ],
     returnType: "Promise<readonly string[]>",
   },
-  handler: async (args, ctx) => {
-    const [cap, dirPath] = args as [Capability | null, string];
+  handler: async ([cap, dirPath], ctx) => {
     if (!cap) {
       throw new ScriptError("fs.list: missing capability");
     }

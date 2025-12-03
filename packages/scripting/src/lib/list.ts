@@ -19,9 +19,9 @@ const listNew = defineOpcode<[...ScriptValue<unknown>[]], any[]>(
       parameters: [{ name: "...args", type: "any[]" }],
       returnType: "T[]",
     },
-    handler: (args, _ctx) => {
+    handler: ([...args], _ctx) => {
       // args are already evaluated
-      return [...args];
+      return args;
     },
   }
 );
@@ -41,8 +41,7 @@ const listLen = defineOpcode<[ScriptValue<readonly unknown[]>], number>(
       parameters: [{ name: "list", type: "readonly unknown[]" }],
       returnType: "number",
     },
-    handler: (args, _ctx) => {
-      const list = args[0];
+    handler: ([list], _ctx) => {
       return list.length;
     },
   }
@@ -63,8 +62,7 @@ const listEmpty = defineOpcode<[ScriptValue<readonly unknown[]>], boolean>(
       parameters: [{ name: "list", type: "readonly unknown[]" }],
       returnType: "boolean",
     },
-    handler: (args, _ctx) => {
-      const list = args[0];
+    handler: ([list], _ctx) => {
       return list.length === 0;
     },
   }
@@ -91,10 +89,8 @@ const listGet = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<numbe
       ],
       returnType: "any",
     },
-    handler: (args, _ctx) => {
-      const list = args[0];
-      const index = args[1] as number;
-      return list[index];
+    handler: ([list, index], _ctx) => {
+      return list[index as number];
     },
   }
 );
@@ -122,11 +118,8 @@ const listSet = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<numbe
       ],
       returnType: "any",
     },
-    handler: (args, _ctx) => {
-      const list = args[0];
-      const index = args[1] as number;
-      const val = args[2];
-      list[index] = val;
+    handler: ([list, index, val], _ctx) => {
+      list[index as number] = val;
       return val;
     },
   }
@@ -153,9 +146,7 @@ const listPush = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<unkn
       ],
       returnType: "number",
     },
-    handler: (args, _ctx) => {
-      const list = args[0];
-      const val = args[1];
+    handler: ([list, val], _ctx) => {
       list.push(val);
       return list.length;
     },
@@ -177,8 +168,7 @@ const listPop = defineOpcode<[ScriptValue<readonly unknown[]>], any>(
       parameters: [{ name: "list", type: "readonly unknown[]" }],
       returnType: "any",
     },
-    handler: (args, _ctx) => {
-      const list = args[0];
+    handler: ([list], _ctx) => {
       return list.pop();
     },
   }
@@ -205,9 +195,7 @@ const listUnshift = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<u
       ],
       returnType: "number",
     },
-    handler: (args, _ctx) => {
-      const list = args[0];
-      const val = args[1];
+    handler: ([list, val], _ctx) => {
       list.unshift(val);
       return list.length;
     },
@@ -229,8 +217,7 @@ const listShift = defineOpcode<[ScriptValue<readonly unknown[]>], any>(
       parameters: [{ name: "list", type: "readonly unknown[]" }],
       returnType: "any",
     },
-    handler: (args, _ctx) => {
-      const list = args[0];
+    handler: ([list], _ctx) => {
       return list.shift();
     },
   }
@@ -259,10 +246,7 @@ const listSlice = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<num
       ],
       returnType: "readonly unknown[]",
     },
-    handler: (args, _ctx) => {
-      const list = args[0];
-      const start = args[1];
-      const end = args.length === 3 ? args[2] : undefined;
+    handler: ([list, start, end], _ctx) => {
       return list.slice(start, end);
     },
   }
@@ -289,16 +273,11 @@ const listSplice = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<nu
         { name: "list", type: "readonly unknown[]" },
         { name: "start", type: "number" },
         { name: "deleteCount", type: "number" },
-        { name: "...items", type: "readonly unknown[]" },
+        { name: "...items", type: "any[]" },
       ],
       returnType: "readonly unknown[]",
     },
-    handler: (args, _ctx) => {
-      const list = args[0];
-      const start = args[1];
-      const deleteCount = args[2];
-      // Remaining args are items to insert
-      const items = args.slice(3);
+    handler: ([list, start, deleteCount, ...items], _ctx) => {
       return list.splice(start, deleteCount, ...items);
     },
   }
@@ -325,9 +304,7 @@ const listConcat = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<re
       ],
       returnType: "readonly unknown[]",
     },
-    handler: (args, _ctx) => {
-      const list1 = args[0];
-      const list2 = args[1];
+    handler: ([list1, list2], _ctx) => {
       return list1.concat(list2);
     },
   }
@@ -354,9 +331,7 @@ const listIncludes = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<
       ],
       returnType: "boolean",
     },
-    handler: (args, _ctx) => {
-      const list = args[0];
-      const val = args[1];
+    handler: ([list, val], _ctx) => {
       return list.includes(val);
     },
   }
@@ -377,8 +352,7 @@ const listReverse = defineOpcode<[ScriptValue<readonly unknown[]>], any[]>(
       parameters: [{ name: "list", type: "readonly unknown[]" }],
       returnType: "readonly unknown[]",
     },
-    handler: (args, _ctx) => {
-      const list = args[0];
+    handler: ([list], _ctx) => {
       return list.reverse();
     },
   }
@@ -399,8 +373,7 @@ const listSort = defineOpcode<[ScriptValue<readonly unknown[]>], any[]>(
       parameters: [{ name: "list", type: "readonly unknown[]" }],
       returnType: "readonly unknown[]",
     },
-    handler: (args, _ctx) => {
-      const list = args[0];
+    handler: ([list], _ctx) => {
       return list.sort();
     },
   }
@@ -427,14 +400,12 @@ const listFind = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<unkn
       ],
       returnType: "any",
     },
-    handler: async (args, ctx) => {
-      const list = args[0];
-      const func = args[1] as any;
-      if (!func || func.type !== "lambda") {
+    handler: async ([list, func], ctx) => {
+      if (!func || (func as any).type !== "lambda") {
         throw new ScriptError("list.find: expected lambda");
       }
       for (const item of list) {
-        const res = executeLambda(func, [item], ctx);
+        const res = executeLambda(func as any, [item], ctx);
         if (res instanceof Promise ? await res : res) {
           return item;
         }
@@ -465,15 +436,13 @@ const listMap = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<unkno
       ],
       returnType: "readonly unknown[]",
     },
-    handler: async (args, ctx) => {
-      const list = args[0];
-      const func = args[1] as any;
-      if (!func || func.type !== "lambda") {
+    handler: async ([list, func], ctx) => {
+      if (!func || (func as any).type !== "lambda") {
         throw new ScriptError("list.map: expected lambda");
       }
       const result: unknown[] = [];
       for (const item of list) {
-        const res = executeLambda(func, [item], ctx);
+        const res = executeLambda(func as any, [item], ctx);
         result.push(res instanceof Promise ? await res : res);
       }
       return result;
@@ -502,15 +471,13 @@ const listFilter = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<un
       ],
       returnType: "readonly unknown[]",
     },
-    handler: async (args, ctx) => {
-      const list = args[0];
-      const func = args[1] as any;
-      if (!func || func.type !== "lambda") {
+    handler: async ([list, func], ctx) => {
+      if (!func || (func as any).type !== "lambda") {
         throw new ScriptError("list.filter: expected lambda");
       }
       const result: unknown[] = [];
       for (const item of list) {
-        const res = executeLambda(func, [item], ctx);
+        const res = executeLambda(func as any, [item], ctx);
         if (res instanceof Promise ? await res : res) {
           result.push(item);
         }
@@ -543,15 +510,13 @@ const listReduce = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<un
       ],
       returnType: "any",
     },
-    handler: async (args, ctx) => {
-      const list = args[0];
-      const func = args[1] as any;
-      if (!func || func.type !== "lambda") {
+    handler: async ([list, func, init], ctx) => {
+      if (!func || (func as any).type !== "lambda") {
         throw new ScriptError("list.reduce: expected lambda");
       }
-      let acc = args[2];
+      let acc = init;
       for (const item of list) {
-        const res = executeLambda(func, [acc, item], ctx);
+        const res = executeLambda(func as any, [acc, item], ctx);
         acc = res instanceof Promise ? await res : res;
       }
       return acc;
@@ -580,15 +545,13 @@ const listFlatMap = defineOpcode<[ScriptValue<readonly unknown[]>, ScriptValue<u
       ],
       returnType: "readonly unknown[]",
     },
-    handler: async (args, ctx) => {
-      const list = args[0];
-      const func = args[1] as any;
-      if (!func || func.type !== "lambda") {
+    handler: async ([list, func], ctx) => {
+      if (!func || (func as any).type !== "lambda") {
         throw new ScriptError("list.flatMap: expected lambda");
       }
       const result: unknown[] = [];
       for (const item of list) {
-        const res = executeLambda(func, [item], ctx);
+        const res = executeLambda(func as any, [item], ctx);
         const mapped = res instanceof Promise ? await res : res;
         if (Array.isArray(mapped)) {
           result.push(...mapped);

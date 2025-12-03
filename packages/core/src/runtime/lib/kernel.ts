@@ -30,9 +30,7 @@ export const get_capability = defineOpcode<
     ],
     returnType: "Capability | null",
   },
-  handler: (args, ctx) => {
-    const [type, filter = {}] = args as [string, object?];
-
+  handler: ([type, filter = {}], ctx) => {
     const caps = getCapabilities(ctx.this.id);
     const match = caps.find((c) => {
       if (c.type !== type) return false;
@@ -72,15 +70,13 @@ export const mint = defineOpcode<
     ],
     returnType: "Capability",
   },
-  handler: (args, ctx) => {
-    const [auth, type, params] = args as [Capability | null, string, object];
-
+  handler: ([auth, type, params], ctx) => {
     if (!auth || (auth as any).__brand !== "Capability") {
       throw new ScriptError("mint: expected capability for authority");
     }
 
     // Verify authority
-    const authCap = getCapability(auth.id);
+    const authCap = getCapability((auth as Capability).id);
     if (!authCap || authCap.owner_id !== ctx.this.id) {
       throw new ScriptError("mint: invalid authority capability");
     }
@@ -125,14 +121,12 @@ export const delegate = defineOpcode<
     ],
     returnType: "Capability",
   },
-  handler: (args, ctx) => {
-    const [parent, restrictions] = args as [Capability | null, object];
-
+  handler: ([parent, restrictions], ctx) => {
     if (!parent || (parent as any).__brand !== "Capability") {
       throw new ScriptError("delegate: expected capability");
     }
 
-    const parentCap = getCapability(parent.id);
+    const parentCap = getCapability((parent as Capability).id);
     if (!parentCap || parentCap.owner_id !== ctx.this.id) {
       throw new ScriptError("delegate: invalid parent capability");
     }
@@ -169,9 +163,7 @@ export const give_capability = defineOpcode<
     ],
     returnType: "null",
   },
-  handler: (args, ctx) => {
-    const [cap, target] = args as [Capability | null, Entity];
-
+  handler: ([cap, target], ctx) => {
     if (!cap || (cap as any).__brand !== "Capability") {
       throw new ScriptError("give_capability: expected capability");
     }
@@ -180,12 +172,12 @@ export const give_capability = defineOpcode<
       throw new ScriptError("give_capability: expected target entity");
     }
 
-    const dbCap = getCapability(cap.id);
+    const dbCap = getCapability((cap as Capability).id);
     if (!dbCap || dbCap.owner_id !== ctx.this.id) {
       throw new ScriptError("give_capability: invalid capability");
     }
 
-    updateCapabilityOwner(cap.id, target.id);
+    updateCapabilityOwner((cap as Capability).id, target.id);
     return null;
   },
 });

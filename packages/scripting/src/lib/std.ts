@@ -54,7 +54,7 @@ export const seq = defineOpcode<ScriptValue<unknown>[], any>("seq", {
     returnType: "any",
     lazy: true,
   },
-  handler: (args, ctx) => {
+  handler: ([...args], ctx) => {
     if (args.length === 0) {
       throw new ScriptError("seq: expected at least one argument");
     }
@@ -109,9 +109,7 @@ const ifOp = defineOpcode<
     returnType: "T",
     lazy: true,
   },
-  handler: (args, ctx) => {
-    const [cond, thenBranch, elseBranch] = args;
-    
+  handler: ([cond, thenBranch, elseBranch], ctx) => {
     const runBranch = (conditionResult: boolean) => {
       if (conditionResult) {
         return evaluate(thenBranch, ctx);
@@ -152,8 +150,7 @@ const whileOp = defineOpcode<[ScriptValue<boolean>, ScriptValue<unknown>], any>(
       returnType: "any",
       lazy: true,
     },
-    handler: (args, ctx) => {
-      const [cond, body] = args;
+    handler: ([cond, body], ctx) => {
       let lastResult: any = null;
 
       const loop = (): any => {
@@ -221,9 +218,7 @@ const forOp = defineOpcode<
     returnType: "any",
     lazy: true,
   },
-  handler: (args, ctx) => {
-    const [varName, listExpr, body] = args;
-    
+  handler: ([varName, listExpr, body], ctx) => {
     const runLoop = (list: any[]) => {
       if (!Array.isArray(list)) return null;
       
@@ -275,8 +270,7 @@ const jsonStringify = defineOpcode<[ScriptValue<unknown>], string>(
       parameters: [{ name: "value", type: "unknown" }],
       returnType: "string",
     },
-    handler: (args, _ctx) => {
-      const [val] = args;
+    handler: ([val], _ctx) => {
       return JSON.stringify(val);
     },
   },
@@ -295,8 +289,7 @@ const jsonParse = defineOpcode<[ScriptValue<string>], unknown>("json.parse", {
     parameters: [{ name: "string", type: "string" }],
     returnType: "unknown",
   },
-  handler: (args, _ctx) => {
-    const [str] = args;
+  handler: ([str], _ctx) => {
     try {
       return JSON.parse(str);
     } catch {
@@ -318,8 +311,7 @@ export const typeof_ = defineOpcode<[ScriptValue<unknown>], "string" | "number" 
     parameters: [{ name: "value", type: "unknown" }],
     returnType: "string",
   },
-  handler: (args, _ctx) => {
-    const [val] = args;
+  handler: ([val], _ctx) => {
     if (Array.isArray(val)) return "array";
     if (val === null) return "null";
     return typeof val as "string" | "number" | "boolean" | "object"| "null" | "array";
@@ -346,8 +338,7 @@ const letOp = defineOpcode<[string, ScriptValue<unknown>], any>("let", {
     ],
     returnType: "any",
   },
-  handler: (args, ctx) => {
-    const [name, value] = args;
+  handler: ([name, value], ctx) => {
     ctx.vars = ctx.vars || {};
     ctx.vars[name] = value;
     return value;
@@ -368,8 +359,7 @@ const var_ = defineOpcode<[string], any>("var", {
     parameters: [{ name: "name", type: "string" }],
     returnType: "any",
   },
-  handler: (args, ctx) => {
-    const [name] = args;
+  handler: ([name], ctx) => {
     return ctx.vars?.[name] ?? null;
   },
 });
@@ -393,8 +383,7 @@ const set_ = defineOpcode<[string, ScriptValue<unknown>], any>("set", {
     ],
     returnType: "any",
   },
-  handler: (args, ctx) => {
-    const [name, value] = args;
+  handler: ([name, value], ctx) => {
     if (ctx.vars && name in ctx.vars) {
       ctx.vars[name] = value;
     }
@@ -422,7 +411,7 @@ export const log = defineOpcode<
     ],
     returnType: "null",
   },
-  handler: (args, _ctx) => {
+  handler: ([...args], _ctx) => {
     console.log(...args);
     return null;
   },
@@ -441,8 +430,7 @@ export const arg = defineOpcode<[ScriptValue<number>], any>("arg", {
     parameters: [{ name: "index", type: "number" }],
     returnType: "any",
   },
-  handler: (args, ctx) => {
-    const [index] = args;
+  handler: ([index], ctx) => {
     return ctx.args?.[index] ?? null;
   },
 });
@@ -477,8 +465,7 @@ export const warn = defineOpcode<[ScriptValue<unknown>], void>("warn", {
     parameters: [{ name: "message", type: "unknown" }],
     returnType: "void",
   },
-  handler: (args, ctx) => {
-    const [msg] = args;
+  handler: ([msg], ctx) => {
     ctx.warnings.push(String(msg));
   },
 });
@@ -495,8 +482,7 @@ const throwOp = defineOpcode<[ScriptValue<unknown>], never>("throw", {
     parameters: [{ name: "message", type: "unknown" }],
     returnType: "never",
   },
-  handler: (args, _ctx) => {
-    const [msg] = args;
+  handler: ([msg], _ctx) => {
     throw new ScriptError(msg as string);
   },
 });
@@ -524,8 +510,7 @@ const tryOp = defineOpcode<
     returnType: "any",
     lazy: true,
   },
-  handler: (args, ctx) => {
-    const [tryBlock, errorVar, catchBlock] = args;
+  handler: ([tryBlock, errorVar, catchBlock], ctx) => {
     try {
       return evaluate(tryBlock, ctx);
     } catch (e: any) {
@@ -562,8 +547,7 @@ export const lambda = defineOpcode<[readonly string[], ScriptValue<unknown>], an
     returnType: "any",
       lazy: true,
     },
-    handler: (args, ctx) => {
-      const [argNames, body] = args;
+    handler: ([argNames, body], ctx) => {
       return {
         type: "lambda",
         args: argNames,
@@ -595,9 +579,7 @@ export const apply = defineOpcode<
     ],
     returnType: "any",
   },
-  handler: (args, ctx) => {
-    const [func, ...evaluatedArgs] = args;
-
+  handler: ([func, ...evaluatedArgs], ctx) => {
     if (!func) {
       throw new ScriptError("apply: func not found");
     }
@@ -648,8 +630,7 @@ export const send = defineOpcode<[ScriptValue<string>, ScriptValue<unknown>], nu
     ],
     returnType: "null",
   },
-  handler: (args, ctx) => {
-    const [type, payload] = args;
+  handler: ([type, payload], ctx) => {
     ctx.send?.(type, payload);
     return null;
   },
@@ -669,7 +650,7 @@ export const quote = defineOpcode<[any], any>("quote", {
     returnType: "any",
     lazy: true,
   },
-  handler: (args, _ctx) => {
-    return args[0];
+  handler: ([value], _ctx) => {
+    return value;
   },
 });

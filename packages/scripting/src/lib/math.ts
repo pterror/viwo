@@ -24,10 +24,10 @@ const add = defineOpcode<
     ],
     returnType: "number",
   },
-  handler: (args, _ctx) => {
-    let sum = args[0];
-    for (let i = 1; i < args.length; i++) {
-      sum += args[i];
+  handler: ([first, ...rest], _ctx) => {
+    let sum = first;
+    for (const val of rest) {
+      sum += val;
     }
     return sum;
   },
@@ -57,10 +57,10 @@ const sub = defineOpcode<
     ],
     returnType: "number",
   },
-  handler: (args, _ctx) => {
-    let diff = args[0];
-    for (let i = 1; i < args.length; i++) {
-      diff -= args[i];
+  handler: ([first, ...rest], _ctx) => {
+    let diff = first;
+    for (const val of rest) {
+      diff -= val;
     }
     return diff;
   },
@@ -90,10 +90,10 @@ const mul = defineOpcode<
     ],
     returnType: "number",
   },
-  handler: (args, _ctx) => {
-    let prod = args[0];
-    for (let i = 1; i < args.length; i++) {
-      prod *= args[i];
+  handler: ([first, ...rest], _ctx) => {
+    let prod = first;
+    for (const val of rest) {
+      prod *= val;
     }
     return prod;
   },
@@ -123,10 +123,10 @@ const div = defineOpcode<
     ],
     returnType: "number",
   },
-  handler: (args, _ctx) => {
-    let quot = args[0];
-    for (let i = 1; i < args.length; i++) {
-      quot /= args[i];
+  handler: ([first, ...rest], _ctx) => {
+    let quot = first;
+    for (const val of rest) {
+      quot /= val;
     }
     return quot;
   },
@@ -154,12 +154,9 @@ const mod = defineOpcode<[number, number], number>(
       ],
       returnType: "number",
     },
-    handler: (args, _ctx) => {
-      const aEval = args[0];
-      const bEval = args[1];
-      return aEval % bEval;
-    },
-  },
+    handler: ([a, b], _ctx) => {
+    return a % b;
+  },  },
 );
 export { mod as "%" };
 
@@ -225,17 +222,19 @@ export const random = defineOpcode<
   handler: (args, _ctx) => {
     // random(max), random(min, max) or random() -> 0..1
     if (args.length === 0) return Math.random();
-    const min = args.length === 2 ? args[0] : 0;
-    const max = args[args.length === 2 ? 1 : 0];
+    
+    let min = 0;
+    let max = 1;
+    
+    if (args.length === 1) {
+      max = args[0] as number;
+    } else {
+      [min, max] = args as [number, number];
+    }
+    
     const shouldFloor = min % 1 === 0 && max % 1 === 0;
     
-    // Manual check for min > max because it's a logic error, not type/count error
     if (min > max) {
-      // We can keep this or remove it. Let's keep it for now as it's specific logic.
-      // But wait, if we remove ScriptError import, we need to import it or use Error.
-      // The original code used ScriptError.
-      // I removed ScriptError import in this file content.
-      // So I should throw Error or re-add ScriptError import.
       throw new Error("random: min must be less than or equal to max");
     }
     const roll = Math.random() * (max - min + 1) + min;

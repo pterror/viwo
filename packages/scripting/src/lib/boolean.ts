@@ -1,4 +1,4 @@
-import { evaluate, ScriptError } from "../interpreter";
+import { evaluate } from "../interpreter";
 import { defineOpcode, ScriptValue } from "../def";
 
 // Comparison
@@ -25,13 +25,9 @@ const eq = defineOpcode<
     ],
     returnType: "boolean",
   },
-  handler: (args, _ctx) => {
-    if (args.length < 2) {
-      throw new ScriptError("==: expected at least 2 arguments");
-    }
-    let prev = args[0];
-    for (let i = 1; i < args.length; i++) {
-      const next = args[i];
+  handler: ([first, ...rest], _ctx) => {
+    let prev = first;
+    for (const next of rest) {
       if (prev !== next) {
         return false;
       }
@@ -65,13 +61,9 @@ const neq = defineOpcode<
     ],
     returnType: "boolean",
   },
-  handler: (args, _ctx) => {
-    if (args.length < 2) {
-      throw new ScriptError("!=: expected at least 2 arguments");
-    }
-    let prev = args[0];
-    for (let i = 1; i < args.length; i++) {
-      const next = args[i];
+  handler: ([first, ...rest], _ctx) => {
+    let prev = first;
+    for (const next of rest) {
       if (prev === next) {
         return false;
       }
@@ -105,13 +97,9 @@ const lt = defineOpcode<
     ],
     returnType: "boolean",
   },
-  handler: (args, _ctx) => {
-    if (args.length < 2) {
-      throw new ScriptError("<: expected at least 2 arguments");
-    }
-    let prev = args[0] as number;
-    for (let i = 1; i < args.length; i++) {
-      const next = args[i] as number;
+  handler: ([first, ...rest], _ctx) => {
+    let prev = first;
+    for (const next of rest) {
       if (prev >= next) {
         return false;
       }
@@ -145,13 +133,9 @@ const gt = defineOpcode<
     ],
     returnType: "boolean",
   },
-  handler: (args, _ctx) => {
-    if (args.length < 2) {
-      throw new ScriptError(">: expected at least 2 arguments");
-    }
-    let prev = args[0] as number;
-    for (let i = 1; i < args.length; i++) {
-      const next = args[i] as number;
+  handler: ([first, ...rest], _ctx) => {
+    let prev = first;
+    for (const next of rest) {
       if (prev <= next) {
         return false;
       }
@@ -185,13 +169,9 @@ const lte = defineOpcode<
     ],
     returnType: "boolean",
   },
-  handler: (args, _ctx) => {
-    if (args.length < 2) {
-      throw new ScriptError("<=: expected at least 2 arguments");
-    }
-    let prev = args[0] as number;
-    for (let i = 1; i < args.length; i++) {
-      const next = args[i] as number;
+  handler: ([first, ...rest], _ctx) => {
+    let prev = first;
+    for (const next of rest) {
       if (prev > next) {
         return false;
       }
@@ -225,13 +205,9 @@ const gte = defineOpcode<
     ],
     returnType: "boolean",
   },
-  handler: (args, _ctx) => {
-    if (args.length < 2) {
-      throw new ScriptError(">=: expected at least 2 arguments");
-    }
-    let prev = args[0] as number;
-    for (let i = 1; i < args.length; i++) {
-      const next = args[i] as number;
+  handler: ([first, ...rest], _ctx) => {
+    let prev = first;
+    for (const next of rest) {
       if (prev < next) {
         return false;
       }
@@ -260,19 +236,16 @@ export const and = defineOpcode<
       { name: "B", type: "block" },
     ],
     parameters: [
-      { name: "a", type: "boolean" },
-      { name: "b", type: "boolean" },
-      { name: "...args", type: "boolean[]" },
+      { name: "a", type: "any" },
+      { name: "b", type: "any" },
+      { name: "...args", type: "any[]" },
     ],
     returnType: "boolean",
     lazy: true,
   },
-  handler: (args, ctx) => {
-    if (args.length < 2) {
-      throw new ScriptError("and: expected at least 2 arguments");
-    }
-    
+  handler: ([a, b, ...rest], ctx) => {
     let i = 0;
+    const args = [a, b, ...rest];
     const next = (): any => {
       if (i >= args.length) return true;
       
@@ -311,19 +284,16 @@ export const or = defineOpcode<
       { name: "B", type: "block" },
     ],
     parameters: [
-      { name: "a", type: "boolean" },
-      { name: "b", type: "boolean" },
-      { name: "...args", type: "boolean[]" },
+      { name: "a", type: "any" },
+      { name: "b", type: "any" },
+      { name: "...args", type: "any[]" },
     ],
     returnType: "boolean",
     lazy: true,
   },
-  handler: (args, ctx) => {
-    if (args.length < 2) {
-      throw new ScriptError("or: expected at least 2 arguments");
-    }
-    
+  handler: ([a, b, ...rest], ctx) => {
     let i = 0;
+    const args = [a, b, ...rest];
     const next = (): any => {
       if (i >= args.length) return false;
       
@@ -354,13 +324,10 @@ export const not = defineOpcode<[boolean], boolean>("not", {
     category: "logic",
     description: "Logical NOT",
     slots: [{ name: "Val", type: "block" }],
-    parameters: [{ name: "val", type: "boolean" }],
+    parameters: [{ name: "val", type: "any" }],
     returnType: "boolean",
   },
-  handler: (args, _ctx) => {
-    if (args.length !== 1) {
-      throw new ScriptError("not: expected 1 argument");
-    }
-    return !args[0];
+  handler: ([val], _ctx) => {
+    return !val;
   },
 });

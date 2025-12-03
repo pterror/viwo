@@ -69,8 +69,7 @@ const objKeys = defineOpcode<[ScriptValue<object>], string[]>(
       parameters: [{ name: "object", type: "object" }],
       returnType: "string[]",
     },
-    handler: (args, _ctx) => {
-      const [obj] = args;
+    handler: ([obj], _ctx) => {
       return Object.getOwnPropertyNames(obj);
     },
   }
@@ -91,8 +90,7 @@ const objValues = defineOpcode<[ScriptValue<object>], any[]>(
       parameters: [{ name: "object", type: "object" }],
       returnType: "any[]",
     },
-    handler: (args, _ctx) => {
-      const [obj] = args;
+    handler: ([obj], _ctx) => {
       return Object.getOwnPropertyNames(obj).map((key) => (obj as any)[key]);
     },
   }
@@ -113,8 +111,7 @@ const objEntries = defineOpcode<[ScriptValue<object>], [string, any][]>(
       parameters: [{ name: "object", type: "object" }],
       returnType: "[string, any][]",
     },
-    handler: (args, _ctx) => {
-      const [obj] = args;
+    handler: ([obj], _ctx) => {
       return Object.getOwnPropertyNames(obj).map((key) => [key, (obj as any)[key]]);
     },
   }
@@ -143,10 +140,9 @@ const objGet = defineOpcode<[ScriptValue<object>, ScriptValue<string>, ScriptVal
       ],
       returnType: "any",
     },
-    handler: (args, _ctx) => {
-      const [obj, key, defVal] = args;
+    handler: ([obj, key, defVal], _ctx) => {
       if (!Object.hasOwnProperty.call(obj, key)) {
-        if (args.length === 3) {
+        if (defVal !== undefined) {
           return defVal;
         }
         throw new ScriptError(`obj.get: key '${key}' not found`);
@@ -179,8 +175,7 @@ const objSet = defineOpcode<[ScriptValue<object>, ScriptValue<string>, ScriptVal
       ],
       returnType: "any",
     },
-    handler: (args, _ctx) => {
-      const [obj, key, val] = args;
+    handler: ([obj, key, val], _ctx) => {
       if (DISALLOWED_KEYS.has(key)) {
         throw new ScriptError(`obj.set: disallowed key '${key}'`);
       }
@@ -211,8 +206,7 @@ const objHas = defineOpcode<[ScriptValue<object>, ScriptValue<string>], boolean>
       ],
       returnType: "boolean",
     },
-    handler: (args, _ctx) => {
-      const [obj, key] = args;
+    handler: ([obj, key], _ctx) => {
       return Object.hasOwnProperty.call(obj, key);
     },
   }
@@ -239,8 +233,7 @@ const objDel = defineOpcode<[ScriptValue<object>, ScriptValue<string>], boolean>
       ],
       returnType: "boolean",
     },
-    handler: (args, _ctx) => {
-      const [obj, key] = args;
+    handler: ([obj, key], _ctx) => {
       if (Object.hasOwnProperty.call(obj, key)) {
         delete (obj as any)[key];
         return true;
@@ -265,8 +258,7 @@ const objMerge = defineOpcode<[ScriptValue<object>, ScriptValue<object>, ...Scri
       parameters: [{ name: "...objects", type: "object[]" }],
       returnType: "any",
     },
-    handler: (args, _ctx) => {
-      const objs = args;
+    handler: ([...objs], _ctx) => {
       return Object.assign({}, ...objs);
     },
   }
@@ -293,8 +285,7 @@ const objMap = defineOpcode<[ScriptValue<object>, ScriptValue<unknown>], any>(
       ],
       returnType: "any",
     },
-    handler: async (args, ctx) => {
-      const [obj, func] = args;
+    handler: async ([obj, func], ctx) => {
       if (!func || (func as any).type !== "lambda") {
         throw new ScriptError(
           `obj.map: expected lambda, got ${JSON.stringify(func)}`,
@@ -303,7 +294,7 @@ const objMap = defineOpcode<[ScriptValue<object>, ScriptValue<unknown>], any>(
 
       const result: Record<string, any> = {};
       for (const [key, val] of Object.entries(obj)) {
-        const res = executeLambda(func, [val, key], ctx);
+        const res = executeLambda(func as any, [val, key], ctx);
         result[key] = res instanceof Promise ? await res : res;
       }
       return result;
@@ -332,15 +323,14 @@ const objFilter = defineOpcode<[ScriptValue<object>, ScriptValue<unknown>], any>
       ],
       returnType: "any",
     },
-    handler: async (args, ctx) => {
-      const [obj, func] = args;
+    handler: async ([obj, func], ctx) => {
       if (!func || (func as any).type !== "lambda") {
         return {};
       }
 
       const result: Record<string, any> = {};
       for (const [key, val] of Object.entries(obj)) {
-        const res = executeLambda(func, [val, key], ctx);
+        const res = executeLambda(func as any, [val, key], ctx);
         if (res instanceof Promise ? await res : res) {
           result[key] = val;
         }
@@ -373,8 +363,7 @@ const objReduce = defineOpcode<[ScriptValue<object>, ScriptValue<unknown>, Scrip
       ],
       returnType: "any",
     },
-    handler: async (args, ctx) => {
-      const [obj, func, init] = args;
+    handler: async ([obj, func, init], ctx) => {
       let acc = init;
 
       if (!func || (func as any).type !== "lambda") {
@@ -382,7 +371,7 @@ const objReduce = defineOpcode<[ScriptValue<object>, ScriptValue<unknown>, Scrip
       }
 
       for (const [key, val] of Object.entries(obj)) {
-        const res = executeLambda(func, [acc, val, key], ctx);
+        const res = executeLambda(func as any, [acc, val, key], ctx);
         acc = res instanceof Promise ? await res : res;
       }
       return acc;
@@ -411,15 +400,14 @@ const objFlatMap = defineOpcode<[ScriptValue<object>, ScriptValue<unknown>], any
       ],
       returnType: "any",
     },
-    handler: async (args, ctx) => {
-      const [obj, func] = args;
+    handler: async ([obj, func], ctx) => {
       if (!func || (func as any).type !== "lambda") {
         return {};
       }
 
       const result: Record<string, unknown> = {};
       for (const [key, val] of Object.entries(obj)) {
-        const res = executeLambda(func, [val, key], ctx);
+        const res = executeLambda(func as any, [val, key], ctx);
         const mapped = res instanceof Promise ? await res : res;
         if (
           typeof mapped === "object" &&

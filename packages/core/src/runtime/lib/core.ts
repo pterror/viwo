@@ -39,13 +39,12 @@ export const create = defineOpcode<[Capability | null, object], number>(
       ],
       returnType: "number",
     },
-    handler: (args, ctx) => {
-      const [cap, data] = args as [Capability | null, object];
+    handler: ([cap, data], ctx) => {
       if (!cap) {
         throw new ScriptError("create: expected capability");
       }
 
-      checkCapability(cap, ctx.this.id, "sys.create");
+      checkCapability(cap as Capability, ctx.this.id, "sys.create");
 
       const newId = createEntity(data as never);
 
@@ -77,23 +76,27 @@ export const destroy = defineOpcode<[Capability | null, Entity], null>(
       ],
       returnType: "null",
     },
-    handler: (args, ctx) => {
-      const [cap, target] = args as [Capability | null, Entity];
+    handler: ([cap, target], ctx) => {
       if (!cap) {
         throw new ScriptError("destroy: expected capability");
       }
 
-      if (!target || typeof target.id !== "number") {
+      if (!target || typeof (target as Entity).id !== "number") {
         throw new ScriptError(
           `destroy: target must be an entity, got ${JSON.stringify(target)}`,
         );
       }
 
-      checkCapability(cap, ctx.this.id, "entity.control", (params) => {
-        return params["target_id"] === target.id;
-      });
+      checkCapability(
+        cap as Capability,
+        ctx.this.id,
+        "entity.control",
+        (params) => {
+          return params["target_id"] === (target as Entity).id;
+        },
+      );
 
-      deleteEntity(target.id);
+      deleteEntity((target as Entity).id);
       return null;
     },
   },
@@ -120,9 +123,7 @@ export const call = defineOpcode<[Entity, string, ...unknown[]], any>("call", {
     ],
     returnType: "any",
   },
-  handler: (args, ctx) => {
-    const [target, verb, ...callArgs] = args as [Entity, string, ...unknown[]];
-
+  handler: ([target, verb, ...callArgs], ctx) => {
     const targetVerb = getVerb(target.id, verb);
     if (!targetVerb) {
       throw new ScriptError(`call: verb '${verb}' not found on ${target.id}`);
@@ -161,8 +162,7 @@ export const schedule = defineOpcode<[string, unknown[], number], null>(
       ],
       returnType: "null",
     },
-    handler: (args, ctx) => {
-      const [verb, callArgs, delay] = args as [string, unknown[], number];
+    handler: ([verb, callArgs, delay], ctx) => {
       scheduler.schedule(ctx.this.id, verb, callArgs, delay);
       return null;
     },
@@ -182,8 +182,7 @@ export const verbs = defineOpcode<[Entity], readonly Verb[]>("verbs", {
     parameters: [{ name: "target", type: "object" }],
     returnType: "Verb[]",
   },
-  handler: (args, _ctx) => {
-    const [target] = args as [Entity];
+  handler: ([target], _ctx) => {
     if (!target || !("id" in target)) {
       return [];
     }
@@ -211,9 +210,7 @@ export const get_verb = defineOpcode<[Entity, string], Verb | null>(
       ],
       returnType: "Verb | null",
     },
-    handler: (args, _ctx) => {
-      const [target, name] = args as [Entity, string];
-
+    handler: ([target, name], _ctx) => {
       if (!target || !("id" in target)) {
         return null;
       }
@@ -234,8 +231,7 @@ export const entity = defineOpcode<[number], Entity>("entity", {
     parameters: [{ name: "id", type: "number" }],
     returnType: "Entity",
   },
-  handler: (args, _ctx) => {
-    const [id] = args as [number];
+  handler: ([id], _ctx) => {
     const entity = getEntity(id);
     if (!entity) {
       throw new ScriptError(`entity: entity ${id} not found`);
@@ -264,8 +260,7 @@ export const set_entity = defineOpcode<[Capability | null, ...Entity[]], void>(
       ],
       returnType: "void",
     },
-    handler: (args, ctx) => {
-      const [cap, ...entities] = args as [Capability | null, ...Entity[]];
+    handler: ([cap, ...entities], ctx) => {
       if (!cap) {
         throw new ScriptError("set_entity: expected capability");
       }
@@ -279,9 +274,14 @@ export const set_entity = defineOpcode<[Capability | null, ...Entity[]], void>(
       }
 
       for (const entity of entities) {
-        checkCapability(cap, ctx.this.id, "entity.control", (params) => {
-          return params["target_id"] === entity.id;
-        });
+        checkCapability(
+          cap as Capability,
+          ctx.this.id,
+          "entity.control",
+          (params) => {
+            return params["target_id"] === entity.id;
+          },
+        );
       }
 
       updateEntity(...entities);
@@ -304,8 +304,7 @@ export const get_prototype = defineOpcode<[Entity], number | null>(
       parameters: [{ name: "target", type: "object" }],
       returnType: "number | null",
     },
-    handler: (args, _ctx) => {
-      const [entity] = args as [Entity];
+    handler: ([entity], _ctx) => {
       if (!entity || typeof entity.id !== "number") {
         throw new ScriptError(
           `get_prototype: expected entity, got ${JSON.stringify(entity)}`,
@@ -336,12 +335,7 @@ export const set_prototype = defineOpcode<
     ],
     returnType: "null",
   },
-  handler: (args, ctx) => {
-    const [cap, entity, protoId] = args as [
-      Capability | null,
-      Entity,
-      number | null,
-    ];
+  handler: ([cap, entity, protoId], ctx) => {
     if (!cap) {
       throw new ScriptError("set_prototype: expected capability");
     }
@@ -381,8 +375,7 @@ export const resolve_props = defineOpcode<[Entity], Entity>("resolve_props", {
     parameters: [{ name: "target", type: "object" }],
     returnType: "Entity",
   },
-  handler: (args, ctx) => {
-    const [entity] = args as [Entity];
+  handler: ([entity], ctx) => {
     return resolveProps(entity, ctx);
   },
 });
@@ -413,18 +406,12 @@ export const sudo = defineOpcode<
     ],
     returnType: "any",
   },
-  handler: (args, ctx) => {
-    const [cap, target, verb, evaluatedArgs] = args as [
-      Capability | null,
-      Entity,
-      string,
-      unknown[],
-    ];
+  handler: ([cap, target, verb, evaluatedArgs], ctx) => {
     if (!cap) {
       throw new ScriptError("sudo: expected capability");
     }
 
-    checkCapability(cap, ctx.this.id, "sys.sudo");
+    checkCapability(cap as Capability, ctx.this.id, "sys.sudo");
 
     if (!target || !("id" in target) || typeof target.id !== "number") {
       throw new ScriptError(

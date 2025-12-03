@@ -14,8 +14,7 @@ const strLen = defineOpcode<[ScriptValue<string>], number>(
       parameters: [{ name: "string", type: "string" }],
       returnType: "number",
     },
-    handler: (args, _ctx) => {
-      const [str] = args;
+    handler: ([str], _ctx) => {
       return str.length;
     },
   }
@@ -33,7 +32,7 @@ const strConcat = defineOpcode<[...ScriptValue<string | number | boolean | null>
       category: "string",
       description: "Concatenate strings",
       slots: [{ name: "Strings", type: "block" }], // Variadic?
-      parameters: [{ name: "...strings", type: "string[]" }],
+      parameters: [{ name: "...strings", type: "any[]" }],
       returnType: "string",
     },
     handler: (args, _ctx) => {
@@ -67,8 +66,7 @@ const strSplit = defineOpcode<[ScriptValue<string>, ScriptValue<string>], string
       ],
       returnType: "string[]",
     },
-    handler: (args, _ctx) => {
-      const [str, sep] = args;
+    handler: ([str, sep], _ctx) => {
       return str.split(sep);
     },
   }
@@ -97,8 +95,7 @@ const strSlice = defineOpcode<[ScriptValue<string>, ScriptValue<number>, ScriptV
       ],
       returnType: "string",
     },
-    handler: (args, _ctx) => {
-      const [str, start, endExpr] = args;
+    handler: ([str, start, endExpr], _ctx) => {
       const end = endExpr !== undefined ? endExpr : str.length;
       return str.slice(start, end);
     },
@@ -120,8 +117,7 @@ const strUpper = defineOpcode<[ScriptValue<string>], string>(
       parameters: [{ name: "string", type: "string" }],
       returnType: "string",
     },
-    handler: (args, _ctx) => {
-      const [str] = args;
+    handler: ([str], _ctx) => {
       return str.toUpperCase();
     },
   }
@@ -142,8 +138,7 @@ const strLower = defineOpcode<[ScriptValue<string>], string>(
       parameters: [{ name: "string", type: "string" }],
       returnType: "string",
     },
-    handler: (args, _ctx) => {
-      const [str] = args;
+    handler: ([str], _ctx) => {
       return str.toLowerCase();
     },
   }
@@ -164,8 +159,7 @@ const strTrim = defineOpcode<[ScriptValue<string>], string>(
       parameters: [{ name: "string", type: "string" }],
       returnType: "string",
     },
-    handler: (args, _ctx) => {
-      const [str] = args;
+    handler: ([str], _ctx) => {
       return str.trim();
     },
   }
@@ -194,8 +188,7 @@ const strReplace = defineOpcode<[ScriptValue<string>, ScriptValue<string>, Scrip
       ],
       returnType: "string",
     },
-    handler: (args, _ctx) => {
-      const [str, search, replace] = args;
+    handler: ([str, search, replace], _ctx) => {
       return str.replace(search, replace);
     },
   }
@@ -222,8 +215,7 @@ const strIncludes = defineOpcode<[ScriptValue<string>, ScriptValue<string>], boo
       ],
       returnType: "boolean",
     },
-    handler: (args, _ctx) => {
-      const [str, search] = args;
+    handler: ([str, search], _ctx) => {
       return str.includes(search);
     },
   }
@@ -250,8 +242,7 @@ const strJoin = defineOpcode<[ScriptValue<any[]>, ScriptValue<string>], string>(
       ],
       returnType: "string",
     },
-    handler: (args, _ctx) => {
-      const [list, separator] = args;
+    handler: ([list, separator], _ctx) => {
       return list.join(separator);
     },
   }

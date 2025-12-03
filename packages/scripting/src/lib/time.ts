@@ -14,7 +14,7 @@ const timeNow = defineOpcode<[], string>(
       parameters: [],
       returnType: "string",
     },
-    handler: (args, _ctx) => {
+    handler: ([], _ctx) => {
       return new Date().toISOString();
     },
   }
@@ -41,8 +41,7 @@ const timeFormat = defineOpcode<[ScriptValue<string>, ScriptValue<string>?], str
       ],
       returnType: "string",
     },
-    handler: (args, _ctx) => {
-      const [timestamp] = args;
+    handler: ([timestamp], _ctx) => {
       return new Date(timestamp).toISOString();
     },
   }
@@ -63,8 +62,7 @@ const timeParse = defineOpcode<[ScriptValue<string>], string>(
       parameters: [{ name: "time", type: "string" }],
       returnType: "string",
     },
-    handler: (args, _ctx) => {
-      const [datetime] = args;
+    handler: ([datetime], _ctx) => {
       return new Date(datetime).toISOString();
     },
   }
@@ -85,8 +83,7 @@ const timeFromTimestamp = defineOpcode<[ScriptValue<number>], string>(
       parameters: [{ name: "timestamp", type: "number" }],
       returnType: "string",
     },
-    handler: (args, _ctx) => {
-      const [timestamp] = args;
+    handler: ([timestamp], _ctx) => {
       return new Date(timestamp).toISOString();
     },
   }
@@ -107,8 +104,7 @@ const timeToTimestamp = defineOpcode<[ScriptValue<string>], number>(
       parameters: [{ name: "time", type: "string" }],
       returnType: "number",
     },
-    handler: (args, _ctx) => {
-      const [datetime] = args;
+    handler: ([datetime], _ctx) => {
       return new Date(datetime).getTime();
     },
   }
@@ -137,8 +133,7 @@ const timeOffset = defineOpcode<[ScriptValue<number>, ScriptValue<"day" | "days"
       ],
       returnType: "string",
     },
-    handler: (args, _ctx) => {
-      const [amount, unit, baseExpr] = args;
+    handler: ([amount, unit, baseExpr], _ctx) => {
       const base = baseExpr !== undefined
         ? baseExpr
         : new Date().toISOString();
