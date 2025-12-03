@@ -146,26 +146,88 @@ export function executeLambda(
   });
 }
 
+// --- Explicit Stack Machine ---
+
+type ExecutionFrame = {
+  type: "call";
+  op: string;
+  args: unknown[]; // Evaluated arguments
+  remaining: ScriptValue<unknown>[]; // Arguments yet to be evaluated
+};
+
 /**
- * Evaluates a script expression.
+ * Evaluates a script expression using an explicit stack machine.
  *
  * @param ast - The script AST (S-expression) to evaluate.
  * @param ctx - The execution context.
- * @returns The result of the evaluation.
+ * @returns The result of the evaluation (or a Promise if async).
  * @throws ScriptError if execution fails or gas runs out.
  */
-export function evaluate<T>(ast: ScriptValue<T>, ctx: ScriptContext): T {
-  if (ctx.gas !== undefined) {
-    ctx.gas -= 1;
-    if (ctx.gas < 0) {
-      throw new ScriptError("Script ran out of gas!");
-    }
+export function evaluate<T>(
+  ast: ScriptValue<T>,
+  ctx: ScriptContext,
+): T | Promise<T> {
+  // If it's a simple value, return immediately
+  if (!Array.isArray(ast)) {
+    return ast as T;
   }
-  if (Array.isArray(ast)) {
-    const [op, ...args] = ast;
-    if (typeof op === "string" && OPS[op]) {
+
+  // Stack of execution frames
+  const stack: ExecutionFrame[] = [];
+
+  // Push initial frame
+  const [op, ...args] = ast;
+  if (typeof op !== "string" || !OPS[op]) {
+    throw new ScriptError(`Unknown opcode: ${op}`, [...(ctx.stack ?? [])]);
+  }
+
+  stack.push({
+    type: "call",
+    op: op,
+    args: [],
+    remaining: args,
+  });
+
+  // Iterative execution loop
+  while (stack.length > 0) {
+    if (ctx.gas !== undefined) {
+      ctx.gas -= 1;
+      if (ctx.gas < 0) {
+        throw new ScriptError("Script ran out of gas!");
+      }
+    }
+
+    const frame = stack[stack.length - 1];
+
+    if (frame.remaining.length > 0) {
+      // Process next argument
+      const nextArg = frame.remaining.shift()!;
+
+      if (Array.isArray(nextArg)) {
+        // It's a nested call, push a new frame
+        const [nextOp, ...nextArgs] = nextArg;
+        if (typeof nextOp !== "string" || !OPS[nextOp]) {
+          throw new ScriptError(`Unknown opcode: ${nextOp}`, [
+            ...(ctx.stack ?? []),
+          ]);
+        }
+        stack.push({
+          type: "call",
+          op: nextOp,
+          args: [],
+          remaining: nextArgs,
+        });
+      } else {
+        // It's a primitive value, push to args directly
+        frame.args.push(nextArg);
+      }
+    } else {
+      // All arguments evaluated, execute opcode
+      stack.pop(); // Remove current frame
+
+      let result: unknown;
       try {
-        return OPS[op].handler(args, ctx) as T;
+        result = OPS[frame.op].handler(frame.args, ctx);
       } catch (e: any) {
         let scriptError: ScriptError;
         if (e instanceof ScriptError) {
@@ -179,15 +241,119 @@ export function evaluate<T>(ast: ScriptValue<T>, ctx: ScriptContext): T {
           ]);
         }
         if (!scriptError.context) {
-          scriptError.context = { op, args };
+          scriptError.context = { op: frame.op, args: frame.args };
         }
         throw scriptError;
       }
-    } else {
-      throw new ScriptError(`Unknown opcode: ${op}`, [...(ctx.stack ?? [])]);
+
+      // Handle Async Result
+      if (result instanceof Promise) {
+        // If we are deep in the stack, we need to bubble up the promise?
+        // Or we can await it here if we are in an async context?
+        // But we want to avoid async/await in this loop if possible.
+        // Actually, if we hit a Promise, we MUST return a Promise that resolves to the final result.
+        // This means the entire `evaluate` becomes async from this point on.
+
+        return handleAsyncResult(result, stack, ctx) as any;
+      }
+
+      // If stack is empty, we are done
+      if (stack.length === 0) {
+        return result as T;
+      }
+
+      // Otherwise, push result to parent frame's args
+      const parent = stack[stack.length - 1];
+      parent.args.push(result);
     }
   }
-  return ast as never;
+
+  // Should not be reached if stack logic is correct
+  throw new ScriptError("Stack underflow");
+}
+
+async function handleAsyncResult(
+  promise: Promise<unknown>,
+  stack: ExecutionFrame[],
+  ctx: ScriptContext,
+): Promise<unknown> {
+  let currentResult = await promise;
+
+  // Push result to parent frame and continue loop
+  if (stack.length === 0) {
+    return currentResult;
+  }
+
+  const parent = stack[stack.length - 1];
+  parent.args.push(currentResult);
+
+  // Resume the loop (async version)
+  while (stack.length > 0) {
+    if (ctx.gas !== undefined) {
+      ctx.gas -= 1;
+      if (ctx.gas < 0) {
+        throw new ScriptError("Script ran out of gas!");
+      }
+    }
+
+    const frame = stack[stack.length - 1];
+
+    if (frame.remaining.length > 0) {
+      const nextArg = frame.remaining.shift()!;
+
+      if (Array.isArray(nextArg)) {
+        const [nextOp, ...nextArgs] = nextArg;
+        if (typeof nextOp !== "string" || !OPS[nextOp]) {
+          throw new ScriptError(`Unknown opcode: ${nextOp}`, [
+            ...(ctx.stack ?? []),
+          ]);
+        }
+        stack.push({
+          type: "call",
+          op: nextOp,
+          args: [],
+          remaining: nextArgs,
+        });
+      } else {
+        frame.args.push(nextArg);
+      }
+    } else {
+      stack.pop();
+
+      try {
+        currentResult = OPS[frame.op].handler(frame.args, ctx);
+      } catch (e: any) {
+        let scriptError: ScriptError;
+        if (e instanceof ScriptError) {
+          scriptError = e;
+          if (scriptError.stackTrace.length === 0) {
+            scriptError.stackTrace = [...(ctx.stack ?? [])];
+          }
+        } else {
+          scriptError = new ScriptError(e.message ?? String(e), [
+            ...(ctx.stack ?? []),
+          ]);
+        }
+        if (!scriptError.context) {
+          scriptError.context = { op: frame.op, args: frame.args };
+        }
+        throw scriptError;
+      }
+
+      if (currentResult instanceof Promise) {
+        currentResult = await currentResult;
+      }
+
+      if (stack.length === 0) {
+        return currentResult;
+      }
+
+      const parent = stack[stack.length - 1];
+      parent.args.push(currentResult);
+    }
+  }
+
+  return currentResult;
 }
 
 /**

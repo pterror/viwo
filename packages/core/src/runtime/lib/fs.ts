@@ -127,7 +127,7 @@ const list = defineOpcode<
       { name: "cap", type: "Capability" },
       { name: "path", type: "string" },
     ],
-    returnType: "readonly string[]",
+    returnType: "string[]",
   },
   handler: async (args, ctx) => {
     const [capExpr, pathExpr] = args;
