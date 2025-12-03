@@ -1,5 +1,10 @@
 import { expect, beforeEach } from "bun:test";
-import { evaluate, ScriptContext, registerLibrary, createScriptContext } from "../interpreter";
+import {
+  evaluate,
+  ScriptContext,
+  registerLibrary,
+  createScriptContext,
+} from "../interpreter";
 import * as BooleanOps from "./boolean";
 import { createLibraryTester } from "./test-utils";
 
@@ -55,17 +60,17 @@ createLibraryTester(BooleanOps, "Boolean Library", (test) => {
 
   // Logic
   test("and", () => {
-    expect(evaluate(BooleanOps["and"](true, true), ctx)).toBe(true);
-    expect(evaluate(BooleanOps["and"](true, false), ctx)).toBe(false);
+    expect(evaluate(BooleanOps.and(true, true), ctx)).toBe(true);
+    expect(evaluate(BooleanOps.and(true, false), ctx)).toBe(false);
   });
 
   test("or", () => {
-    expect(evaluate(BooleanOps["or"](false, true), ctx)).toBe(true);
-    expect(evaluate(BooleanOps["or"](false, false), ctx)).toBe(false);
+    expect(evaluate(BooleanOps.or(false, true), ctx)).toBe(true);
+    expect(evaluate(BooleanOps.or(false, false), ctx)).toBe(false);
   });
 
   test("not", () => {
-    expect(evaluate(BooleanOps["not"](true), ctx)).toBe(false);
-    expect(evaluate(BooleanOps["not"](false), ctx)).toBe(true);
+    expect(evaluate(BooleanOps.not(true), ctx)).toBe(false);
+    expect(evaluate(BooleanOps.not(false), ctx)).toBe(true);
   });
 });

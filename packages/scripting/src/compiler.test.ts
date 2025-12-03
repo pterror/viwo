@@ -56,36 +56,36 @@ describe("Compiler", () => {
   });
 
   test("logic", () => {
-    expect(run(BooleanLib["and"](true, true))).toBe(true);
-    expect(run(BooleanLib["or"](true, false))).toBe(true);
-    expect(run(BooleanLib["not"](true))).toBe(false);
+    expect(run(BooleanLib.and(true, true))).toBe(true);
+    expect(run(BooleanLib.or(true, false))).toBe(true);
+    expect(run(BooleanLib.not(true))).toBe(false);
     expect(run(BooleanLib["=="](1, 1))).toBe(true);
     expect(run(BooleanLib[">"](2, 1))).toBe(true);
   });
 
   test("variables", () => {
     const localCtx = { ...ctx, vars: {} };
-    run(Std["let"]("x", 10), localCtx);
-    expect(run(Std["var"]("x"), localCtx)).toBe(10);
+    run(Std.let("x", 10), localCtx);
+    expect(run(Std.var("x"), localCtx)).toBe(10);
   });
 
   test("control flow", () => {
-    expect(run(Std["if"](true, 1, 2))).toBe(1);
-    expect(run(Std["if"](false, 1, 2))).toBe(2);
+    expect(run(Std.if(true, 1, 2))).toBe(1);
+    expect(run(Std.if(false, 1, 2))).toBe(2);
 
-    expect(run(Std["seq"](1, 2, 3))).toBe(3);
+    expect(run(Std.seq(1, 2, 3))).toBe(3);
   });
 
   test("loops", () => {
     // sum = 0; for x in [1, 2, 3]: sum += x
-    const script = Std["seq"](
-      Std["let"]("sum", 0),
-      Std["for"](
+    const script = Std.seq(
+      Std.let("sum", 0),
+      Std.for(
         "x",
         List["list.new"](1, 2, 3),
-        Std["let"]("sum", MathLib["+"](Std["var"]("sum"), Std["var"]("x"))),
+        Std.let("sum", MathLib["+"](Std.var("sum"), Std.var("x"))),
       ),
-      Std["var"]("sum"),
+      Std.var("sum"),
     );
     expect(run(script)).toBe(6);
   });
@@ -108,30 +108,33 @@ describe("Compiler", () => {
   });
 
   test("if else", () => {
-    expect(run(Std["if"](false, "then", "else"))).toBe("else");
-    expect(run(Std["if"](false, "then"))).toBe(null); // No else branch
+    expect(run(Std.if(false, "then", "else"))).toBe("else");
+    expect(run(Std.if(false, "then"))).toBe(null); // No else branch
   });
 
   test("var retrieval", () => {
     const localCtx = { ...ctx, vars: { x: 10 } };
-    expect(run(Std["var"]("x"), localCtx)).toBe(10);
-    expect(run(Std["var"]("missing"), localCtx)).toBe(null); // Variable not found
+    expect(run(Std.var("x"), localCtx)).toBe(10);
+    expect(run(Std.var("missing"), localCtx)).toBe(null); // Variable not found
   });
 
   test("lambda & apply", () => {
     // (lambda (x) (+ x 1))
-    const inc = Std["lambda"](["x"], MathLib["+"](Std["var"]("x"), 1));
-    expect(run(Std["apply"](inc, 1))).toBe(2);
+    const inc = Std.lambda(["x"], MathLib["+"](Std.var("x"), 1));
+    expect(run(Std.apply(inc, 1))).toBe(2);
   });
 
   test("closure capture", () => {
     // (let x 10); (let addX (lambda (y) (+ x y))); (apply addX 5) -> 15
     expect(
       run(
-        Std["seq"](
-          Std["let"]("x", 10),
-          Std["let"]("addX", Std["lambda"](["y"], MathLib["+"](Std["var"]("x"), Std["var"]("y")))),
-          Std["apply"](Std["var"]("addX"), 5),
+        Std.seq(
+          Std.let("x", 10),
+          Std.let(
+            "addX",
+            Std.lambda(["y"], MathLib["+"](Std.var("x"), Std.var("y"))),
+          ),
+          Std.apply(Std.var("addX"), 5),
         ),
       ),
     ).toBe(15);
@@ -139,8 +142,8 @@ describe("Compiler", () => {
 
   test("try/catch", () => {
     // try { throw "error" } catch { return "caught" }
-    const script = Std["try"](
-      Std["throw"]("oops"),
+    const script = Std.try(
+      Std.throw("oops"),
       "this should be unused", // No error var
       "caught",
     );
@@ -150,19 +153,19 @@ describe("Compiler", () => {
   test("try/catch with error variable", () => {
     // try { throw "error" } catch(e) { return e }
     const localCtx = { ...ctx, vars: {} };
-    const script = Std["try"](Std["throw"]("oops"), "err", Std["var"]("err"));
+    const script = Std.try(Std.throw("oops"), "err", Std.var("err"));
     expect(run(script, localCtx)).toBe("oops");
   });
 
   test("object operations", () => {
-    const script = Std["seq"](
-      Std["let"]("o", ObjectLib["obj.new"](["a", 1], ["b", 2])),
-      ObjectLib["obj.set"](Std["var"]("o"), "c", 3),
-      Std["let"]("res", ObjectLib["obj.get"](Std["var"]("o"), "c")),
-      Std["let"]("hasB", ObjectLib["obj.has"](Std["var"]("o"), "b")),
-      ObjectLib["obj.del"](Std["var"]("o"), "b"),
-      Std["let"]("hasBAfter", ObjectLib["obj.has"](Std["var"]("o"), "b")),
-      List["list.new"](Std["var"]("res"), Std["var"]("hasB"), Std["var"]("hasBAfter")),
+    const script = Std.seq(
+      Std.let("o", ObjectLib["obj.new"](["a", 1], ["b", 2])),
+      ObjectLib["obj.set"](Std.var("o"), "c", 3),
+      Std.let("res", ObjectLib["obj.get"](Std.var("o"), "c")),
+      Std.let("hasB", ObjectLib["obj.has"](Std.var("o"), "b")),
+      ObjectLib["obj.del"](Std.var("o"), "b"),
+      Std.let("hasBAfter", ObjectLib["obj.has"](Std.var("o"), "b")),
+      List["list.new"](Std.var("res"), Std.var("hasB"), Std.var("hasBAfter")),
     );
 
     const res = run(script);

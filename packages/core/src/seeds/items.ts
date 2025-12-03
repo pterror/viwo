@@ -23,23 +23,26 @@ export function seedItems(locationId: number) {
   addVerb(
     bookId,
     "read",
-    Std["seq"](
-      Std["let"]("index", Std["arg"](0)),
-      Std["if"](
-        Boolean["not"](Std["var"]("index")),
-        Std["throw"]("Please specify a chapter index (0-based)."),
+    Std.seq(
+      Std.let("index", Std.arg(0)),
+      Std.if(
+        Boolean.not(Std.var("index")),
+        Std.throw("Please specify a chapter index (0-based)."),
       ),
-      Std["let"]("chapters", Object["obj.get"](Std["this"](), "chapters")),
-      Std["let"]("chapter", List["list.get"](Std["var"]("chapters"), Std["var"]("index"))),
-      Std["if"](Boolean["not"](Std["var"]("chapter")), Std["throw"]("Chapter not found.")),
-      CoreLib["call"](
-        Std["caller"](),
+      Std.let("chapters", Object["obj.get"](Std.this(), "chapters")),
+      Std.let(
+        "chapter",
+        List["list.get"](Std.var("chapters"), Std.var("index")),
+      ),
+      Std.if(Boolean.not(Std.var("chapter")), Std.throw("Chapter not found.")),
+      CoreLib.call(
+        Std.caller(),
         "tell",
         String["str.concat"](
           "Reading: ",
-          Object["obj.get"](Std["var"]("chapter"), "title"),
+          Object["obj.get"](Std.var("chapter"), "title"),
           "\n\n",
-          Object["obj.get"](Std["var"]("chapter"), "content"),
+          Object["obj.get"](Std.var("chapter"), "content"),
         ),
       ),
     ),
@@ -48,17 +51,17 @@ export function seedItems(locationId: number) {
   addVerb(
     bookId,
     "list_chapters",
-    Std["seq"](
-      Std["let"]("chapters", Object["obj.get"](Std["this"](), "chapters")),
-      CoreLib["call"](
-        Std["caller"](),
+    Std.seq(
+      Std.let("chapters", Object["obj.get"](Std.this(), "chapters")),
+      CoreLib.call(
+        Std.caller(),
         "tell",
         String["str.concat"](
           "Chapters:\n",
           String["str.join"](
             List["list.map"](
-              Std["var"]("chapters"),
-              Std["lambda"](["c"], Object["obj.get"](Std["var"]("c"), "title")),
+              Std.var("chapters"),
+              Std.lambda(["c"], Object["obj.get"](Std.var("c"), "title")),
             ),
             "\n",
           ),
@@ -70,66 +73,66 @@ export function seedItems(locationId: number) {
   addVerb(
     bookId,
     "add_chapter",
-    Std["seq"](
-      Std["let"]("title", Std["arg"](0)),
-      Std["let"]("content", Std["arg"](1)),
-      Std["if"](
-        Boolean["not"](Boolean["and"](Std["var"]("title"), Std["var"]("content"))),
-        Std["throw"]("Usage: add_chapter <title> <content>"),
+    Std.seq(
+      Std.let("title", Std.arg(0)),
+      Std.let("content", Std.arg(1)),
+      Std.if(
+        Boolean.not(Boolean.and(Std.var("title"), Std.var("content"))),
+        Std.throw("Usage: add_chapter <title> <content>"),
       ),
-      Std["let"]("chapters", Object["obj.get"](Std["this"](), "chapters")),
+      Std.let("chapters", Object["obj.get"](Std.this(), "chapters")),
 
       // Construct new chapter object
-      Std["let"]("newChapter", {}),
-      Object["obj.set"](Std["var"]("newChapter"), "title", Std["var"]("title")),
-      Object["obj.set"](Std["var"]("newChapter"), "content", Std["var"]("content")),
+      Std.let("newChapter", {}),
+      Object["obj.set"](Std.var("newChapter"), "title", Std.var("title")),
+      Object["obj.set"](Std.var("newChapter"), "content", Std.var("content")),
 
-      List["list.push"](Std["var"]("chapters"), Std["var"]("newChapter")),
-      Object["obj.set"](Std["this"](), "chapters", Std["var"]("chapters")), // Save back to entity
-      CoreLib["call"](Std["caller"](), "tell", "Chapter added."),
+      List["list.push"](Std.var("chapters"), Std.var("newChapter")),
+      Object["obj.set"](Std.this(), "chapters", Std.var("chapters")), // Save back to entity
+      CoreLib.call(Std.caller(), "tell", "Chapter added."),
     ),
   );
 
   addVerb(
     bookId,
     "search_chapters",
-    Std["seq"](
-      Std["let"]("query", String["str.lower"](Std["arg"](0))),
-      Std["let"]("chapters", Object["obj.get"](Std["this"](), "chapters")),
-      Std["let"](
+    Std.seq(
+      Std.let("query", String["str.lower"](Std.arg(0))),
+      Std.let("chapters", Object["obj.get"](Std.this(), "chapters")),
+      Std.let(
         "results",
         List["list.filter"](
-          Std["var"]("chapters"),
-          Std["lambda"](
+          Std.var("chapters"),
+          Std.lambda(
             ["c"],
-            Boolean["or"](
+            Boolean.or(
               String["str.includes"](
-                String["str.lower"](Object["obj.get"](Std["var"]("c"), "title")),
-                Std["var"]("query"),
+                String["str.lower"](Object["obj.get"](Std.var("c"), "title")),
+                Std.var("query"),
               ),
               String["str.includes"](
-                String["str.lower"](Object["obj.get"](Std["var"]("c"), "title")),
-                Std["var"]("query"),
+                String["str.lower"](Object["obj.get"](Std.var("c"), "title")),
+                Std.var("query"),
               ),
               String["str.includes"](
-                String["str.lower"](Object["obj.get"](Std["var"]("c"), "content")),
-                Std["var"]("query"),
+                String["str.lower"](Object["obj.get"](Std.var("c"), "content")),
+                Std.var("query"),
               ),
             ),
           ),
         ),
       ),
-      CoreLib["call"](
-        Std["caller"](),
+      CoreLib.call(
+        Std.caller(),
         "tell",
         String["str.concat"](
           "Found ",
-          List["list.len"](Std["var"]("results")),
+          List["list.len"](Std.var("results")),
           " matches:\n",
           String["str.join"](
             List["list.map"](
-              Std["var"]("results"),
-              Std["lambda"](["c"], Object["obj.get"](Std["var"]("c"), "title")),
+              Std.var("results"),
+              Std.lambda(["c"], Object["obj.get"](Std.var("c"), "title")),
             ),
             "\n",
           ),

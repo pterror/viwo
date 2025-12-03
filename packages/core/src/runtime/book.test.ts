@@ -46,19 +46,19 @@ describe("Book Item Scripting", () => {
     caller = getEntity(callerId)!;
 
     // Add tell verb
-    addVerb(callerId, "tell", Std["send"]("message", Std["arg"](0)));
+    addVerb(callerId, "tell", Std.send("message", Std.arg(0)));
   });
 
   it("should list chapters", async () => {
-    const script = Std["seq"](
-      Std["let"]("chapters", Object["obj.get"](Std["this"](), "chapters")),
-      CoreLib["call"](
-        Std["caller"](),
+    const script = Std.seq(
+      Std.let("chapters", Object["obj.get"](Std.this(), "chapters")),
+      CoreLib.call(
+        Std.caller(),
         "tell",
         String["str.join"](
           List["list.map"](
-            Std["var"]("chapters"),
-            Std["lambda"](["c"], Object["obj.get"](Std["var"]("c"), "title")),
+            Std.var("chapters"),
+            Std.lambda(["c"], Object["obj.get"](Std.var("c"), "title")),
           ),
           "\n",
         ),
@@ -77,23 +77,26 @@ describe("Book Item Scripting", () => {
   });
 
   it("should read a chapter", async () => {
-    const script = Std["seq"](
-      Std["let"]("index", Std["arg"](0)),
-      Std["let"]("chapters", Object["obj.get"](Std["this"](), "chapters")),
-      Std["let"]("chapter", List["list.get"](Std["var"]("chapters"), Std["var"]("index"))),
-      Std["if"](
-        Std["var"]("chapter"),
-        CoreLib["call"](
-          Std["caller"](),
+    const script = Std.seq(
+      Std.let("index", Std.arg(0)),
+      Std.let("chapters", Object["obj.get"](Std.this(), "chapters")),
+      Std.let(
+        "chapter",
+        List["list.get"](Std.var("chapters"), Std.var("index")),
+      ),
+      Std.if(
+        Std.var("chapter"),
+        CoreLib.call(
+          Std.caller(),
           "tell",
           String["str.concat"](
             "Chapter: ",
-            Object["obj.get"](Std["var"]("chapter"), "title"),
+            Object["obj.get"](Std.var("chapter"), "title"),
             "\n\n",
-            Object["obj.get"](Std["var"]("chapter"), "content"),
+            Object["obj.get"](Std.var("chapter"), "content"),
           ),
         ),
-        CoreLib["call"](Std["caller"](), "tell", "Chapter not found."),
+        CoreLib.call(Std.caller(), "tell", "Chapter not found."),
       ),
     );
 
@@ -125,16 +128,18 @@ describe("Book Item Scripting", () => {
   });
 
   it("should add a chapter", async () => {
-    const script = Std["seq"](
-      Std["let"]("title", Std["arg"](0)),
-      Std["let"]("content", Std["arg"](1)),
-      Std["let"]("chapters", Object["obj.get"](Std["this"](), "chapters")),
-      Std["let"]("newChapter", {}),
-      Object["obj.set"](Std["var"]("newChapter"), "title", Std["var"]("title")),
-      Object["obj.set"](Std["var"]("newChapter"), "content", Std["var"]("content")),
-      List["list.push"](Std["var"]("chapters"), Std["var"]("newChapter")),
-      CoreLib["set_entity"](Object["obj.set"](Std["this"](), "chapters", Std["var"]("chapters"))),
-      CoreLib["call"](Std["caller"](), "tell", "Chapter added."),
+    const script = Std.seq(
+      Std.let("title", Std.arg(0)),
+      Std.let("content", Std.arg(1)),
+      Std.let("chapters", Object["obj.get"](Std.this(), "chapters")),
+      Std.let("newChapter", {}),
+      Object["obj.set"](Std.var("newChapter"), "title", Std.var("title")),
+      Object["obj.set"](Std.var("newChapter"), "content", Std.var("content")),
+      List["list.push"](Std.var("chapters"), Std.var("newChapter")),
+      CoreLib.set_entity(
+        Object["obj.set"](Std.this(), "chapters", Std.var("chapters")),
+      ),
+      CoreLib.call(Std.caller(), "tell", "Chapter added."),
     );
 
     await evaluate(
@@ -152,39 +157,39 @@ describe("Book Item Scripting", () => {
   });
 
   it("should search chapters", async () => {
-    const script = Std["seq"](
-      Std["let"]("query", Std["arg"](0)),
-      Std["let"]("chapters", Object["obj.get"](Std["this"](), "chapters")),
-      Std["let"](
+    const script = Std.seq(
+      Std.let("query", Std.arg(0)),
+      Std.let("chapters", Object["obj.get"](Std.this(), "chapters")),
+      Std.let(
         "results",
         List["list.filter"](
-          Std["var"]("chapters"),
-          Std["lambda"](
+          Std.var("chapters"),
+          Std.lambda(
             ["c"],
-            BooleanLib["or"](
+            BooleanLib.or(
               String["str.includes"](
-                String["str.lower"](Object["obj.get"](Std["var"]("c"), "title")),
-                String["str.lower"](Std["var"]("query")),
+                String["str.lower"](Object["obj.get"](Std.var("c"), "title")),
+                String["str.lower"](Std.var("query")),
               ),
               String["str.includes"](
-                String["str.lower"](Object["obj.get"](Std["var"]("c"), "content")),
-                String["str.lower"](Std["var"]("query")),
+                String["str.lower"](Object["obj.get"](Std.var("c"), "content")),
+                String["str.lower"](Std.var("query")),
               ),
             ),
           ),
         ),
       ),
-      CoreLib["call"](
-        Std["caller"](),
+      CoreLib.call(
+        Std.caller(),
         "tell",
         String["str.concat"](
           "Found ",
-          List["list.len"](Std["var"]("results")),
+          List["list.len"](Std.var("results")),
           " matches:\n",
           String["str.join"](
             List["list.map"](
-              Std["var"]("results"),
-              Std["lambda"](["c"], Object["obj.get"](Std["var"]("c"), "title")),
+              Std.var("results"),
+              Std.lambda(["c"], Object["obj.get"](Std.var("c"), "title")),
             ),
             "\n",
           ),

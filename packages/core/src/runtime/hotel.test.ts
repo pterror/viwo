@@ -4,7 +4,13 @@ import * as CoreLib from "../runtime/lib/core";
 import * as KernelLib from "../runtime/lib/kernel";
 import { seed } from "../seed";
 import { seedHotel } from "../seeds/hotel";
-import { createEntity, getEntity, updateEntity, getVerb, createCapability } from "../repo";
+import {
+  createEntity,
+  getEntity,
+  updateEntity,
+  getVerb,
+  createCapability,
+} from "../repo";
 import {
   evaluate,
   registerLibrary,
@@ -92,7 +98,10 @@ describe("Hotel Scripting", () => {
         "SELECT id FROM entities WHERE json_extract(props, '$.name') = 'Player Base'",
       )
       .get()!;
-    const callerId = createEntity({ name: "Guest", location: hotelLobby.id }, playerBase.id);
+    const callerId = createEntity(
+      { name: "Guest", location: hotelLobby.id },
+      playerBase.id,
+    );
     caller = getEntity(callerId)!;
     createCapability(callerId, "entity.control", { target_id: callerId });
   });
@@ -100,9 +109,14 @@ describe("Hotel Scripting", () => {
   it("should leave a room (move and destroy)", async () => {
     // 1. Manually create a room (since visit is gone)
     const roomProto = db
-      .query("SELECT id FROM entities WHERE json_extract(props, '$.name') = 'Hotel Room Prototype'")
+      .query(
+        "SELECT id FROM entities WHERE json_extract(props, '$.name') = 'Hotel Room Prototype'",
+      )
       .get() as any;
-    const roomId = createEntity({ name: "Room 101", lobby_id: hotelLobby.id }, roomProto.id);
+    const roomId = createEntity(
+      { name: "Room 101", lobby_id: hotelLobby.id },
+      roomProto.id,
+    );
     createCapability(roomId, "entity.control", { target_id: roomId });
 
     // Move caller to room
@@ -121,7 +135,9 @@ describe("Hotel Scripting", () => {
       createScriptContext({ caller, this: getEntity(roomId)!, send }),
     );
 
-    expect(messages[0]).toBe("You leave the room and it fades away behind you.");
+    expect(messages[0]).toBe(
+      "You leave the room and it fades away behind you.",
+    );
 
     caller = getEntity(caller.id)!;
     expect(caller["location"]).toBe(hotelLobby.id); // Back in lobby
@@ -307,7 +323,10 @@ describe("Hotel Seed", () => {
       .get()!;
 
     // 2. Create a Floor Lobby instance (mocking the elevator 'out' logic)
-    const floorLobbyId = createEntity({ name: "Floor 1 Lobby", floor: 1 }, floorLobbyProto.id);
+    const floorLobbyId = createEntity(
+      { name: "Floor 1 Lobby", floor: 1 },
+      floorLobbyProto.id,
+    );
     createCapability(floorLobbyId, "sys.create", {});
     createCapability(floorLobbyId, "entity.control", {
       target_id: floorLobbyId,
@@ -319,7 +338,7 @@ describe("Hotel Seed", () => {
     // TODO: `move` does not support `id`
     let output = "";
     await evaluate(
-      CoreLib["call"](player, "move", floorLobbyId),
+      CoreLib.call(player, "move", floorLobbyId),
       createScriptContext({ caller: player, this: player }),
     );
 
@@ -384,7 +403,10 @@ describe("Hotel Seed", () => {
       .get()!;
 
     // 2. Create a Floor Lobby instance
-    const floorLobbyId = createEntity({ name: "Floor 2 Lobby", floor: 2 }, floorLobbyProto.id);
+    const floorLobbyId = createEntity(
+      { name: "Floor 2 Lobby", floor: 2 },
+      floorLobbyProto.id,
+    );
     createCapability(floorLobbyId, "sys.create", {});
     createCapability(floorLobbyId, "entity.control", {
       target_id: floorLobbyId,
@@ -396,7 +418,7 @@ describe("Hotel Seed", () => {
 
     // TODO: `move` does not support `id`
     await evaluate(
-      CoreLib["call"](player, "move", floorLobbyId),
+      CoreLib.call(player, "move", floorLobbyId),
       createScriptContext({
         caller: player,
         this: player,

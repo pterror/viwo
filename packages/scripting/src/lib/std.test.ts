@@ -1,6 +1,10 @@
 import { expect, beforeEach, mock } from "bun:test";
 import { createLibraryTester } from "./test-utils";
-import { createScriptContext, registerLibrary, ScriptContext } from "../interpreter";
+import {
+  createScriptContext,
+  registerLibrary,
+  ScriptContext,
+} from "../interpreter";
 import { evaluate } from "../interpreter";
 import * as Std from "./std";
 import * as List from "./list";
@@ -62,49 +66,49 @@ createLibraryTester(Std, "Core Library", (test) => {
 
   // Values
   test("this", () => {
-    expect(evaluate(Std["this"](), ctx)).toEqual({ id: 2 });
+    expect(evaluate(Std.this(), ctx)).toEqual({ id: 2 });
   });
 
   test("caller", () => {
-    expect(evaluate(Std["caller"](), ctx)).toEqual({ id: 1 });
+    expect(evaluate(Std.caller(), ctx)).toEqual({ id: 1 });
   });
 
   // Control Flow
   test("seq", () => {
-    expect(evaluate(Std["seq"](1, 2, 3), ctx)).toBe(3);
+    expect(evaluate(Std.seq(1, 2, 3), ctx)).toBe(3);
   });
 
   test("if", () => {
-    expect(evaluate(Std["if"](true, 1, 2), ctx)).toBe(1);
-    expect(evaluate(Std["if"](false, 1, 2), ctx)).toBe(2);
-    expect(evaluate(Std["if"](false, 1), ctx)).toBe(null);
+    expect(evaluate(Std.if(true, 1, 2), ctx)).toBe(1);
+    expect(evaluate(Std.if(false, 1, 2), ctx)).toBe(2);
+    expect(evaluate(Std.if(false, 1), ctx)).toBe(null);
   });
 
   test("while", () => {
     const localCtx = { ...ctx, locals: {} };
-    evaluate(Std["let"]("i", 0), localCtx);
+    evaluate(Std.let("i", 0), localCtx);
     evaluate(
-      Std["while"](
-        Boolean["<"](Std["var"]("i"), 3),
-        Std["set"]("i", Math["+"](Std["var"]("i"), 1)),
+      Std.while(
+        Boolean["<"](Std.var("i"), 3),
+        Std.set("i", Math["+"](Std.var("i"), 1)),
       ),
       localCtx,
     );
-    expect(evaluate(Std["var"]("i"), localCtx)).toBe(3);
+    expect(evaluate(Std.var("i"), localCtx)).toBe(3);
   });
 
   test("for", () => {
     const localCtx = { ...ctx, locals: {} };
-    evaluate(Std["let"]("sum", 0), localCtx);
+    evaluate(Std.let("sum", 0), localCtx);
     evaluate(
-      Std["for"](
+      Std.for(
         "x",
         List["list.new"](1, 2, 3),
-        Std["set"]("sum", Math["+"](Std["var"]("sum"), Std["var"]("x"))),
+        Std.set("sum", Math["+"](Std.var("sum"), Std.var("x"))),
       ),
       localCtx,
     );
-    expect(evaluate(Std["var"]("sum"), localCtx)).toBe(6);
+    expect(evaluate(Std.var("sum"), localCtx)).toBe(6);
   });
 
   // Data Structures
@@ -122,81 +126,83 @@ createLibraryTester(Std, "Core Library", (test) => {
   // Variables
   test("let", () => {
     const localCtx = { ...ctx, locals: {} };
-    expect(evaluate(Std["let"]("x", 10), localCtx)).toBe(10);
+    expect(evaluate(Std.let("x", 10), localCtx)).toBe(10);
     expect(localCtx.vars?.["x"]).toBe(10);
   });
 
   test("var", () => {
     const localCtx = { ...ctx, locals: {}, vars: { x: 10 } };
-    expect(evaluate(Std["var"]("x"), localCtx)).toBe(10);
-    expect(evaluate(Std["var"]("y"), localCtx)).toBe(null);
+    expect(evaluate(Std.var("x"), localCtx)).toBe(10);
+    expect(evaluate(Std.var("y"), localCtx)).toBe(null);
   });
 
   test("set", () => {
     const localCtx = { ...ctx, locals: {}, vars: { x: 10 } };
-    expect(evaluate(Std["set"]("x", 20), localCtx)).toBe(20);
+    expect(evaluate(Std.set("x", 20), localCtx)).toBe(20);
     expect(localCtx.vars?.x).toBe(20);
   });
 
   // Arithmetic
 
   test("typeof", () => {
-    expect(evaluate(Std["typeof"](1), ctx)).toBe("number");
-    expect(evaluate(Std["typeof"]("s"), ctx)).toBe("string");
-    expect(evaluate(Std["typeof"](true), ctx)).toBe("boolean");
-    expect(evaluate(Std["typeof"]({}), ctx)).toBe("object");
-    expect(evaluate(Std["typeof"](List["list.new"]()), ctx)).toBe("array");
-    expect(evaluate(Std["typeof"](null), ctx)).toBe("null");
+    expect(evaluate(Std.typeof(1), ctx)).toBe("number");
+    expect(evaluate(Std.typeof("s"), ctx)).toBe("string");
+    expect(evaluate(Std.typeof(true), ctx)).toBe("boolean");
+    expect(evaluate(Std.typeof({}), ctx)).toBe("object");
+    expect(evaluate(Std.typeof(List["list.new"]()), ctx)).toBe("array");
+    expect(evaluate(Std.typeof(null), ctx)).toBe("null");
   });
 
   // System
   test("log", () => {
     // Mock console.log? Or just ensure it runs without error
-    evaluate(Std["log"]("hello"), ctx);
+    evaluate(Std.log("hello"), ctx);
   });
 
   test("arg", () => {
-    expect(evaluate(Std["arg"](0), ctx)).toBe(10);
-    expect(evaluate(Std["arg"](1), ctx)).toBe(20);
-    expect(evaluate(Std["arg"](2), ctx)).toBe(null);
+    expect(evaluate(Std.arg(0), ctx)).toBe(10);
+    expect(evaluate(Std.arg(1), ctx)).toBe(20);
+    expect(evaluate(Std.arg(2), ctx)).toBe(null);
   });
 
   test("args", () => {
-    expect(evaluate(Std["args"](), ctx)).toEqual([10, 20]);
+    expect(evaluate(Std.args(), ctx)).toEqual([10, 20]);
   });
 
   test("warn", () => {
-    evaluate(Std["warn"]("warning"), ctx);
+    evaluate(Std.warn("warning"), ctx);
     expect(ctx.warnings).toContain("warning");
   });
 
   test("throw", () => {
-    expect(() => evaluate(Std["throw"]("error"), ctx)).toThrow("error");
+    expect(() => evaluate(Std.throw("error"), ctx)).toThrow("error");
   });
 
   test("try", () => {
-    expect(evaluate(Std["try"](Std["throw"]("oops"), "err", Std["var"]("err")), ctx)).toBe("oops");
+    expect(
+      evaluate(Std.try(Std.throw("oops"), "err", Std.var("err")), ctx),
+    ).toBe("oops");
 
-    expect(evaluate(Std["try"](123, "err", 456), ctx)).toBe(123);
+    expect(evaluate(Std.try(123, "err", 456), ctx)).toBe(123);
   });
 
   test("lambda", () => {
-    const l = evaluate(Std["lambda"](["x"], Std["var"]("x")), ctx);
+    const l = evaluate(Std.lambda(["x"], Std.var("x")), ctx);
     expect(l.type).toBe("lambda");
   });
 
   test("apply", () => {
-    const l = evaluate(Std["lambda"](["x"], Std["var"]("x")), ctx);
-    expect(evaluate(Std["apply"](l, 123), ctx)).toBe(123);
+    const l = evaluate(Std.lambda(["x"], Std.var("x")), ctx);
+    expect(evaluate(Std.apply(l, 123), ctx)).toBe(123);
   });
 
   test("send", () => {
     // We mocked send in ctx, just check it doesn't crash
-    evaluate(Std["send"]("message", "hello"), ctx);
+    evaluate(Std.send("message", "hello"), ctx);
   });
 
   test("quote", () => {
-    expect(evaluate(Std["quote"]([1, 2, 3]), ctx)).toEqual([1, 2, 3]);
-    expect(evaluate(Std["quote"]("hello"), ctx)).toBe("hello");
+    expect(evaluate(Std.quote([1, 2, 3]), ctx)).toEqual([1, 2, 3]);
+    expect(evaluate(Std.quote("hello"), ctx)).toBe("hello");
   });
 });

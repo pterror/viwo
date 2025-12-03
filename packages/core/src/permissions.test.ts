@@ -62,22 +62,28 @@ describe("Capability Permissions", () => {
   const tryRename = (actor: Entity, target: Entity, newName: string) => {
     // Script to rename entity:
     // set_entity(get_capability("entity.control", { target_id: target.id }), target, { name: newName })
-    const script = Std["seq"](
-      Std["let"](
+    const script = Std.seq(
+      Std.let(
         "cap",
-        Kernel["get_capability"]("entity.control", Object["obj.new"](["target_id", target.id])),
-      ),
-      // If no specific cap, try wildcard (for admin)
-      Std["if"](
-        Boolean["not"](Std["var"]("cap")),
-        Std["set"](
-          "cap",
-          Kernel["get_capability"]("entity.control", Object["obj.new"](["*", true])),
+        Kernel.getCapability(
+          "entity.control",
+          Object["obj.new"](["target_id", target.id]),
         ),
       ),
-      CoreLib["set_entity"](
-        Std["var"]("cap"),
-        Object["obj.set"](CoreLib["entity"](target.id), "name", newName),
+      // If no specific cap, try wildcard (for admin)
+      Std.if(
+        Boolean.not(Std.var("cap")),
+        Std.set(
+          "cap",
+          Kernel.getCapability(
+            "entity.control",
+            Object["obj.new"](["*", true]),
+          ),
+        ),
+      ),
+      CoreLib.set_entity(
+        Std.var("cap"),
+        Object["obj.set"](CoreLib.entity(target.id), "name", newName),
       ),
     );
 
@@ -111,13 +117,16 @@ describe("Capability Permissions", () => {
     // let cap = get_capability("entity.control", { target_id: item.id })
     // let newCap = delegate(cap, {})
     // give_capability(newCap, other)
-    const delegateScript = Std["seq"](
-      Std["let"](
+    const delegateScript = Std.seq(
+      Std.let(
         "cap",
-        Kernel["get_capability"]("entity.control", Object["obj.new"](["target_id", item.id])),
+        Kernel.getCapability(
+          "entity.control",
+          Object["obj.new"](["target_id", item.id]),
+        ),
       ),
-      Std["let"]("newCap", Kernel["delegate"](Std["var"]("cap"), Object["obj.new"]())),
-      Kernel["give_capability"](Std["var"]("newCap"), CoreLib["entity"](other.id)),
+      Std.let("newCap", Kernel.delegate(Std.var("cap"), Object["obj.new"]())),
+      Kernel.giveCapability(Std.var("newCap"), CoreLib.entity(other.id)),
     );
 
     const ctx = createScriptContext({
@@ -141,7 +150,7 @@ describe("Capability Permissions", () => {
         id: crypto.randomUUID(),
       };
 
-      const script = Kernel["give_capability"](fakeCap, CoreLib["entity"](other.id));
+      const script = Kernel.giveCapability(fakeCap, CoreLib.entity(other.id));
 
       const ctx = createScriptContext({
         caller: owner,
@@ -150,9 +159,9 @@ describe("Capability Permissions", () => {
       });
 
       // Should fail because ID doesn't exist in DB
-      expect(Promise.resolve().then(() => evaluate(script, ctx))).rejects.toThrow(
-        "give_capability: invalid capability",
-      );
+      expect(
+        Promise.resolve().then(() => evaluate(script, ctx)),
+      ).rejects.toThrow("give_capability: invalid capability");
     });
 
     test("Capability Theft", async () => {
@@ -164,7 +173,7 @@ describe("Capability Permissions", () => {
       // only returns caps owned by the caller.
       const stolenCap = { __brand: "Capability" as const, id: ownerCapId };
 
-      const script = Kernel["give_capability"](stolenCap, CoreLib["entity"](other.id));
+      const script = Kernel.giveCapability(stolenCap, CoreLib.entity(other.id));
 
       const ctx = createScriptContext({
         caller: other, // Attacker is the caller
@@ -173,9 +182,9 @@ describe("Capability Permissions", () => {
       });
 
       // Should fail because owner_id check fails
-      expect(Promise.resolve().then(() => evaluate(script, ctx))).rejects.toThrow(
-        "give_capability: invalid capability",
-      );
+      expect(
+        Promise.resolve().then(() => evaluate(script, ctx)),
+      ).rejects.toThrow("give_capability: invalid capability");
     });
 
     test("Minting Namespace Violation", async () => {
@@ -185,9 +194,11 @@ describe("Capability Permissions", () => {
       });
       const mintAuth = { __brand: "Capability" as const, id: mintAuthId };
       // Try to mint outside namespace
-      const script = Kernel["mint"](mintAuth, "sys.sudo", Object["obj.new"]());
+      const script = Kernel.mint(mintAuth, "sys.sudo", Object["obj.new"]());
       const ctx = createScriptContext({ caller: owner, this: owner, args: [] });
-      expect(Promise.resolve().then(() => evaluate(script, ctx))).rejects.toThrow(
+      expect(
+        Promise.resolve().then(() => evaluate(script, ctx)),
+      ).rejects.toThrow(
         "mint: authority namespace 'user.1' does not cover 'sys.sudo'",
       );
     });
@@ -196,11 +207,11 @@ describe("Capability Permissions", () => {
       // Try to use a non-sys.mint capability as authority
       const badAuthId = createCapability(owner.id, "entity.control", {});
       const badAuth = { __brand: "Capability" as const, id: badAuthId };
-      const script = Kernel["mint"](badAuth, "some.cap", Object["obj.new"]());
+      const script = Kernel.mint(badAuth, "some.cap", Object["obj.new"]());
       const ctx = createScriptContext({ caller: owner, this: owner, args: [] });
-      expect(Promise.resolve().then(() => evaluate(script, ctx))).rejects.toThrow(
-        "mint: authority must be sys.mint",
-      );
+      expect(
+        Promise.resolve().then(() => evaluate(script, ctx)),
+      ).rejects.toThrow("mint: authority must be sys.mint");
     });
   });
 });

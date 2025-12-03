@@ -1,5 +1,10 @@
 import { describe, test, expect, beforeAll } from "bun:test";
-import { evaluate, ScriptContext, registerLibrary, ScriptError } from "./interpreter";
+import {
+  evaluate,
+  ScriptContext,
+  registerLibrary,
+  ScriptError,
+} from "./interpreter";
 import * as Std from "./lib/std";
 import * as ObjectLib from "./lib/object";
 import * as List from "./lib/list";
@@ -51,30 +56,30 @@ describe("Interpreter", () => {
   });
 
   test("logic", () => {
-    expect(evaluate(BooleanLib["and"](true, true), ctx)).toBe(true);
-    expect(evaluate(BooleanLib["or"](true, false), ctx)).toBe(true);
-    expect(evaluate(BooleanLib["not"](true), ctx)).toBe(false);
+    expect(evaluate(BooleanLib.and(true, true), ctx)).toBe(true);
+    expect(evaluate(BooleanLib.or(true, false), ctx)).toBe(true);
+    expect(evaluate(BooleanLib.not(true), ctx)).toBe(false);
     expect(evaluate(BooleanLib["=="](1, 1), ctx)).toBe(true);
     expect(evaluate(BooleanLib[">"](2, 1), ctx)).toBe(true);
   });
 
   test("variables", () => {
     const localCtx = { ...ctx, vars: {} };
-    evaluate(Std["let"]("x", 10), localCtx);
-    expect(evaluate(Std["var"]("x"), localCtx)).toBe(10);
+    evaluate(Std.let("x", 10), localCtx);
+    expect(evaluate(Std.var("x"), localCtx)).toBe(10);
   });
 
   test("control flow", () => {
-    expect(evaluate(Std["if"](true, 1, 2), ctx)).toBe(1);
-    expect(evaluate(Std["if"](false, 1, 2), ctx)).toBe(2);
+    expect(evaluate(Std.if(true, 1, 2), ctx)).toBe(1);
+    expect(evaluate(Std.if(false, 1, 2), ctx)).toBe(2);
 
-    expect(evaluate(Std["seq"](1, 2, 3), ctx)).toBe(3);
+    expect(evaluate(Std.seq(1, 2, 3), ctx)).toBe(3);
   });
 
   test("gas limit", () => {
     const lowGasCtx = { ...ctx, gas: 2 };
     // seq (1) + let (1) + let (1) = 3 ops -> should fail
-    const script = Std["seq"](Std["let"]("a", 1), Std["let"]("b", 2));
+    const script = Std.seq(Std.let("a", 1), Std.let("b", 2));
 
     // We expect it to throw
     let error;
@@ -89,14 +94,14 @@ describe("Interpreter", () => {
 
   test("loops", () => {
     // sum = 0; for x in [1, 2, 3]: sum += x
-    const script = Std["seq"](
-      Std["let"]("sum", 0),
-      Std["for"](
+    const script = Std.seq(
+      Std.let("sum", 0),
+      Std.for(
         "x",
         List["list.new"](1, 2, 3),
-        Std["let"]("sum", MathLib["+"](Std["var"]("sum"), Std["var"]("x"))),
+        Std.let("sum", MathLib["+"](Std.var("sum"), Std.var("x"))),
       ),
-      Std["var"]("sum"),
+      Std.var("sum"),
     );
     expect(evaluate(script, ctx)).toBe(6);
   });
@@ -120,14 +125,14 @@ describe("Interpreter", () => {
   });
 
   test("if else", () => {
-    expect(evaluate(Std["if"](false, "then", "else"), ctx)).toBe("else");
-    expect(evaluate(Std["if"](false, "then"), ctx)).toBe(null); // No else branch
+    expect(evaluate(Std.if(false, "then", "else"), ctx)).toBe("else");
+    expect(evaluate(Std.if(false, "then"), ctx)).toBe(null); // No else branch
   });
 
   test("var retrieval", () => {
     const localCtx = { ...ctx, vars: { x: 10 } };
-    expect(evaluate(Std["var"]("x"), localCtx)).toBe(10);
-    expect(evaluate(Std["var"]("missing"), localCtx)).toBe(null); // Variable not found
+    expect(evaluate(Std.var("x"), localCtx)).toBe(10);
+    expect(evaluate(Std.var("missing"), localCtx)).toBe(null); // Variable not found
   });
 });
 
@@ -148,7 +153,7 @@ describe("Interpreter Errors and Warnings", () => {
 
   test("throw", () => {
     try {
-      evaluate(Std["throw"]("Something went wrong"), ctx);
+      evaluate(Std.throw("Something went wrong"), ctx);
       expect(true).toBe(false); // Should not reach here
     } catch (e: any) {
       expect(e.message).toBe("Something went wrong");
@@ -157,8 +162,8 @@ describe("Interpreter Errors and Warnings", () => {
 
   test("try/catch", () => {
     // try { throw "error" } catch { return "caught" }
-    const script = Std["try"](
-      Std["throw"]("oops"),
+    const script = Std.try(
+      Std.throw("oops"),
       "this should be unused", // No error var
       "caught",
     );
@@ -168,32 +173,32 @@ describe("Interpreter Errors and Warnings", () => {
   test("try/catch with error variable", () => {
     // try { throw "error" } catch(e) { return e }
     const localCtx = { ...ctx, vars: {} };
-    const script = Std["try"](Std["throw"]("oops"), "err", Std["var"]("err"));
+    const script = Std.try(Std.throw("oops"), "err", Std.var("err"));
     expect(evaluate(script, localCtx)).toBe("oops");
   });
 
   test("try/catch no error", () => {
     // try { return "ok" } catch { return "bad" }
-    const script = Std["try"]("ok", "this should be unused", "bad");
+    const script = Std.try("ok", "this should be unused", "bad");
     expect(evaluate(script, ctx)).toBe("ok");
   });
 
   test("warn", () => {
     const warnings: string[] = [];
     const localCtx = { ...ctx, warnings };
-    evaluate(Std["warn"]("Be careful"), localCtx);
+    evaluate(Std.warn("Be careful"), localCtx);
     expect(localCtx.warnings).toContain("Be careful");
   });
 
   test("nested try/catch", () => {
-    const script = Std["try"](
-      Std["try"](
-        Std["throw"]("inner"),
+    const script = Std.try(
+      Std.try(
+        Std.throw("inner"),
         "this should be unused", // No error var
-        Std["throw"]("outer"),
+        Std.throw("outer"),
       ),
       "e",
-      Std["var"]("e"),
+      Std.var("e"),
     );
     expect(evaluate(script, { ...ctx, vars: {} })).toBe("outer");
   });
@@ -221,21 +226,21 @@ describe("Interpreter Libraries", () => {
   describe("Lambda & HOF", () => {
     test("lambda & apply", () => {
       // (lambda (x) (+ x 1))
-      const inc = Std["lambda"](["x"], MathLib["+"](Std["var"]("x"), 1));
-      expect(evaluate(Std["apply"](inc, 1), ctx)).toBe(2);
+      const inc = Std.lambda(["x"], MathLib["+"](Std.var("x"), 1));
+      expect(evaluate(Std.apply(inc, 1), ctx)).toBe(2);
     });
 
     test("closure capture", () => {
       // (let x 10); (let addX (lambda (y) (+ x y))); (apply addX 5) -> 15
       expect(
         evaluate(
-          Std["seq"](
-            Std["let"]("x", 10),
-            Std["let"](
+          Std.seq(
+            Std.let("x", 10),
+            Std.let(
               "addX",
-              Std["lambda"](["y"], MathLib["+"](Std["var"]("x"), Std["var"]("y"))),
+              Std.lambda(["y"], MathLib["+"](Std.var("x"), Std.var("y"))),
             ),
-            Std["apply"](Std["var"]("addX"), 5),
+            Std.apply(Std.var("addX"), 5),
           ),
           ctx,
         ),
@@ -263,9 +268,9 @@ describe("Interpreter Stack Traces", () => {
   test("stack trace in lambda", () => {
     // (let fail (lambda () (throw "boom")))
     // (apply fail)
-    const script = Std["seq"](
-      Std["let"]("fail", Std["lambda"]([], Std["throw"]("boom"))),
-      Std["apply"](Std["var"]("fail")),
+    const script = Std.seq(
+      Std.let("fail", Std.lambda([], Std.throw("boom"))),
+      Std.apply(Std.var("fail")),
     );
 
     try {
@@ -283,10 +288,10 @@ describe("Interpreter Stack Traces", () => {
     // (let inner (lambda () (throw "boom")))
     // (let outer (lambda () (apply inner)))
     // (apply outer)
-    const script = Std["seq"](
-      Std["let"]("inner", Std["lambda"]([], Std["throw"]("boom"))),
-      Std["let"]("outer", Std["lambda"]([], Std["apply"](Std["var"]("inner")))),
-      Std["apply"](Std["var"]("outer")),
+    const script = Std.seq(
+      Std.let("inner", Std.lambda([], Std.throw("boom"))),
+      Std.let("outer", Std.lambda([], Std.apply(Std.var("inner")))),
+      Std.apply(Std.var("outer")),
     );
 
     try {

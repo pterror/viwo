@@ -21,11 +21,11 @@ describe("Repo", () => {
   test("Verb Inheritance", () => {
     // 1. Create Prototype
     const protoId = createEntity({ name: "Proto" });
-    addVerb(protoId, "protoVerb", StdLib["seq"]());
+    addVerb(protoId, "protoVerb", StdLib.seq());
 
     // 2. Create Instance
     const instanceId = createEntity({ name: "Instance" }, protoId);
-    addVerb(instanceId, "instanceVerb", StdLib["seq"]());
+    addVerb(instanceId, "instanceVerb", StdLib.seq());
 
     // 3. Get Verbs
     const verbs = getVerbs(instanceId);
@@ -38,11 +38,11 @@ describe("Repo", () => {
   test("Verb Override", () => {
     // 1. Create Prototype
     const protoId = createEntity({ name: "ProtoOverride" });
-    addVerb(protoId, "common", StdLib["seq"]("proto"));
+    addVerb(protoId, "common", StdLib.seq("proto"));
 
     // 2. Create Instance
     const instanceId = createEntity({ name: "InstanceOverride" }, protoId);
-    addVerb(instanceId, "common", StdLib["seq"]("instance"));
+    addVerb(instanceId, "common", StdLib.seq("instance"));
 
     // 3. Get Verbs
     const verbs = getVerbs(instanceId);
@@ -50,7 +50,7 @@ describe("Repo", () => {
 
     expect(common).toBeDefined();
     // Should be the instance one
-    expect(common?.code).toEqual(StdLib["seq"]("instance"));
+    expect(common?.code).toEqual(StdLib.seq("instance"));
   });
 
   test("updateEntity", () => {
@@ -78,7 +78,11 @@ describe("Repo", () => {
 
   test("getVerb", () => {
     const entity = createEntity({ name: "Scripted" });
-    addVerb(entity, "jump", CoreLib["call"](StdLib["caller"](), "tell", "You jumped"));
+    addVerb(
+      entity,
+      "jump",
+      CoreLib.call(StdLib.caller(), "tell", "You jumped"),
+    );
 
     const verb = getVerb(entity, "jump");
     expect(verb).not.toBeNull();
@@ -90,7 +94,7 @@ describe("Repo", () => {
 
   test("getVerb Inheritance", () => {
     const proto = createEntity({ name: "Proto" });
-    addVerb(proto, "fly", CoreLib["call"](StdLib["caller"](), "tell", "You flew"));
+    addVerb(proto, "fly", CoreLib.call(StdLib.caller(), "tell", "You flew"));
 
     const instance = createEntity({ name: "Instance" }, proto);
 

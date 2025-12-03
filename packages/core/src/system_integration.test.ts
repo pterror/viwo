@@ -59,7 +59,7 @@ describe("System Integration Security", () => {
   test("FS.read with capability", async () => {
     const ctx = createScriptContext({ caller: admin, this: admin, args: [] });
     const content = await evaluate(
-      FS["fs.read"](Kernel["get_capability"]("fs.read"), "/tmp/test.txt"),
+      FS.fsRead(Kernel.getCapability("fs.read"), "/tmp/test.txt"),
       ctx,
     );
     expect(content).toBe("file content");
@@ -69,8 +69,8 @@ describe("System Integration Security", () => {
     const ctx = createScriptContext({ caller: user, this: user, args: [] });
     expect(
       evaluate(
-        FS["fs.read"](
-          Kernel["get_capability"]("fs.read"), // User has none, returns null
+        FS.fsRead(
+          Kernel.getCapability("fs.read"), // User has none, returns null
           "/tmp/test.txt",
         ),
         ctx,
@@ -82,8 +82,8 @@ describe("System Integration Security", () => {
     const ctx = createScriptContext({ caller: admin, this: admin, args: [] });
     expect(
       evaluate(
-        FS["fs.read"](
-          Kernel["get_capability"]("fs.read"),
+        FS.fsRead(
+          Kernel.getCapability("fs.read"),
           "/etc/passwd", // Outside /tmp
         ),
         ctx,
@@ -94,8 +94,8 @@ describe("System Integration Security", () => {
   test("Net.http.get with capability", async () => {
     const ctx = createScriptContext({ caller: admin, this: admin, args: [] });
     const response = await evaluate(
-      Net["net.http.get"](
-        Kernel["get_capability"]("net.http.read"),
+      Net.netHttpGet(
+        Kernel.getCapability("net.http.read"),
         "https://api.example.com/data",
       ),
       ctx,
@@ -107,8 +107,8 @@ describe("System Integration Security", () => {
     const ctx = createScriptContext({ caller: admin, this: admin, args: [] });
     expect(
       evaluate(
-        Net["net.http.get"](
-          Kernel["get_capability"]("net.http.read"),
+        Net.netHttpGet(
+          Kernel.getCapability("net.http.read"),
           "https://google.com", // Not example.com
         ),
         ctx,

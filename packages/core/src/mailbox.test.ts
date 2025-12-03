@@ -8,7 +8,13 @@ import {
   ListLib as List,
 } from "@viwo/scripting";
 import { Entity } from "@viwo/shared/jsonrpc";
-import { createEntity, getEntity, addVerb, updateEntity, createCapability } from "./repo";
+import {
+  createEntity,
+  getEntity,
+  addVerb,
+  updateEntity,
+  createCapability,
+} from "./repo";
 import { CoreLib, db } from ".";
 import * as KernelLib from "./runtime/lib/kernel";
 import { seed } from "./seed";
@@ -38,7 +44,9 @@ describe("Mailbox Verification", () => {
 
     // Get System Entity
     const systemRes = db
-      .query<Entity, []>("SELECT * FROM entities WHERE json_extract(props, '$.name') = 'System'")
+      .query<Entity, []>(
+        "SELECT * FROM entities WHERE json_extract(props, '$.name') = 'System'",
+      )
       .get();
     if (!systemRes) throw new Error("System entity not found");
     system = getEntity(systemRes.id)!;
@@ -72,8 +80,8 @@ describe("Mailbox Verification", () => {
 
   const checkView = (actor: Entity, target: Entity) => {
     // Check if actor has entity.control for target
-    const script = KernelLib["has_capability"](
-      CoreLib["entity"](actor.id),
+    const script = KernelLib.hasCapability(
+      CoreLib.entity(actor.id),
       "entity.control",
       Object["obj.new"](["target_id", target.id]),
     );
@@ -101,30 +109,33 @@ describe("Mailbox Verification", () => {
     // and the RECEIVER (or destination) to accept it.
     // For simplicity here, we'll assume 'give' just moves it if the giver owns the item.
 
-    const giveVerb = Std["seq"](
-      Std["let"]("item", Std["arg"](0)),
-      Std["let"]("dest", Std["arg"](1)),
-      Std["if"](
+    const giveVerb = Std.seq(
+      Std.let("item", Std.arg(0)),
+      Std.let("dest", Std.arg(1)),
+      Std.if(
         BooleanLib["=="](
-          Object["obj.get"](Std["var"]("item"), "owner"),
-          Object["obj.get"](Std["caller"](), "id"),
+          Object["obj.get"](Std.var("item"), "owner"),
+          Object["obj.get"](Std.caller(), "id"),
         ),
-        Std["seq"](
-          Std["let"]("newOwner", Object["obj.get"](Std["var"]("dest"), "owner")),
-          Std["let"](
+        Std.seq(
+          Std.let("newOwner", Object["obj.get"](Std.var("dest"), "owner")),
+          Std.let(
             "cap",
-            KernelLib["get_capability"](
+            KernelLib.getCapability(
               "entity.control",
-              Object["obj.new"](["target_id", Object["obj.get"](Std["var"]("item"), "id")]),
+              Object["obj.new"]([
+                "target_id",
+                Object["obj.get"](Std.var("item"), "id"),
+              ]),
             ),
           ),
-          CoreLib["set_entity"](
-            Std["var"]("cap"),
+          CoreLib.set_entity(
+            Std.var("cap"),
             Object["obj.merge"](
-              Std["var"]("item"),
+              Std.var("item"),
               Object["obj.new"](
-                ["location", Object["obj.get"](Std["var"]("dest"), "id")],
-                ["owner", Std["var"]("newOwner")],
+                ["location", Object["obj.get"](Std.var("dest"), "id")],
+                ["owner", Std.var("newOwner")],
               ),
             ),
           ),
@@ -136,11 +147,11 @@ describe("Mailbox Verification", () => {
 
     addVerb(system.id, "give", giveVerb);
 
-    const callGive = CoreLib["call"](
-      CoreLib["entity"](system.id),
+    const callGive = CoreLib.call(
+      CoreLib.entity(system.id),
       "give",
-      CoreLib["entity"](item.id),
-      CoreLib["entity"](mailbox.id),
+      CoreLib.entity(item.id),
+      CoreLib.entity(mailbox.id),
     );
 
     const ctx = createScriptContext({
@@ -159,25 +170,28 @@ describe("Mailbox Verification", () => {
 
   test("should hide contents from sender", async () => {
     // Simulate a 'look' that respects permissions (needs capability).
-    const lookVerb = Std["seq"](
-      Std["let"]("target", Std["arg"](0)),
-      Std["if"](
-        KernelLib["has_capability"](
-          Std["caller"](),
+    const lookVerb = Std.seq(
+      Std.let("target", Std.arg(0)),
+      Std.if(
+        KernelLib.hasCapability(
+          Std.caller(),
           "entity.control",
-          Object["obj.new"](["target_id", Object["obj.get"](Std["var"]("target"), "id")]),
+          Object["obj.new"]([
+            "target_id",
+            Object["obj.get"](Std.var("target"), "id"),
+          ]),
         ),
-        Object["obj.get"](Std["var"]("target"), "contents", List["list.new"]()),
+        Object["obj.get"](Std.var("target"), "contents", List["list.new"]()),
         List["list.new"](),
       ),
     );
 
     addVerb(system.id, "look_at", lookVerb);
 
-    const callLook = CoreLib["call"](
-      CoreLib["entity"](system.id),
+    const callLook = CoreLib.call(
+      CoreLib.entity(system.id),
       "look_at",
-      CoreLib["entity"](mailbox.id),
+      CoreLib.entity(mailbox.id),
     );
 
     const ctx = createScriptContext({
@@ -191,25 +205,28 @@ describe("Mailbox Verification", () => {
   });
 
   test("should show contents to receiver", async () => {
-    const lookVerb = Std["seq"](
-      Std["let"]("target", Std["arg"](0)),
-      Std["if"](
-        KernelLib["has_capability"](
-          Std["caller"](),
+    const lookVerb = Std.seq(
+      Std.let("target", Std.arg(0)),
+      Std.if(
+        KernelLib.hasCapability(
+          Std.caller(),
           "entity.control",
-          Object["obj.new"](["target_id", Object["obj.get"](Std["var"]("target"), "id")]),
+          Object["obj.new"]([
+            "target_id",
+            Object["obj.get"](Std.var("target"), "id"),
+          ]),
         ),
-        Object["obj.get"](Std["var"]("target"), "contents", List["list.new"]()),
+        Object["obj.get"](Std.var("target"), "contents", List["list.new"]()),
         List["list.new"](),
       ),
     );
 
     addVerb(system.id, "look_at", lookVerb);
 
-    const callLook = CoreLib["call"](
-      CoreLib["entity"](system.id),
+    const callLook = CoreLib.call(
+      CoreLib.entity(system.id),
       "look_at",
-      CoreLib["entity"](mailbox.id),
+      CoreLib.entity(mailbox.id),
     );
 
     const ctx = createScriptContext({

@@ -3,7 +3,12 @@ import { checkCapability } from "../utils";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-function checkFsCapability(ctx: any, cap: Capability, type: string, targetPath: string) {
+function checkFsCapability(
+  ctx: any,
+  cap: Capability,
+  type: string,
+  targetPath: string,
+) {
   checkCapability(cap, ctx.this.id, type, (params) => {
     const allowedPath = params["path"];
     if (!allowedPath || typeof allowedPath !== "string") {
@@ -17,7 +22,10 @@ function checkFsCapability(ctx: any, cap: Capability, type: string, targetPath: 
   });
 }
 
-const read = defineOpcode<[Capability | null, string], Promise<string>>("fs.read", {
+export const fsRead = defineOpcode<
+  [Capability | null, string],
+  Promise<string>
+>("fs.read", {
   metadata: {
     label: "Read File",
     category: "fs",
@@ -50,9 +58,11 @@ const read = defineOpcode<[Capability | null, string], Promise<string>>("fs.read
     }
   },
 });
-export { read as "fs.read" };
 
-const write = defineOpcode<[Capability | null, string, string], Promise<null>>("fs.write", {
+export const fsWrite = defineOpcode<
+  [Capability | null, string, string],
+  Promise<null>
+>("fs.write", {
   metadata: {
     label: "Write File",
     category: "fs",
@@ -91,9 +101,11 @@ const write = defineOpcode<[Capability | null, string, string], Promise<null>>("
     }
   },
 });
-export { write as "fs.write" };
 
-const list = defineOpcode<[Capability | null, string], Promise<readonly string[]>>("fs.list", {
+export const fsList = defineOpcode<
+  [Capability | null, string],
+  Promise<readonly string[]>
+>("fs.list", {
   metadata: {
     label: "List Directory",
     category: "fs",
@@ -126,4 +138,3 @@ const list = defineOpcode<[Capability | null, string], Promise<readonly string[]
     }
   },
 });
-export { list as "fs.list" };

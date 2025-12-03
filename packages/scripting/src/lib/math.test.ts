@@ -1,5 +1,10 @@
 import { expect, beforeEach } from "bun:test";
-import { evaluate, ScriptContext, registerLibrary, createScriptContext } from "../interpreter";
+import {
+  evaluate,
+  ScriptContext,
+  registerLibrary,
+  createScriptContext,
+} from "../interpreter";
 import * as MathOps from "./math";
 import { createLibraryTester } from "./test-utils";
 
@@ -49,15 +54,15 @@ createLibraryTester(MathOps, "Math Library", (test) => {
   });
 
   test("random", () => {
-    const r1 = evaluate(MathOps["random"](), ctx);
+    const r1 = evaluate(MathOps.random(), ctx);
     expect(r1).toBeGreaterThanOrEqual(0);
     expect(r1).toBeLessThan(1);
 
-    const r2 = evaluate(MathOps["random"](10), ctx);
+    const r2 = evaluate(MathOps.random(10), ctx);
     expect(r2).toBeGreaterThanOrEqual(0);
     expect(r2).toBeLessThanOrEqual(10);
 
-    const r3 = evaluate(MathOps["random"](5, 10), ctx);
+    const r3 = evaluate(MathOps.random(5, 10), ctx);
     expect(r3).toBeGreaterThanOrEqual(5);
     expect(r3).toBeLessThanOrEqual(10);
   });

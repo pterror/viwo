@@ -47,7 +47,7 @@ mock.module("../../repo", () => ({
         id: 2,
         entity_id: 102,
         name: "fail",
-        code: Std["throw"]("verb failed"),
+        code: Std.throw("verb failed"),
         permissions: {},
       };
     }
@@ -56,7 +56,7 @@ mock.module("../../repo", () => ({
         id: 3,
         entity_id: 103,
         name: "say_hello",
-        code: Std["send"]("message", "Hello!"),
+        code: Std.send("message", "Hello!"),
         permissions: {},
       };
     }
@@ -118,21 +118,21 @@ createLibraryTester(Core, "Core Library", (test) => {
 
   // Entity Interaction
   test("create", () => {
-    expect(evaluate(Core["create"](sysCreateCap, {}), ctx)).toBe(100);
+    expect(evaluate(Core.create(sysCreateCap, {}), ctx)).toBe(100);
   });
 
   test("destroy", () => {
-    evaluate(Core["destroy"](entityControlCap, { id: 1 }), ctx);
+    evaluate(Core.destroy(entityControlCap, { id: 1 }), ctx);
   });
 
   test("call", () => {
     // Mock getVerb to return something executable
-    expect(() => evaluate(Core["call"]({ id: 1 }, "missing"), ctx)).toThrow();
+    expect(() => evaluate(Core.call({ id: 1 }, "missing"), ctx)).toThrow();
   });
 
   test("call stack trace", () => {
     try {
-      evaluate(Core["call"]({ id: 102 }, "fail"), ctx);
+      evaluate(Core.call({ id: 102 }, "fail"), ctx);
       expect(true).toBe(false);
     } catch (e: any) {
       expect(e).toBeInstanceOf(ScriptError);
@@ -143,17 +143,17 @@ createLibraryTester(Core, "Core Library", (test) => {
   });
 
   test("schedule", () => {
-    evaluate(Core["schedule"]("verb", List["list.new"](), 100), ctx);
+    evaluate(Core.schedule("verb", List["list.new"](), 100), ctx);
   });
 
   // Entity Introspection
   test("verbs", () => {
-    expect(evaluate(Core["verbs"]({ id: 1 }), ctx)).toEqual([]);
+    expect(evaluate(Core.verbs({ id: 1 }), ctx)).toEqual([]);
   });
 
   test("get_verb", () => {
     // Mock returns a verb for id 101
-    expect(evaluate(Core["get_verb"]({ id: 101 }, "get_dynamic"), ctx)).toEqual({
+    expect(evaluate(Core.get_verb({ id: 101 }, "get_dynamic"), ctx)).toEqual({
       id: 1,
       entity_id: 101,
       name: "get_dynamic",
@@ -161,30 +161,30 @@ createLibraryTester(Core, "Core Library", (test) => {
       permissions: {},
     });
     // Mock returns null for id 1
-    expect(evaluate(Core["get_verb"]({ id: 1 }, "missing"), ctx)).toBe(null);
+    expect(evaluate(Core.get_verb({ id: 1 }, "missing"), ctx)).toBe(null);
   });
 
   test("entity", () => {
-    expect(evaluate(Core["entity"](1), ctx)).toEqual({
+    expect(evaluate(Core.entity(1), ctx)).toEqual({
       id: 1,
       props: {},
     });
   });
 
   test("set_entity", () => {
-    evaluate(Core["set_entity"](entityControlCap, { id: 1 }), ctx);
+    evaluate(Core.set_entity(entityControlCap, { id: 1 }), ctx);
   });
 
   test("get_prototype", () => {
-    expect(evaluate(Core["get_prototype"]({ id: 1 }), ctx)).toBe(null);
+    expect(evaluate(Core.get_prototype({ id: 1 }), ctx)).toBe(null);
   });
 
   test("set_prototype", () => {
-    evaluate(Core["set_prototype"](entityControlCap, { id: 1 }, 2), ctx);
+    evaluate(Core.set_prototype(entityControlCap, { id: 1 }, 2), ctx);
   });
 
   test("resolve_props", () => {
-    expect(evaluate(Core["resolve_props"]({ id: 101 }), ctx)).toEqual({
+    expect(evaluate(Core.resolve_props({ id: 101 }), ctx)).toEqual({
       id: 101,
       dynamic: "resolved_value",
     });
@@ -202,7 +202,10 @@ createLibraryTester(Core, "Core Library", (test) => {
     const fakeCap = { __brand: "Capability" as const, id: crypto.randomUUID() };
 
     expect(() =>
-      evaluate(Core["sudo"](fakeCap, { id: 101 }, "get_dynamic", List["list.new"]()), userCtx),
+      evaluate(
+        Core.sudo(fakeCap, { id: 101 }, "get_dynamic", List["list.new"]()),
+        userCtx,
+      ),
     ).toThrow("Invalid capability"); // Or "Capability not owned"
 
     // 2. Allow if System (ID 3) with valid cap
@@ -214,7 +217,10 @@ createLibraryTester(Core, "Core Library", (test) => {
       send: () => {},
     });
     expect(
-      evaluate(Core["sudo"](sysSudoCap, { id: 101 }, "get_dynamic", List["list.new"]()), systemCtx),
+      evaluate(
+        Core.sudo(sysSudoCap, { id: 101 }, "get_dynamic", List["list.new"]()),
+        systemCtx,
+      ),
     ).toBe("resolved_value");
 
     // 3. Allow if Bot (ID 4) with valid cap
@@ -226,7 +232,10 @@ createLibraryTester(Core, "Core Library", (test) => {
       send: () => {},
     });
     expect(
-      evaluate(Core["sudo"](botSudoCap, { id: 101 }, "get_dynamic", List["list.new"]()), botCtx),
+      evaluate(
+        Core.sudo(botSudoCap, { id: 101 }, "get_dynamic", List["list.new"]()),
+        botCtx,
+      ),
     ).toBe("resolved_value");
 
     // 4. Verify message forwarding for Bot
@@ -240,7 +249,10 @@ createLibraryTester(Core, "Core Library", (test) => {
       },
     });
 
-    evaluate(Core["sudo"](botSudoCap, { id: 103 }, "say_hello", List["list.new"]()), botForwardCtx);
+    evaluate(
+      Core.sudo(botSudoCap, { id: 103 }, "say_hello", List["list.new"]()),
+      botForwardCtx,
+    );
 
     expect(sentMessage).toEqual({
       type: "forward",
