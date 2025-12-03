@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "module": "src/index.ts",
   "type": "module",
+  "scripts": {
     "dev": "bun run --watch src/index.ts",
     "start": "bun run src/index.ts",
     "typecheck": "tsgo --noEmit",
@@ -16,6 +17,6 @@
   "devDependencies": {
     "@tsconfig/strictest": "^2.0.8",
     "bun-types": "latest",
-    "typescript": "^5.0.0"
+    "typescript": "next"
   }
 }

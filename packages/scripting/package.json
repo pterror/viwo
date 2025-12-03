@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@viwo/shared": "workspace:*",
-    "typescript": "^5.0.0"
+    "typescript": "next"
   },
   "devDependencies": {
     "bun-types": "latest"
