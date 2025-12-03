@@ -53,3 +53,43 @@ export function resolveProps(entity: Entity, ctx: ScriptContext): Entity {
 
   return resolved;
 }
+
+import { getCapability } from "../repo";
+import { ScriptError, Capability } from "@viwo/scripting";
+
+export function checkCapability(
+  cap: Capability | undefined,
+  ownerId: number,
+  type: string,
+  paramsMatch?: (params: Record<string, unknown>) => boolean,
+) {
+  if (
+    !cap ||
+    typeof cap !== "object" ||
+    (cap as any).__brand !== "Capability"
+  ) {
+    throw new ScriptError(`Expected capability of type ${type}`);
+  }
+
+  const dbCap = getCapability(cap.id);
+  if (!dbCap) {
+    throw new ScriptError("Invalid capability");
+  }
+
+  if (dbCap.owner_id !== ownerId) {
+    throw new ScriptError("Capability not owned by caller");
+  }
+
+  if (dbCap.type !== type) {
+    throw new ScriptError(
+      `Expected capability of type ${type}, got ${dbCap.type}`,
+    );
+  }
+  // Allow wildcard params (superuser)
+  if (dbCap.params && dbCap.params["*"] === true) {
+    return;
+  }
+  if (paramsMatch && !paramsMatch(dbCap.params)) {
+    throw new ScriptError("Capability parameters do not match requirements");
+  }
+}

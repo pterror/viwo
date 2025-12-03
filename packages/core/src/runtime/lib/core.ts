@@ -1,5 +1,5 @@
 import { evaluate, ScriptError, createScriptContext } from "@viwo/scripting";
-import { resolveProps } from "../utils";
+
 import {
   createEntity,
   deleteEntity,
@@ -10,47 +10,12 @@ import {
   updateEntity,
   Verb,
   getVerb,
-  getCapability,
   createCapability,
 } from "../../repo";
 import { scheduler } from "../../scheduler";
 import { defineOpcode, ScriptValue, Capability } from "@viwo/scripting";
+import { checkCapability, resolveProps } from "../utils";
 import { Entity } from "@viwo/shared/jsonrpc";
-
-// Helper to verify capabilities
-function checkCapability(
-  cap: unknown,
-  type: string,
-  ownerId: number,
-  paramsMatch?: (params: Record<string, unknown>) => boolean,
-): void {
-  if (
-    !cap ||
-    typeof cap !== "object" ||
-    (cap as any).__brand !== "Capability"
-  ) {
-    throw new ScriptError(`Expected capability for ${type}`);
-  }
-  const dbCap = getCapability((cap as Capability).id);
-  if (!dbCap) {
-    throw new ScriptError("Invalid capability");
-  }
-  if (dbCap.owner_id !== ownerId) {
-    throw new ScriptError("Capability not owned by caller");
-  }
-  if (dbCap.type !== type) {
-    throw new ScriptError(
-      `Expected capability of type ${type}, got ${dbCap.type}`,
-    );
-  }
-  // Allow wildcard params (superuser)
-  if (dbCap.params && dbCap.params["*"] === true) {
-    return;
-  }
-  if (paramsMatch && !paramsMatch(dbCap.params)) {
-    throw new ScriptError("Capability parameters do not match requirements");
-  }
-}
 
 // Entity Interaction
 

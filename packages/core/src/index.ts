@@ -22,6 +22,8 @@ import {
 } from "@viwo/scripting";
 import * as Core from "./runtime/lib/core";
 import * as Kernel from "./runtime/lib/kernel";
+import * as FS from "./runtime/lib/fs";
+import * as Net from "./runtime/lib/net";
 
 import { PluginManager, CommandContext } from "./plugin";
 import { scheduler } from "./scheduler";
@@ -54,6 +56,8 @@ const clients = new Map<number, Bun.ServerWebSocket<{ userId: number }>>();
 registerLibrary(StdLib);
 registerLibrary(Core);
 registerLibrary(Kernel);
+registerLibrary(FS);
+registerLibrary(Net);
 registerLibrary(ListLib);
 registerLibrary(ObjectLib);
 registerLibrary(StringLib);
