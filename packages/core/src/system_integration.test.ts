@@ -16,24 +16,24 @@ import {
   evaluate,
   createScriptContext,
   registerLibrary,
-  StdLib as Std,
+  StdLib,
   ObjectLib,
-  ListLib as List,
+  ListLib,
 } from "@viwo/scripting";
 import { Entity } from "@viwo/shared/jsonrpc";
 import { createEntity, getEntity, createCapability } from "./repo";
-import * as Kernel from "./runtime/lib/kernel";
-import * as FS from "./runtime/lib/fs";
-import * as Net from "./runtime/lib/net";
+import * as KernelLib from "./runtime/lib/kernel";
+import * as FsLib from "./runtime/lib/fs";
+import * as NetLib from "./runtime/lib/net";
 import { db } from "./db";
 
 describe("System Integration Security", () => {
-  registerLibrary(Std);
+  registerLibrary(StdLib);
   registerLibrary(ObjectLib);
-  registerLibrary(List);
-  registerLibrary(Kernel);
-  registerLibrary(FS);
-  registerLibrary(Net);
+  registerLibrary(ListLib);
+  registerLibrary(KernelLib);
+  registerLibrary(FsLib);
+  registerLibrary(NetLib);
 
   let admin: Entity;
   let user: Entity;
@@ -59,7 +59,7 @@ describe("System Integration Security", () => {
   test("FS.read with capability", async () => {
     const ctx = createScriptContext({ caller: admin, this: admin, args: [] });
     const content = await evaluate(
-      FS.fsRead(Kernel.getCapability("fs.read"), "/tmp/test.txt"),
+      FsLib.fsRead(KernelLib.getCapability("fs.read"), "/tmp/test.txt"),
       ctx,
     );
     expect(content).toBe("file content");
@@ -69,8 +69,8 @@ describe("System Integration Security", () => {
     const ctx = createScriptContext({ caller: user, this: user, args: [] });
     expect(
       evaluate(
-        FS.fsRead(
-          Kernel.getCapability("fs.read"), // User has none, returns null
+        FsLib.fsRead(
+          KernelLib.getCapability("fs.read"), // User has none, returns null
           "/tmp/test.txt",
         ),
         ctx,
@@ -82,8 +82,8 @@ describe("System Integration Security", () => {
     const ctx = createScriptContext({ caller: admin, this: admin, args: [] });
     expect(
       evaluate(
-        FS.fsRead(
-          Kernel.getCapability("fs.read"),
+        FsLib.fsRead(
+          KernelLib.getCapability("fs.read"),
           "/etc/passwd", // Outside /tmp
         ),
         ctx,
@@ -94,8 +94,8 @@ describe("System Integration Security", () => {
   test("Net.http.get with capability", async () => {
     const ctx = createScriptContext({ caller: admin, this: admin, args: [] });
     const response = await evaluate(
-      Net.netHttpGet(
-        Kernel.getCapability("net.http.read"),
+      NetLib.netHttpGet(
+        KernelLib.getCapability("net.http.read"),
         "https://api.example.com/data",
       ),
       ctx,
@@ -107,8 +107,8 @@ describe("System Integration Security", () => {
     const ctx = createScriptContext({ caller: admin, this: admin, args: [] });
     expect(
       evaluate(
-        Net.netHttpGet(
-          Kernel.getCapability("net.http.read"),
+        NetLib.netHttpGet(
+          KernelLib.getCapability("net.http.read"),
           "https://google.com", // Not example.com
         ),
         ctx,

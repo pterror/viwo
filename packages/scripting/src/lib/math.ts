@@ -1,10 +1,8 @@
 import { defineOpcode } from "../def";
 
 // Arithmetic
-/**
- * Adds numbers.
- */
-const add = defineOpcode<[number, number, ...number[]], number>("+", {
+/** Adds numbers.*/
+export const add = defineOpcode<[number, number, ...number[]], number>("+", {
   metadata: {
     label: "+",
     category: "math",
@@ -29,12 +27,9 @@ const add = defineOpcode<[number, number, ...number[]], number>("+", {
     return sum;
   },
 });
-export { add as "+" };
 
-/**
- * Subtracts numbers.
- */
-const sub = defineOpcode<[number, number, ...number[]], number>("-", {
+/** Subtracts numbers. */
+export const sub = defineOpcode<[number, number, ...number[]], number>("-", {
   metadata: {
     label: "-",
     category: "math",
@@ -59,12 +54,9 @@ const sub = defineOpcode<[number, number, ...number[]], number>("-", {
     return diff;
   },
 });
-export { sub as "-" };
 
-/**
- * Multiplies numbers.
- */
-const mul = defineOpcode<[number, number, ...number[]], number>("*", {
+/** Multiplies numbers. */
+export const mul = defineOpcode<[number, number, ...number[]], number>("*", {
   metadata: {
     label: "*",
     category: "math",
@@ -89,12 +81,9 @@ const mul = defineOpcode<[number, number, ...number[]], number>("*", {
     return prod;
   },
 });
-export { mul as "*" };
 
-/**
- * Divides numbers.
- */
-const div = defineOpcode<[number, number, ...number[]], number>("/", {
+/** Divides numbers. */
+export const div = defineOpcode<[number, number, ...number[]], number>("/", {
   metadata: {
     label: "/",
     category: "math",
@@ -119,12 +108,9 @@ const div = defineOpcode<[number, number, ...number[]], number>("/", {
     return quot;
   },
 });
-export { div as "/" };
 
-/**
- * Calculates the modulo of two numbers.
- */
-const mod = defineOpcode<[number, number], number>("%", {
+/** Calculates the modulo of two numbers. */
+export const mod = defineOpcode<[number, number], number>("%", {
   metadata: {
     label: "%",
     category: "math",
@@ -144,12 +130,9 @@ const mod = defineOpcode<[number, number], number>("%", {
     return a % b;
   },
 });
-export { mod as "%" };
 
-/**
- * Calculates exponentiation (power tower).
- */
-const pow = defineOpcode<[number, number, ...number[]], number>("^", {
+/** Calculates exponentiation (power tower). */
+export const pow = defineOpcode<[number, number, ...number[]], number>("^", {
   metadata: {
     label: "^",
     category: "math",
@@ -176,7 +159,6 @@ const pow = defineOpcode<[number, number, ...number[]], number>("^", {
     return pow;
   },
 });
-export { pow as "^" };
 
 /**
  * Generates a random number.

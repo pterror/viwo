@@ -3,9 +3,9 @@ import {
   evaluate,
   createScriptContext,
   registerLibrary,
-  StdLib as Std,
+  StdLib,
   ObjectLib,
-  ListLib as List,
+  ListLib,
 } from "@viwo/scripting";
 import { Entity } from "@viwo/shared/jsonrpc";
 import {
@@ -14,16 +14,16 @@ import {
   createCapability,
   getCapabilities,
 } from "./repo";
-import * as Core from "./runtime/lib/core";
-import * as Kernel from "./runtime/lib/kernel";
-import { CoreLib, db } from ".";
+import * as CoreLib from "./runtime/lib/core";
+import * as KernelLib from "./runtime/lib/kernel";
+import { db } from ".";
 
 describe("Capability Security", () => {
-  registerLibrary(Std);
+  registerLibrary(StdLib);
   registerLibrary(ObjectLib);
-  registerLibrary(List);
-  registerLibrary(Core);
-  registerLibrary(Kernel);
+  registerLibrary(ListLib);
+  registerLibrary(CoreLib);
+  registerLibrary(KernelLib);
 
   // let sys: Entity;
   let admin: Entity;
@@ -54,7 +54,7 @@ describe("Capability Security", () => {
 
   test("Kernel.get_capability", async () => {
     const ctx = createScriptContext({ caller: admin, this: admin, args: [] });
-    const cap = await evaluate(Kernel.getCapability("sys.mint"), ctx);
+    const cap = await evaluate(KernelLib.getCapability("sys.mint"), ctx);
     expect(cap).not.toBeNull();
     expect((cap as any)?.__brand).toBe("Capability");
   });
@@ -63,10 +63,10 @@ describe("Capability Security", () => {
     // Admin mints a capability for themselves
     const ctx = createScriptContext({ caller: admin, this: admin, args: [] });
     const newCap = await evaluate(
-      Kernel.mint(
-        Kernel.getCapability("sys.mint"),
+      KernelLib.mint(
+        KernelLib.getCapability("sys.mint"),
         "test.cap",
-        ObjectLib["obj.new"](),
+        ObjectLib.objNew(),
       ),
       ctx,
     );
@@ -89,7 +89,7 @@ describe("Capability Security", () => {
 
     try {
       await evaluate(
-        CoreLib.create(null, ObjectLib["obj.new"](["name", "Fail"])),
+        CoreLib.create(null, ObjectLib.objNew(["name", "Fail"])),
         ctx,
       );
       expect(true).toBe(false); // Should not reach here
@@ -103,8 +103,8 @@ describe("Capability Security", () => {
     const ctx = createScriptContext({ caller: admin, this: admin, args: [] });
     const newId = await evaluate(
       CoreLib.create(
-        Kernel.getCapability("sys.create"),
-        ObjectLib["obj.new"](["name", "Success"]),
+        KernelLib.getCapability("sys.create"),
+        ObjectLib.objNew(["name", "Success"]),
       ),
       ctx,
     );
@@ -118,7 +118,7 @@ describe("Capability Security", () => {
     try {
       await evaluate(
         CoreLib.set_entity(
-          ObjectLib["obj.new"](["name", "Fail"]), // Invalid cap
+          ObjectLib.objNew(["name", "Fail"]), // Invalid cap
           CoreLib.entity(targetId),
         ),
         ctx,
@@ -135,11 +135,11 @@ describe("Capability Security", () => {
 
     await evaluate(
       CoreLib.set_entity(
-        Kernel.getCapability(
+        KernelLib.getCapability(
           "entity.control",
-          ObjectLib["obj.new"](["*", true]),
+          ObjectLib.objNew(["*", true]),
         ),
-        ObjectLib["obj.set"](CoreLib.entity(targetId), "name", "Modified"),
+        ObjectLib.objSet(CoreLib.entity(targetId), "name", "Modified"),
       ),
       ctx,
     );

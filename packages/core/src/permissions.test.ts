@@ -3,22 +3,22 @@ import {
   evaluate,
   createScriptContext,
   registerLibrary,
-  StdLib as Std,
-  ObjectLib as Object,
-  ListLib as List,
-  BooleanLib as Boolean,
+  StdLib,
+  ObjectLib,
+  ListLib,
+  BooleanLib,
 } from "@viwo/scripting";
 import { Entity } from "@viwo/shared/jsonrpc";
 import { createEntity, getEntity, createCapability } from "./repo";
 import { CoreLib, db } from ".";
 import { seed } from "./seed";
-import * as Kernel from "./runtime/lib/kernel";
+import * as KernelLib from "./runtime/lib/kernel";
 
 describe("Capability Permissions", () => {
-  registerLibrary(Std);
-  registerLibrary(Object);
-  registerLibrary(List);
-  registerLibrary(Kernel);
+  registerLibrary(StdLib);
+  registerLibrary(ObjectLib);
+  registerLibrary(ListLib);
+  registerLibrary(KernelLib);
   registerLibrary(CoreLib);
 
   let owner: Entity;
@@ -62,28 +62,28 @@ describe("Capability Permissions", () => {
   const tryRename = (actor: Entity, target: Entity, newName: string) => {
     // Script to rename entity:
     // set_entity(get_capability("entity.control", { target_id: target.id }), target, { name: newName })
-    const script = Std.seq(
-      Std.let(
+    const script = StdLib.seq(
+      StdLib.let(
         "cap",
-        Kernel.getCapability(
+        KernelLib.getCapability(
           "entity.control",
-          Object["obj.new"](["target_id", target.id]),
+          ObjectLib.objNew(["target_id", target.id]),
         ),
       ),
       // If no specific cap, try wildcard (for admin)
-      Std.if(
-        Boolean.not(Std.var("cap")),
-        Std.set(
+      StdLib.if(
+        BooleanLib.not(StdLib.var("cap")),
+        StdLib.set(
           "cap",
-          Kernel.getCapability(
+          KernelLib.getCapability(
             "entity.control",
-            Object["obj.new"](["*", true]),
+            ObjectLib.objNew(["*", true]),
           ),
         ),
       ),
       CoreLib.set_entity(
-        Std.var("cap"),
-        Object["obj.set"](CoreLib.entity(target.id), "name", newName),
+        StdLib.var("cap"),
+        ObjectLib.objSet(CoreLib.entity(target.id), "name", newName),
       ),
     );
 
@@ -117,16 +117,19 @@ describe("Capability Permissions", () => {
     // let cap = get_capability("entity.control", { target_id: item.id })
     // let newCap = delegate(cap, {})
     // give_capability(newCap, other)
-    const delegateScript = Std.seq(
-      Std.let(
+    const delegateScript = StdLib.seq(
+      StdLib.let(
         "cap",
-        Kernel.getCapability(
+        KernelLib.getCapability(
           "entity.control",
-          Object["obj.new"](["target_id", item.id]),
+          ObjectLib.objNew(["target_id", item.id]),
         ),
       ),
-      Std.let("newCap", Kernel.delegate(Std.var("cap"), Object["obj.new"]())),
-      Kernel.giveCapability(Std.var("newCap"), CoreLib.entity(other.id)),
+      StdLib.let(
+        "newCap",
+        KernelLib.delegate(StdLib.var("cap"), ObjectLib.objNew()),
+      ),
+      KernelLib.giveCapability(StdLib.var("newCap"), CoreLib.entity(other.id)),
     );
 
     const ctx = createScriptContext({
@@ -150,7 +153,10 @@ describe("Capability Permissions", () => {
         id: crypto.randomUUID(),
       };
 
-      const script = Kernel.giveCapability(fakeCap, CoreLib.entity(other.id));
+      const script = KernelLib.giveCapability(
+        fakeCap,
+        CoreLib.entity(other.id),
+      );
 
       const ctx = createScriptContext({
         caller: owner,
@@ -173,7 +179,10 @@ describe("Capability Permissions", () => {
       // only returns caps owned by the caller.
       const stolenCap = { __brand: "Capability" as const, id: ownerCapId };
 
-      const script = Kernel.giveCapability(stolenCap, CoreLib.entity(other.id));
+      const script = KernelLib.giveCapability(
+        stolenCap,
+        CoreLib.entity(other.id),
+      );
 
       const ctx = createScriptContext({
         caller: other, // Attacker is the caller
@@ -194,7 +203,7 @@ describe("Capability Permissions", () => {
       });
       const mintAuth = { __brand: "Capability" as const, id: mintAuthId };
       // Try to mint outside namespace
-      const script = Kernel.mint(mintAuth, "sys.sudo", Object["obj.new"]());
+      const script = KernelLib.mint(mintAuth, "sys.sudo", ObjectLib.objNew());
       const ctx = createScriptContext({ caller: owner, this: owner, args: [] });
       expect(
         Promise.resolve().then(() => evaluate(script, ctx)),
@@ -207,7 +216,7 @@ describe("Capability Permissions", () => {
       // Try to use a non-sys.mint capability as authority
       const badAuthId = createCapability(owner.id, "entity.control", {});
       const badAuth = { __brand: "Capability" as const, id: badAuthId };
-      const script = Kernel.mint(badAuth, "some.cap", Object["obj.new"]());
+      const script = KernelLib.mint(badAuth, "some.cap", ObjectLib.objNew());
       const ctx = createScriptContext({ caller: owner, this: owner, args: [] });
       expect(
         Promise.resolve().then(() => evaluate(script, ctx)),

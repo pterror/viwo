@@ -31,26 +31,26 @@ describe("Decompiler", () => {
   });
 
   test("infix operators", () => {
-    expect(decompile(MathLib["+"](1, 2))).toBe("(1 + 2)");
-    expect(decompile(MathLib["*"](3, 4))).toBe("(3 * 4)");
-    expect(decompile(BooleanLib["=="](1, 1))).toBe("(1 === 1)");
+    expect(decompile(MathLib.add(1, 2))).toBe("(1 + 2)");
+    expect(decompile(MathLib.mul(3, 4))).toBe("(3 * 4)");
+    expect(decompile(BooleanLib.eq(1, 1))).toBe("(1 === 1)");
   });
 
   test("nested infix operators", () => {
     // (1 + (2 * 3))
-    const script = MathLib["+"](1, MathLib["*"](2, 3));
+    const script = MathLib.add(1, MathLib.mul(2, 3));
     expect(decompile(script)).toBe("(1 + (2 * 3))");
   });
 
   test("lambda", () => {
-    const script = Std.lambda(["x"], MathLib["+"](Std.var("x"), 1));
+    const script = Std.lambda(["x"], MathLib.add(Std.var("x"), 1));
     expect(decompile(script)).toBe("(x) => (x + 1)");
   });
 
   test("lambda with block", () => {
     const script = Std.lambda(
       ["x"],
-      Std.seq(Std.let("y", 1), MathLib["+"](Std.var("x"), Std.var("y"))),
+      Std.seq(Std.let("y", 1), MathLib.add(Std.var("x"), Std.var("y"))),
     );
     const expected = `(x) => {
   let y = 1;
@@ -73,7 +73,7 @@ describe("Decompiler", () => {
     expect(decompile(whileScript, 0, true)).toBe(expectedWhile);
 
     // for (x of list) { log(x) }
-    const forScript = Std.for("x", List["list.new"](1, 2), Std.log(Std.var("x")));
+    const forScript = Std.for("x", List.listNew(1, 2), Std.log(Std.var("x")));
     const expectedFor = `for (const x of [1, 2]) {
   console.log(x);
 }`;
@@ -81,26 +81,28 @@ describe("Decompiler", () => {
   });
 
   test("data structures", () => {
-    const list = List["list.new"](1, 2, 3);
+    const list = List.listNew(1, 2, 3);
     expect(decompile(list)).toBe("[1, 2, 3]");
 
-    const obj = ObjectLib["obj.new"](["a", 1], ["b", 2]);
+    const obj = ObjectLib.objNew(["a", 1], ["b", 2]);
     expect(decompile(obj)).toBe('{ "a": 1, "b": 2 }');
 
     // obj.get
-    expect(decompile(ObjectLib["obj.get"](Std.var("o"), "k"))).toBe("o.k");
-    expect(decompile(ObjectLib["obj.get"](Std.var("o"), "invalid-key"))).toBe('o["invalid-key"]');
-    expect(decompile(ObjectLib["obj.get"](Std.var("o"), "k", "default"))).toBe(
+    expect(decompile(ObjectLib.objGet(Std.var("o"), "k"))).toBe("o.k");
+    expect(decompile(ObjectLib.objGet(Std.var("o"), "invalid-key"))).toBe(
+      'o["invalid-key"]',
+    );
+    expect(decompile(ObjectLib.objGet(Std.var("o"), "k", "default"))).toBe(
       '(o.k ?? "default")',
     );
 
     // obj.set
-    expect(decompile(ObjectLib["obj.set"](Std.var("o"), "k", 3))).toBe("o.k = 3");
+    expect(decompile(ObjectLib.objSet(Std.var("o"), "k", 3))).toBe("o.k = 3");
 
     // obj.has
-    expect(decompile(ObjectLib["obj.has"](Std.var("o"), "k"))).toBe('"k" in o');
+    expect(decompile(ObjectLib.objHas(Std.var("o"), "k"))).toBe('"k" in o');
 
     // obj.del
-    expect(decompile(ObjectLib["obj.del"](Std.var("o"), "k"))).toBe("delete o.k");
+    expect(decompile(ObjectLib.objDel(Std.var("o"), "k"))).toBe("delete o.k");
   });
 });

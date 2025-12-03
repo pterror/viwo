@@ -3,10 +3,10 @@ import {
   createScriptContext,
   evaluate,
   registerLibrary,
-  StdLib as Std,
-  ListLib as List,
-  StringLib as String,
-  ObjectLib as Object,
+  StdLib,
+  ListLib,
+  StringLib,
+  ObjectLib,
   BooleanLib,
 } from "@viwo/scripting";
 import { Entity } from "@viwo/shared/jsonrpc";
@@ -14,10 +14,10 @@ import { addVerb, createEntity, getEntity } from "../repo";
 import * as CoreLib from "../runtime/lib/core";
 
 describe("Book Item Scripting", () => {
-  registerLibrary(Std);
-  registerLibrary(List);
-  registerLibrary(String);
-  registerLibrary(Object);
+  registerLibrary(StdLib);
+  registerLibrary(ListLib);
+  registerLibrary(StringLib);
+  registerLibrary(ObjectLib);
   registerLibrary(CoreLib);
   registerLibrary(BooleanLib);
 
@@ -46,19 +46,19 @@ describe("Book Item Scripting", () => {
     caller = getEntity(callerId)!;
 
     // Add tell verb
-    addVerb(callerId, "tell", Std.send("message", Std.arg(0)));
+    addVerb(callerId, "tell", StdLib.send("message", StdLib.arg(0)));
   });
 
   it("should list chapters", async () => {
-    const script = Std.seq(
-      Std.let("chapters", Object["obj.get"](Std.this(), "chapters")),
+    const script = StdLib.seq(
+      StdLib.let("chapters", ObjectLib.objGet(StdLib.this(), "chapters")),
       CoreLib.call(
-        Std.caller(),
+        StdLib.caller(),
         "tell",
-        String["str.join"](
-          List["list.map"](
-            Std.var("chapters"),
-            Std.lambda(["c"], Object["obj.get"](Std.var("c"), "title")),
+        StringLib.strJoin(
+          ListLib.listMap(
+            StdLib.var("chapters"),
+            StdLib.lambda(["c"], ObjectLib.objGet(StdLib.var("c"), "title")),
           ),
           "\n",
         ),
@@ -77,26 +77,26 @@ describe("Book Item Scripting", () => {
   });
 
   it("should read a chapter", async () => {
-    const script = Std.seq(
-      Std.let("index", Std.arg(0)),
-      Std.let("chapters", Object["obj.get"](Std.this(), "chapters")),
-      Std.let(
+    const script = StdLib.seq(
+      StdLib.let("index", StdLib.arg(0)),
+      StdLib.let("chapters", ObjectLib.objGet(StdLib.this(), "chapters")),
+      StdLib.let(
         "chapter",
-        List["list.get"](Std.var("chapters"), Std.var("index")),
+        ListLib.listGet(StdLib.var("chapters"), StdLib.var("index")),
       ),
-      Std.if(
-        Std.var("chapter"),
+      StdLib.if(
+        StdLib.var("chapter"),
         CoreLib.call(
-          Std.caller(),
+          StdLib.caller(),
           "tell",
-          String["str.concat"](
+          StringLib.strConcat(
             "Chapter: ",
-            Object["obj.get"](Std.var("chapter"), "title"),
+            ObjectLib.objGet(StdLib.var("chapter"), "title"),
             "\n\n",
-            Object["obj.get"](Std.var("chapter"), "content"),
+            ObjectLib.objGet(StdLib.var("chapter"), "content"),
           ),
         ),
-        CoreLib.call(Std.caller(), "tell", "Chapter not found."),
+        CoreLib.call(StdLib.caller(), "tell", "Chapter not found."),
       ),
     );
 
@@ -128,18 +128,22 @@ describe("Book Item Scripting", () => {
   });
 
   it("should add a chapter", async () => {
-    const script = Std.seq(
-      Std.let("title", Std.arg(0)),
-      Std.let("content", Std.arg(1)),
-      Std.let("chapters", Object["obj.get"](Std.this(), "chapters")),
-      Std.let("newChapter", {}),
-      Object["obj.set"](Std.var("newChapter"), "title", Std.var("title")),
-      Object["obj.set"](Std.var("newChapter"), "content", Std.var("content")),
-      List["list.push"](Std.var("chapters"), Std.var("newChapter")),
-      CoreLib.set_entity(
-        Object["obj.set"](Std.this(), "chapters", Std.var("chapters")),
+    const script = StdLib.seq(
+      StdLib.let("title", StdLib.arg(0)),
+      StdLib.let("content", StdLib.arg(1)),
+      StdLib.let("chapters", ObjectLib.objGet(StdLib.this(), "chapters")),
+      StdLib.let("newChapter", {}),
+      ObjectLib.objSet(StdLib.var("newChapter"), "title", StdLib.var("title")),
+      ObjectLib.objSet(
+        StdLib.var("newChapter"),
+        "content",
+        StdLib.var("content"),
       ),
-      CoreLib.call(Std.caller(), "tell", "Chapter added."),
+      ListLib.listPush(StdLib.var("chapters"), StdLib.var("newChapter")),
+      CoreLib.set_entity(
+        ObjectLib.objSet(StdLib.this(), "chapters", StdLib.var("chapters")),
+      ),
+      CoreLib.call(StdLib.caller(), "tell", "Chapter added."),
     );
 
     await evaluate(
@@ -157,39 +161,41 @@ describe("Book Item Scripting", () => {
   });
 
   it("should search chapters", async () => {
-    const script = Std.seq(
-      Std.let("query", Std.arg(0)),
-      Std.let("chapters", Object["obj.get"](Std.this(), "chapters")),
-      Std.let(
+    const script = StdLib.seq(
+      StdLib.let("query", StdLib.arg(0)),
+      StdLib.let("chapters", ObjectLib.objGet(StdLib.this(), "chapters")),
+      StdLib.let(
         "results",
-        List["list.filter"](
-          Std.var("chapters"),
-          Std.lambda(
+        ListLib.listFilter(
+          StdLib.var("chapters"),
+          StdLib.lambda(
             ["c"],
             BooleanLib.or(
-              String["str.includes"](
-                String["str.lower"](Object["obj.get"](Std.var("c"), "title")),
-                String["str.lower"](Std.var("query")),
+              StringLib.strIncludes(
+                StringLib.strLower(ObjectLib.objGet(StdLib.var("c"), "title")),
+                StringLib.strLower(StdLib.var("query")),
               ),
-              String["str.includes"](
-                String["str.lower"](Object["obj.get"](Std.var("c"), "content")),
-                String["str.lower"](Std.var("query")),
+              StringLib.strIncludes(
+                StringLib.strLower(
+                  ObjectLib.objGet(StdLib.var("c"), "content"),
+                ),
+                StringLib.strLower(StdLib.var("query")),
               ),
             ),
           ),
         ),
       ),
       CoreLib.call(
-        Std.caller(),
+        StdLib.caller(),
         "tell",
-        String["str.concat"](
+        StringLib.strConcat(
           "Found ",
-          List["list.len"](Std.var("results")),
+          ListLib.listLen(StdLib.var("results")),
           " matches:\n",
-          String["str.join"](
-            List["list.map"](
-              Std.var("results"),
-              Std.lambda(["c"], Object["obj.get"](Std.var("c"), "title")),
+          StringLib.strJoin(
+            ListLib.listMap(
+              StdLib.var("results"),
+              StdLib.lambda(["c"], ObjectLib.objGet(StdLib.var("c"), "title")),
             ),
             "\n",
           ),

@@ -30,19 +30,27 @@ const ItemView = (props: { item: number }) => {
 
 export default function InspectorPanel() {
   const inspectedItem =
-    gameStore.state.inspectedItem == null
+    gameStore.state.inspectedItem === null
       ? null!
       : gameStore.state.entities.get(gameStore.state.inspectedItem)!;
   return (
     <div class="inspector-panel">
       <Show
         when={inspectedItem}
-        fallback={<div class="inspector-panel__empty">Select an item to inspect</div>}
+        fallback={
+          <div class="inspector-panel__empty">Select an item to inspect</div>
+        }
       >
-        <div class="inspector-panel__name">{inspectedItem["name"] as string}</div>
-        <div class="inspector-panel__desc">{inspectedItem["description"] as string}</div>
+        <div class="inspector-panel__name">
+          {inspectedItem["name"] as string}
+        </div>
+        <div class="inspector-panel__desc">
+          {inspectedItem["description"] as string}
+        </div>
 
-        <Show when={(inspectedItem["contents"] as readonly number[]).length > 0}>
+        <Show
+          when={(inspectedItem["contents"] as readonly number[]).length > 0}
+        >
           <div class="inspector-panel__contents-label">Contains:</div>
           <For each={inspectedItem["contents"] as readonly number[]}>
             {(item) => <ItemView item={item} />}

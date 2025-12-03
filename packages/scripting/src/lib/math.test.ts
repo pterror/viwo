@@ -25,32 +25,32 @@ createLibraryTester(MathOps, "Math Library", (test) => {
 
   // Arithmetic
   test("+", () => {
-    expect(evaluate(MathOps["+"](1, 2), ctx)).toBe(3);
-    expect(evaluate(MathOps["+"](1, 2, 3), ctx)).toBe(6);
+    expect(evaluate(MathOps.add(1, 2), ctx)).toBe(3);
+    expect(evaluate(MathOps.add(1, 2, 3), ctx)).toBe(6);
   });
 
   test("-", () => {
-    expect(evaluate(MathOps["-"](3, 1), ctx)).toBe(2);
-    expect(evaluate(MathOps["-"](10, 2, 3), ctx)).toBe(5);
+    expect(evaluate(MathOps.sub(3, 1), ctx)).toBe(2);
+    expect(evaluate(MathOps.sub(10, 2, 3), ctx)).toBe(5);
   });
 
   test("*", () => {
-    expect(evaluate(MathOps["*"](2, 3), ctx)).toBe(6);
-    expect(evaluate(MathOps["*"](2, 3, 4), ctx)).toBe(24);
+    expect(evaluate(MathOps.mul(2, 3), ctx)).toBe(6);
+    expect(evaluate(MathOps.mul(2, 3, 4), ctx)).toBe(24);
   });
 
   test("/", () => {
-    expect(evaluate(MathOps["/"](6, 2), ctx)).toBe(3);
-    expect(evaluate(MathOps["/"](12, 2, 3), ctx)).toBe(2);
+    expect(evaluate(MathOps.div(6, 2), ctx)).toBe(3);
+    expect(evaluate(MathOps.div(12, 2, 3), ctx)).toBe(2);
   });
 
   test("%", () => {
-    expect(evaluate(MathOps["%"](5, 2), ctx)).toBe(1);
+    expect(evaluate(MathOps.mod(5, 2), ctx)).toBe(1);
   });
 
   test("^", () => {
-    expect(evaluate(MathOps["^"](2, 3), ctx)).toBe(8);
-    expect(evaluate(MathOps["^"](2, 3, 2), ctx)).toBe(512); // 2^(3^2) = 2^9 = 512
+    expect(evaluate(MathOps.pow(2, 3), ctx)).toBe(8);
+    expect(evaluate(MathOps.pow(2, 3, 2), ctx)).toBe(512); // 2^(3^2) = 2^9 = 512
   });
 
   test("random", () => {

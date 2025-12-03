@@ -89,8 +89,8 @@ createLibraryTester(Std, "Core Library", (test) => {
     evaluate(Std.let("i", 0), localCtx);
     evaluate(
       Std.while(
-        Boolean["<"](Std.var("i"), 3),
-        Std.set("i", Math["+"](Std.var("i"), 1)),
+        Boolean.lt(Std.var("i"), 3),
+        Std.set("i", Math.add(Std.var("i"), 1)),
       ),
       localCtx,
     );
@@ -103,8 +103,8 @@ createLibraryTester(Std, "Core Library", (test) => {
     evaluate(
       Std.for(
         "x",
-        List["list.new"](1, 2, 3),
-        Std.set("sum", Math["+"](Std.var("sum"), Std.var("x"))),
+        List.listNew(1, 2, 3),
+        Std.set("sum", Math.add(Std.var("sum"), Std.var("x"))),
       ),
       localCtx,
     );
@@ -149,7 +149,7 @@ createLibraryTester(Std, "Core Library", (test) => {
     expect(evaluate(Std.typeof("s"), ctx)).toBe("string");
     expect(evaluate(Std.typeof(true), ctx)).toBe("boolean");
     expect(evaluate(Std.typeof({}), ctx)).toBe("object");
-    expect(evaluate(Std.typeof(List["list.new"]()), ctx)).toBe("array");
+    expect(evaluate(Std.typeof(List.listNew()), ctx)).toBe("array");
     expect(evaluate(Std.typeof(null), ctx)).toBe("null");
   });
 

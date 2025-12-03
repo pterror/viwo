@@ -1,11 +1,11 @@
 import { describe, test, expect, beforeEach } from "bun:test";
-import { BooleanLib, StdLib as Std } from "@viwo/scripting";
+import { BooleanLib, StdLib } from "@viwo/scripting";
 import {
   evaluate,
   createScriptContext,
   registerLibrary,
-  ObjectLib as Object,
-  ListLib as List,
+  ObjectLib,
+  ListLib,
 } from "@viwo/scripting";
 import { Entity } from "@viwo/shared/jsonrpc";
 import {
@@ -15,14 +15,15 @@ import {
   updateEntity,
   createCapability,
 } from "./repo";
-import { CoreLib, db } from ".";
+import { db } from ".";
+import * as CoreLib from "./runtime/lib/core";
 import * as KernelLib from "./runtime/lib/kernel";
 import { seed } from "./seed";
 
 describe("Mailbox Verification", () => {
-  registerLibrary(Std);
-  registerLibrary(Object);
-  registerLibrary(List);
+  registerLibrary(StdLib);
+  registerLibrary(ObjectLib);
+  registerLibrary(ListLib);
   registerLibrary(CoreLib);
   registerLibrary(KernelLib);
 
@@ -83,7 +84,7 @@ describe("Mailbox Verification", () => {
     const script = KernelLib.hasCapability(
       CoreLib.entity(actor.id),
       "entity.control",
-      Object["obj.new"](["target_id", target.id]),
+      ObjectLib.objNew(["target_id", target.id]),
     );
 
     const ctx = createScriptContext({
@@ -109,33 +110,33 @@ describe("Mailbox Verification", () => {
     // and the RECEIVER (or destination) to accept it.
     // For simplicity here, we'll assume 'give' just moves it if the giver owns the item.
 
-    const giveVerb = Std.seq(
-      Std.let("item", Std.arg(0)),
-      Std.let("dest", Std.arg(1)),
-      Std.if(
-        BooleanLib["=="](
-          Object["obj.get"](Std.var("item"), "owner"),
-          Object["obj.get"](Std.caller(), "id"),
+    const giveVerb = StdLib.seq(
+      StdLib.let("item", StdLib.arg(0)),
+      StdLib.let("dest", StdLib.arg(1)),
+      StdLib.if(
+        BooleanLib.eq(
+          ObjectLib.objGet(StdLib.var("item"), "owner"),
+          ObjectLib.objGet(StdLib.caller(), "id"),
         ),
-        Std.seq(
-          Std.let("newOwner", Object["obj.get"](Std.var("dest"), "owner")),
-          Std.let(
+        StdLib.seq(
+          StdLib.let("newOwner", ObjectLib.objGet(StdLib.var("dest"), "owner")),
+          StdLib.let(
             "cap",
             KernelLib.getCapability(
               "entity.control",
-              Object["obj.new"]([
+              ObjectLib.objNew([
                 "target_id",
-                Object["obj.get"](Std.var("item"), "id"),
+                ObjectLib.objGet(StdLib.var("item"), "id"),
               ]),
             ),
           ),
           CoreLib.set_entity(
-            Std.var("cap"),
-            Object["obj.merge"](
-              Std.var("item"),
-              Object["obj.new"](
-                ["location", Object["obj.get"](Std.var("dest"), "id")],
-                ["owner", Std.var("newOwner")],
+            StdLib.var("cap"),
+            ObjectLib.objMerge(
+              StdLib.var("item"),
+              ObjectLib.objNew(
+                ["location", ObjectLib.objGet(StdLib.var("dest"), "id")],
+                ["owner", StdLib.var("newOwner")],
               ),
             ),
           ),
@@ -170,19 +171,19 @@ describe("Mailbox Verification", () => {
 
   test("should hide contents from sender", async () => {
     // Simulate a 'look' that respects permissions (needs capability).
-    const lookVerb = Std.seq(
-      Std.let("target", Std.arg(0)),
-      Std.if(
+    const lookVerb = StdLib.seq(
+      StdLib.let("target", StdLib.arg(0)),
+      StdLib.if(
         KernelLib.hasCapability(
-          Std.caller(),
+          StdLib.caller(),
           "entity.control",
-          Object["obj.new"]([
+          ObjectLib.objNew([
             "target_id",
-            Object["obj.get"](Std.var("target"), "id"),
+            ObjectLib.objGet(StdLib.var("target"), "id"),
           ]),
         ),
-        Object["obj.get"](Std.var("target"), "contents", List["list.new"]()),
-        List["list.new"](),
+        ObjectLib.objGet(StdLib.var("target"), "contents", ListLib.listNew()),
+        ListLib.listNew(),
       ),
     );
 
@@ -205,19 +206,19 @@ describe("Mailbox Verification", () => {
   });
 
   test("should show contents to receiver", async () => {
-    const lookVerb = Std.seq(
-      Std.let("target", Std.arg(0)),
-      Std.if(
+    const lookVerb = StdLib.seq(
+      StdLib.let("target", StdLib.arg(0)),
+      StdLib.if(
         KernelLib.hasCapability(
-          Std.caller(),
+          StdLib.caller(),
           "entity.control",
-          Object["obj.new"]([
+          ObjectLib.objNew([
             "target_id",
-            Object["obj.get"](Std.var("target"), "id"),
+            ObjectLib.objGet(StdLib.var("target"), "id"),
           ]),
         ),
-        Object["obj.get"](Std.var("target"), "contents", List["list.new"]()),
-        List["list.new"](),
+        ObjectLib.objGet(StdLib.var("target"), "contents", ListLib.listNew()),
+        ListLib.listNew(),
       ),
     );
 

@@ -4,8 +4,8 @@ import {
   evaluate,
   registerLibrary,
   createScriptContext,
-  ListLib as List,
-  StringLib as String,
+  ListLib,
+  StringLib,
   ObjectLib,
   BooleanLib,
   StdLib,
@@ -26,8 +26,8 @@ import { seed } from "../seed";
 describe("Player Commands", () => {
   registerLibrary(StdLib);
   registerLibrary(Core);
-  registerLibrary(List);
-  registerLibrary(String);
+  registerLibrary(ListLib);
+  registerLibrary(StringLib);
   registerLibrary(ObjectLib);
   registerLibrary(BooleanLib);
   registerLibrary(Kernel);
@@ -229,8 +229,8 @@ describe("Player Commands", () => {
 
 describe("Recursive Move Check", () => {
   registerLibrary(Core);
-  registerLibrary(List);
-  registerLibrary(String);
+  registerLibrary(ListLib);
+  registerLibrary(StringLib);
   registerLibrary(ObjectLib);
 
   let caller: Entity;

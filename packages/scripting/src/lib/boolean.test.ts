@@ -25,37 +25,37 @@ createLibraryTester(BooleanOps, "Boolean Library", (test) => {
 
   // Comparison
   test("==", () => {
-    expect(evaluate(BooleanOps["=="](1, 1), ctx)).toBe(true);
-    expect(evaluate(BooleanOps["=="](1, 2), ctx)).toBe(false);
-    expect(evaluate(BooleanOps["=="](1, 1, 1), ctx)).toBe(true);
+    expect(evaluate(BooleanOps.eq(1, 1), ctx)).toBe(true);
+    expect(evaluate(BooleanOps.eq(1, 2), ctx)).toBe(false);
+    expect(evaluate(BooleanOps.eq(1, 1, 1), ctx)).toBe(true);
   });
 
   test("!=", () => {
-    expect(evaluate(BooleanOps["!="](1, 2), ctx)).toBe(true);
-    expect(evaluate(BooleanOps["!="](1, 1), ctx)).toBe(false);
+    expect(evaluate(BooleanOps.neq(1, 2), ctx)).toBe(true);
+    expect(evaluate(BooleanOps.neq(1, 1), ctx)).toBe(false);
   });
 
   test("<", () => {
-    expect(evaluate(BooleanOps["<"](1, 2), ctx)).toBe(true);
-    expect(evaluate(BooleanOps["<"](2, 1), ctx)).toBe(false);
-    expect(evaluate(BooleanOps["<"](1, 2, 3), ctx)).toBe(true);
+    expect(evaluate(BooleanOps.lt(1, 2), ctx)).toBe(true);
+    expect(evaluate(BooleanOps.lt(2, 1), ctx)).toBe(false);
+    expect(evaluate(BooleanOps.lt(1, 2, 3), ctx)).toBe(true);
   });
 
   test(">", () => {
-    expect(evaluate(BooleanOps[">"](2, 1), ctx)).toBe(true);
-    expect(evaluate(BooleanOps[">"](1, 2), ctx)).toBe(false);
+    expect(evaluate(BooleanOps.gt(2, 1), ctx)).toBe(true);
+    expect(evaluate(BooleanOps.gt(1, 2), ctx)).toBe(false);
   });
 
   test("<=", () => {
-    expect(evaluate(BooleanOps["<="](1, 1), ctx)).toBe(true);
-    expect(evaluate(BooleanOps["<="](1, 2), ctx)).toBe(true);
-    expect(evaluate(BooleanOps["<="](2, 1), ctx)).toBe(false);
+    expect(evaluate(BooleanOps.lte(1, 1), ctx)).toBe(true);
+    expect(evaluate(BooleanOps.lte(1, 2), ctx)).toBe(true);
+    expect(evaluate(BooleanOps.lte(2, 1), ctx)).toBe(false);
   });
 
   test(">=", () => {
-    expect(evaluate(BooleanOps[">="](1, 1), ctx)).toBe(true);
-    expect(evaluate(BooleanOps[">="](2, 1), ctx)).toBe(true);
-    expect(evaluate(BooleanOps[">="](1, 2), ctx)).toBe(false);
+    expect(evaluate(BooleanOps.gte(1, 1), ctx)).toBe(true);
+    expect(evaluate(BooleanOps.gte(2, 1), ctx)).toBe(true);
+    expect(evaluate(BooleanOps.gte(1, 2), ctx)).toBe(false);
   });
 
   // Logic

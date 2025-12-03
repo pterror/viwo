@@ -44,23 +44,23 @@ describe("Interpreter", () => {
   });
 
   test("math", () => {
-    expect(evaluate(MathLib["+"](1, 2), ctx)).toBe(3);
-    expect(evaluate(MathLib["-"](5, 3), ctx)).toBe(2);
-    expect(evaluate(MathLib["*"](2, 3), ctx)).toBe(6);
-    expect(evaluate(MathLib["/"](6, 2), ctx)).toBe(3);
+    expect(evaluate(MathLib.add(1, 2), ctx)).toBe(3);
+    expect(evaluate(MathLib.sub(5, 3), ctx)).toBe(2);
+    expect(evaluate(MathLib.mul(2, 3), ctx)).toBe(6);
+    expect(evaluate(MathLib.div(6, 2), ctx)).toBe(3);
   });
 
   test("math extended", () => {
-    expect(evaluate(MathLib["%"](10, 3), ctx)).toBe(1);
-    expect(evaluate(MathLib["^"](2, 3), ctx)).toBe(8);
+    expect(evaluate(MathLib.mod(10, 3), ctx)).toBe(1);
+    expect(evaluate(MathLib.pow(2, 3), ctx)).toBe(8);
   });
 
   test("logic", () => {
     expect(evaluate(BooleanLib.and(true, true), ctx)).toBe(true);
     expect(evaluate(BooleanLib.or(true, false), ctx)).toBe(true);
     expect(evaluate(BooleanLib.not(true), ctx)).toBe(false);
-    expect(evaluate(BooleanLib["=="](1, 1), ctx)).toBe(true);
-    expect(evaluate(BooleanLib[">"](2, 1), ctx)).toBe(true);
+    expect(evaluate(BooleanLib.eq(1, 1), ctx)).toBe(true);
+    expect(evaluate(BooleanLib.gt(2, 1), ctx)).toBe(true);
   });
 
   test("variables", () => {
@@ -98,8 +98,8 @@ describe("Interpreter", () => {
       Std.let("sum", 0),
       Std.for(
         "x",
-        List["list.new"](1, 2, 3),
-        Std.let("sum", MathLib["+"](Std.var("sum"), Std.var("x"))),
+        List.listNew(1, 2, 3),
+        Std.let("sum", MathLib.add(Std.var("sum"), Std.var("x"))),
       ),
       Std.var("sum"),
     );
@@ -118,10 +118,10 @@ describe("Interpreter", () => {
   });
 
   test("comparisons", () => {
-    expect(evaluate(BooleanLib["!="](1, 2), ctx)).toBe(true);
-    expect(evaluate(BooleanLib["<"](1, 2), ctx)).toBe(true);
-    expect(evaluate(BooleanLib[">="](2, 2), ctx)).toBe(true);
-    expect(evaluate(BooleanLib["<="](2, 2), ctx)).toBe(true);
+    expect(evaluate(BooleanLib.neq(1, 2), ctx)).toBe(true);
+    expect(evaluate(BooleanLib.lt(1, 2), ctx)).toBe(true);
+    expect(evaluate(BooleanLib.gte(2, 2), ctx)).toBe(true);
+    expect(evaluate(BooleanLib.lte(2, 2), ctx)).toBe(true);
   });
 
   test("if else", () => {
@@ -226,7 +226,7 @@ describe("Interpreter Libraries", () => {
   describe("Lambda & HOF", () => {
     test("lambda & apply", () => {
       // (lambda (x) (+ x 1))
-      const inc = Std.lambda(["x"], MathLib["+"](Std.var("x"), 1));
+      const inc = Std.lambda(["x"], MathLib.add(Std.var("x"), 1));
       expect(evaluate(Std.apply(inc, 1), ctx)).toBe(2);
     });
 
@@ -238,7 +238,7 @@ describe("Interpreter Libraries", () => {
             Std.let("x", 10),
             Std.let(
               "addX",
-              Std.lambda(["y"], MathLib["+"](Std.var("x"), Std.var("y"))),
+              Std.lambda(["y"], MathLib.add(Std.var("x"), Std.var("y"))),
             ),
             Std.apply(Std.var("addX"), 5),
           ),
@@ -308,7 +308,7 @@ describe("Interpreter Stack Traces", () => {
 
   test("opcode error context", () => {
     // (+ 1 "string") -> should fail
-    const script = MathLib["+"](1, "string" as any);
+    const script = MathLib.add(1, "string" as any);
 
     try {
       evaluate(script, ctx);

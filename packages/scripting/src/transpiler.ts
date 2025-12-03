@@ -7,7 +7,12 @@ import * as BooleanLib from "./lib/boolean";
 import { RESERVED_TYPESCRIPT_KEYWORDS } from "./type_generator";
 
 export function transpile(code: string): any {
-  const sourceFile = ts.createSourceFile("script.ts", code, ts.ScriptTarget.Latest, true);
+  const sourceFile = ts.createSourceFile(
+    "script.ts",
+    code,
+    ts.ScriptTarget.Latest,
+    true,
+  );
 
   const scope = new Set<string>();
   const statements: any[] = [];
@@ -40,7 +45,10 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
     ts.isInterfaceDeclaration(node) ||
     ts.isTypeAliasDeclaration(node)
   ) {
-    if (node.modifiers && node.modifiers.some((m) => m.kind === ts.SyntaxKind.DeclareKeyword)) {
+    if (
+      node.modifiers &&
+      node.modifiers.some((m) => m.kind === ts.SyntaxKind.DeclareKeyword)
+    ) {
       return undefined;
     }
   }
@@ -110,37 +118,37 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
 
     switch (op) {
       case ts.SyntaxKind.PlusToken:
-        return MathLib["+"](left, right);
+        return MathLib.add(left, right);
       case ts.SyntaxKind.MinusToken:
-        return MathLib["-"](left, right);
+        return MathLib.sub(left, right);
       case ts.SyntaxKind.AsteriskToken:
-        return MathLib["*"](left, right);
+        return MathLib.mul(left, right);
       case ts.SyntaxKind.SlashToken:
-        return MathLib["/"](left, right);
+        return MathLib.div(left, right);
       case ts.SyntaxKind.PercentToken:
-        return MathLib["%"](left, right);
+        return MathLib.mod(left, right);
       case ts.SyntaxKind.EqualsEqualsEqualsToken:
       case ts.SyntaxKind.EqualsEqualsToken:
-        return BooleanLib["=="](left, right);
+        return BooleanLib.eq(left, right);
       case ts.SyntaxKind.ExclamationEqualsEqualsToken:
       case ts.SyntaxKind.ExclamationEqualsToken:
-        return BooleanLib["!="](left, right);
+        return BooleanLib.neq(left, right);
       case ts.SyntaxKind.LessThanToken:
-        return BooleanLib["<"](left, right);
+        return BooleanLib.lt(left, right);
       case ts.SyntaxKind.GreaterThanToken:
-        return BooleanLib[">"](left, right);
+        return BooleanLib.gt(left, right);
       case ts.SyntaxKind.LessThanEqualsToken:
-        return BooleanLib["<="](left, right);
+        return BooleanLib.lte(left, right);
       case ts.SyntaxKind.GreaterThanEqualsToken:
-        return BooleanLib[">="](left, right);
+        return BooleanLib.gte(left, right);
       case ts.SyntaxKind.AmpersandAmpersandToken:
         return BooleanLib.and(left, right);
       case ts.SyntaxKind.BarBarToken:
         return BooleanLib.or(left, right);
       case ts.SyntaxKind.InKeyword:
-        return ObjectLib["obj.has"](right, left);
+        return ObjectLib.objHas(right, left);
       case ts.SyntaxKind.AsteriskAsteriskToken:
-        return MathLib["^"](left, right);
+        return MathLib.pow(left, right);
       case ts.SyntaxKind.EqualsToken:
         // Assignment
         if (Array.isArray(left) && left[0] === "var") {
@@ -148,7 +156,7 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
         }
         // Handle object property assignment?
         if (Array.isArray(left) && left[0] === "obj.get") {
-          return ObjectLib["obj.set"](left[1], left[2], right);
+          return ObjectLib.objSet(left[1], left[2], right);
         }
         throw new Error("Invalid assignment target");
     }
@@ -164,7 +172,7 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
     const expr = transpileNode(node.expression, scope);
     // expr should be ["obj.get", obj, key]
     if (Array.isArray(expr) && expr[0] === "obj.get") {
-      return ObjectLib["obj.del"](expr[1], expr[2]);
+      return ObjectLib.objDel(expr[1], expr[2]);
     }
     // If it's just a property access that wasn't transpiled to obj.get yet?
     // transpileNode handles PropertyAccessExpression and ElementAccessExpression returning obj.get
@@ -174,7 +182,7 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
 
   if (ts.isArrayLiteralExpression(node)) {
     const elements = node.elements.map((e) => transpileNode(e, scope));
-    return List["list.new"](...elements);
+    return List.listNew(...elements);
   }
 
   if (ts.isObjectLiteralExpression(node)) {
@@ -183,24 +191,25 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
       if (ts.isPropertyAssignment(prop)) {
         const key = prop.name.getText();
         // Strip quotes if present
-        const cleanKey = key.startsWith('"') || key.startsWith("'") ? key.slice(1, -1) : key;
+        const cleanKey =
+          key.startsWith('"') || key.startsWith("'") ? key.slice(1, -1) : key;
         const val = transpileNode(prop.initializer, scope);
         props.push([cleanKey, val]);
       }
     });
-    return ObjectLib["obj.new"](...props);
+    return ObjectLib.objNew(...props);
   }
 
   if (ts.isPropertyAccessExpression(node)) {
     const obj = transpileNode(node.expression, scope);
     const key = node.name.text;
-    return ObjectLib["obj.get"](obj, key);
+    return ObjectLib.objGet(obj, key);
   }
 
   if (ts.isElementAccessExpression(node)) {
     const obj = transpileNode(node.expression, scope);
     const key = transpileNode(node.argumentExpression, scope);
-    return ObjectLib["obj.get"](obj, key);
+    return ObjectLib.objGet(obj, key);
   }
 
   if (ts.isCallExpression(node)) {
@@ -263,7 +272,9 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
   if (ts.isIfStatement(node)) {
     const cond = transpileNode(node.expression, scope);
     const thenStmt = transpileNode(node.thenStatement, scope);
-    const elseStmt = node.elseStatement ? transpileNode(node.elseStatement, scope) : null;
+    const elseStmt = node.elseStatement
+      ? transpileNode(node.elseStatement, scope)
+      : null;
 
     if (elseStmt) {
       return Std.if(cond, thenStmt, elseStmt);

@@ -1,9 +1,7 @@
 import { defineOpcode } from "../def";
 
-/**
- * Returns the current time as an ISO 8601 string.
- */
-const timeNow = defineOpcode<[], string>("time.now", {
+/** Returns the current time as an ISO 8601 string. */
+export const timeNow = defineOpcode<[], string>("time.now", {
   metadata: {
     label: "Now",
     category: "time",
@@ -16,36 +14,33 @@ const timeNow = defineOpcode<[], string>("time.now", {
     return new Date().toISOString();
   },
 });
-export { timeNow as "time.now" };
 
-/**
- * Formats a timestamp string.
- */
-const timeFormat = defineOpcode<[string, string?], string>("time.format", {
-  metadata: {
-    label: "Format Time",
-    category: "time",
-    description: "Format timestamp",
-    slots: [
-      { name: "Time", type: "string" },
-      { name: "Format", type: "string", default: null }, // Format string not really used yet?
-    ],
-    parameters: [
-      { name: "time", type: "string" },
-      { name: "format", type: "string", optional: true },
-    ],
-    returnType: "string",
+/** Formats a timestamp string. */
+export const timeFormat = defineOpcode<[string, string?], string>(
+  "time.format",
+  {
+    metadata: {
+      label: "Format Time",
+      category: "time",
+      description: "Format timestamp",
+      slots: [
+        { name: "Time", type: "string" },
+        { name: "Format", type: "string", default: null }, // Format string not really used yet?
+      ],
+      parameters: [
+        { name: "time", type: "string" },
+        { name: "format", type: "string", optional: true },
+      ],
+      returnType: "string",
+    },
+    handler: ([timestamp], _ctx) => {
+      return new Date(timestamp).toISOString();
+    },
   },
-  handler: ([timestamp], _ctx) => {
-    return new Date(timestamp).toISOString();
-  },
-});
-export { timeFormat as "time.format" };
+);
 
-/**
- * Parses a datetime string and returns it in ISO 8601 format.
- */
-const timeParse = defineOpcode<[string], string>("time.parse", {
+/** Parses a datetime string and returns it in ISO 8601 format. */
+export const timeParse = defineOpcode<[string], string>("time.parse", {
   metadata: {
     label: "Parse Time",
     category: "time",
@@ -58,48 +53,45 @@ const timeParse = defineOpcode<[string], string>("time.parse", {
     return new Date(datetime).toISOString();
   },
 });
-export { timeParse as "time.parse" };
 
-/**
- * Converts a numeric timestamp (ms since epoch) to an ISO 8601 string.
- */
-const timeFromTimestamp = defineOpcode<[number], string>("time.from_timestamp", {
-  metadata: {
-    label: "From Timestamp",
-    category: "time",
-    description: "Convert number to ISO",
-    slots: [{ name: "Timestamp", type: "number" }],
-    parameters: [{ name: "timestamp", type: "number" }],
-    returnType: "string",
+/** Converts a numeric timestamp (ms since epoch) to an ISO 8601 string. */
+export const timeFromTimestamp = defineOpcode<[number], string>(
+  "time.from_timestamp",
+  {
+    metadata: {
+      label: "From Timestamp",
+      category: "time",
+      description: "Convert number to ISO",
+      slots: [{ name: "Timestamp", type: "number" }],
+      parameters: [{ name: "timestamp", type: "number" }],
+      returnType: "string",
+    },
+    handler: ([timestamp], _ctx) => {
+      return new Date(timestamp).toISOString();
+    },
   },
-  handler: ([timestamp], _ctx) => {
-    return new Date(timestamp).toISOString();
-  },
-});
-export { timeFromTimestamp as "time.from_timestamp" };
+);
 
-/**
- * Converts an ISO 8601 string to a numeric timestamp (ms since epoch).
- */
-const timeToTimestamp = defineOpcode<[string], number>("time.to_timestamp", {
-  metadata: {
-    label: "To Timestamp",
-    category: "time",
-    description: "Convert ISO to number",
-    slots: [{ name: "Time", type: "string" }],
-    parameters: [{ name: "time", type: "string" }],
-    returnType: "number",
+/** Converts an ISO 8601 string to a numeric timestamp (ms since epoch). */
+export const timeToTimestamp = defineOpcode<[string], number>(
+  "time.to_timestamp",
+  {
+    metadata: {
+      label: "To Timestamp",
+      category: "time",
+      description: "Convert ISO to number",
+      slots: [{ name: "Time", type: "string" }],
+      parameters: [{ name: "time", type: "string" }],
+      returnType: "number",
+    },
+    handler: ([datetime], _ctx) => {
+      return new Date(datetime).getTime();
+    },
   },
-  handler: ([datetime], _ctx) => {
-    return new Date(datetime).getTime();
-  },
-});
-export { timeToTimestamp as "time.to_timestamp" };
+);
 
-/**
- * Adds an offset to a timestamp.
- */
-const timeOffset = defineOpcode<
+/** Adds an offset to a timestamp. */
+export const timeOffset = defineOpcode<
   [
     number,
     (
@@ -179,4 +171,3 @@ const timeOffset = defineOpcode<
     return date.toISOString();
   },
 });
-export { timeOffset as "time.offset" };

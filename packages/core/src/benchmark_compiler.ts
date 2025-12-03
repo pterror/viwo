@@ -30,10 +30,10 @@ const script = StdLib.seq(
   StdLib.let("sum", 0),
   StdLib.let("i", 0),
   StdLib.while(
-    BooleanLib["<"](StdLib.var("i"), ITERATIONS),
+    BooleanLib.lt(StdLib.var("i"), ITERATIONS),
     StdLib.seq(
-      StdLib.set("sum", MathLib["+"](StdLib.var("sum"), StdLib.var("i"))),
-      StdLib.set("i", MathLib["+"](StdLib.var("i"), 1)),
+      StdLib.set("sum", MathLib.add(StdLib.var("sum"), StdLib.var("i"))),
+      StdLib.set("i", MathLib.add(StdLib.var("i"), 1)),
     ),
   ),
   StdLib.var("sum"),
@@ -77,4 +77,6 @@ console.log(`Compiled Execution: ${timeExec.toFixed(2)}ms`);
 console.log(`Result: ${result2}`);
 
 console.log(`Speedup (Exec only): ${(timeInterp / timeExec).toFixed(2)}x`);
-console.log(`Speedup (Total): ${(timeInterp / (compileTime + timeExec)).toFixed(2)}x`);
+console.log(
+  `Speedup (Total): ${(timeInterp / (compileTime + timeExec)).toFixed(2)}x`,
+);

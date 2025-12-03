@@ -15,23 +15,23 @@ import {
   evaluate,
   registerLibrary,
   createScriptContext,
-  StdLib as Std,
-  ListLib as List,
-  StringLib as String,
+  StdLib,
+  ListLib,
+  StringLib,
   ObjectLib,
-  TimeLib as Time,
+  TimeLib,
   BooleanLib,
 } from "@viwo/scripting";
 import { Entity } from "@viwo/shared/jsonrpc";
 
 registerLibrary(CoreLib);
 registerLibrary(KernelLib);
-registerLibrary(Std);
-registerLibrary(List);
-registerLibrary(String);
+registerLibrary(StdLib);
+registerLibrary(ListLib);
+registerLibrary(StringLib);
 registerLibrary(ObjectLib);
 registerLibrary(BooleanLib);
-registerLibrary(Time);
+registerLibrary(TimeLib);
 
 describe("Hotel Scripting", () => {
   let hotelLobby: Entity;

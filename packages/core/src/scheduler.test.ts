@@ -1,18 +1,13 @@
 import { describe, it, expect, beforeAll } from "bun:test";
 import { scheduler } from "./scheduler";
 import { createEntity, addVerb, getEntity, createCapability } from "./repo";
-import {
-  registerLibrary,
-  StdLib as Std,
-  ObjectLib as Object,
-  MathLib,
-} from "@viwo/scripting";
+import { registerLibrary, StdLib, ObjectLib, MathLib } from "@viwo/scripting";
 import { CoreLib, db } from ".";
 import * as KernelLib from "./runtime/lib/kernel";
 
 describe("Scheduler Verification", () => {
-  registerLibrary(Std);
-  registerLibrary(Object);
+  registerLibrary(StdLib);
+  registerLibrary(ObjectLib);
   registerLibrary(CoreLib);
   registerLibrary(KernelLib);
 
@@ -37,23 +32,23 @@ describe("Scheduler Verification", () => {
     addVerb(
       entityId,
       "increment",
-      Std.seq(
-        Std.let(
+      StdLib.seq(
+        StdLib.let(
           "cap",
           KernelLib.getCapability(
             "entity.control",
-            Object["obj.new"]([
+            ObjectLib.objNew([
               "target_id",
-              Object["obj.get"](Std.this(), "id"),
+              ObjectLib.objGet(StdLib.this(), "id"),
             ]),
           ),
         ),
         CoreLib.set_entity(
-          Std.var("cap"),
-          Object["obj.set"](
-            Std.this(),
+          StdLib.var("cap"),
+          ObjectLib.objSet(
+            StdLib.this(),
             "count",
-            MathLib["+"](Object["obj.get"](Std.this(), "count"), 1),
+            MathLib.add(ObjectLib.objGet(StdLib.this(), "count"), 1),
           ),
         ),
       ),

@@ -1,14 +1,14 @@
 import {
-  MathLib as Math,
-  StringLib as Str,
-  ListLib as List,
-  TimeLib as Time,
-  ObjectLib as Object,
-  StdLib as Std,
-  BooleanLib as Boolean,
+  MathLib,
+  StringLib,
+  ListLib,
+  TimeLib,
+  ObjectLib,
+  StdLib,
+  BooleanLib,
 } from "@viwo/scripting";
-import * as Core from "./runtime/lib/core";
-import * as Kernel from "./runtime/lib/kernel";
+import * as CoreLib from "./runtime/lib/core";
+import * as KernelLib from "./runtime/lib/kernel";
 import { db } from "./db";
 import {
   createEntity,
@@ -23,7 +23,7 @@ import { seedHotel } from "./seeds/hotel";
 export function seed() {
   // Check for any row at all.
   const root = db.query("SELECT id FROM entities").get();
-  if (root != null) {
+  if (root !== null) {
     console.log("Database already seeded.");
     return;
   }
@@ -68,55 +68,59 @@ export function seed() {
   addVerb(
     botId,
     "sudo",
-    Core.sudo(
-      Kernel.getCapability("sys.sudo"),
-      Core.entity(Std.arg(0)),
-      Std.arg(1),
-      Std.arg(2),
+    CoreLib.sudo(
+      KernelLib.getCapability("sys.sudo"),
+      CoreLib.entity(StdLib.arg(0)),
+      StdLib.arg(1),
+      StdLib.arg(2),
     ),
   );
 
   addVerb(
     systemId,
     "get_available_verbs",
-    Std.seq(
-      Std.let("player", Std.arg(0)),
-      Std.let("verbs", List["list.new"]()),
-      Std.let("seen", Object["obj.new"]()),
+    StdLib.seq(
+      StdLib.let("player", StdLib.arg(0)),
+      StdLib.let("verbs", ListLib.listNew()),
+      StdLib.let("seen", ObjectLib.objNew()),
 
-      Std.let(
+      StdLib.let(
         "addVerbs",
-        Std.lambda(
+        StdLib.lambda(
           ["entityId"],
-          Std.seq(
-            Std.let(
+          StdLib.seq(
+            StdLib.let(
               "entityVerbs",
-              Core.verbs(Core.entity(Std.var("entityId"))),
+              CoreLib.verbs(CoreLib.entity(StdLib.var("entityId"))),
             ),
-            Std.for(
+            StdLib.for(
               "v",
-              Std.var("entityVerbs"),
-              Std.seq(
-                Std.let(
+              StdLib.var("entityVerbs"),
+              StdLib.seq(
+                StdLib.let(
                   "key",
-                  Str["str.concat"](
-                    Object["obj.get"](Std.var("v"), "name"),
+                  StringLib.strConcat(
+                    ObjectLib.objGet(StdLib.var("v"), "name"),
                     ":",
-                    Std.var("entityId"),
+                    StdLib.var("entityId"),
                   ),
                 ),
-                Std.if(
-                  Boolean.not(
-                    Object["obj.has"](Std.var("seen"), Std.var("key")),
+                StdLib.if(
+                  BooleanLib.not(
+                    ObjectLib.objHas(StdLib.var("seen"), StdLib.var("key")),
                   ),
-                  Std.seq(
-                    Object["obj.set"](Std.var("seen"), Std.var("key"), true),
-                    Object["obj.set"](
-                      Std.var("v"),
-                      "source",
-                      Std.var("entityId"),
+                  StdLib.seq(
+                    ObjectLib.objSet(
+                      StdLib.var("seen"),
+                      StdLib.var("key"),
+                      true,
                     ),
-                    List["list.push"](Std.var("verbs"), Std.var("v")),
+                    ObjectLib.objSet(
+                      StdLib.var("v"),
+                      "source",
+                      StdLib.var("entityId"),
+                    ),
+                    ListLib.listPush(StdLib.var("verbs"), StdLib.var("v")),
                   ),
                 ),
               ),
@@ -126,64 +130,70 @@ export function seed() {
       ),
 
       // 1. Player verbs
-      Std.apply(
-        Std.var("addVerbs"),
-        Object["obj.get"](Std.var("player"), "id"),
+      StdLib.apply(
+        StdLib.var("addVerbs"),
+        ObjectLib.objGet(StdLib.var("player"), "id"),
       ),
 
       // 2. Room verbs
-      Std.let("locationId", Object["obj.get"](Std.var("player"), "location")),
-      Std.if(
-        Std.var("locationId"),
-        Std.seq(
-          Std.apply(Std.var("addVerbs"), Std.var("locationId")),
+      StdLib.let(
+        "locationId",
+        ObjectLib.objGet(StdLib.var("player"), "location"),
+      ),
+      StdLib.if(
+        StdLib.var("locationId"),
+        StdLib.seq(
+          StdLib.apply(StdLib.var("addVerbs"), StdLib.var("locationId")),
 
           // 3. Items in Room
-          Std.let("room", Core.entity(Std.var("locationId"))),
-          Std.let(
+          StdLib.let("room", CoreLib.entity(StdLib.var("locationId"))),
+          StdLib.let(
             "contents",
-            Object["obj.get"](Std.var("room"), "contents", List["list.new"]()),
+            ObjectLib.objGet(StdLib.var("room"), "contents", ListLib.listNew()),
           ),
-          Std.for(
+          StdLib.for(
             "itemId",
-            Std.var("contents"),
-            Std.apply(Std.var("addVerbs"), Std.var("itemId")),
+            StdLib.var("contents"),
+            StdLib.apply(StdLib.var("addVerbs"), StdLib.var("itemId")),
           ),
         ),
       ),
 
       // 4. Inventory verbs
-      Std.let(
+      StdLib.let(
         "inventory",
-        Object["obj.get"](Std.var("player"), "contents", List["list.new"]()),
+        ObjectLib.objGet(StdLib.var("player"), "contents", ListLib.listNew()),
       ),
-      Std.for(
+      StdLib.for(
         "itemId",
-        Std.var("inventory"),
-        Std.apply(Std.var("addVerbs"), Std.var("itemId")),
+        StdLib.var("inventory"),
+        StdLib.apply(StdLib.var("addVerbs"), StdLib.var("itemId")),
       ),
 
-      Std.var("verbs"),
+      StdLib.var("verbs"),
     ),
   );
 
   addVerb(
     entityBaseId,
     "find",
-    Std.seq(
-      Std.let("query", Std.arg(0)),
-      Std.let("locationId", Object["obj.get"](Std.caller(), "location")),
-      Std.let("location", Core.entity(Std.var("locationId"))),
+    StdLib.seq(
+      StdLib.let("query", StdLib.arg(0)),
+      StdLib.let("locationId", ObjectLib.objGet(StdLib.caller(), "location")),
+      StdLib.let("location", CoreLib.entity(StdLib.var("locationId"))),
       // Search contents only
-      List["list.find"](
-        Object["obj.get"](Std.var("location"), "contents", List["list.new"]()),
-        Std.lambda(
+      ListLib.listFind(
+        ObjectLib.objGet(StdLib.var("location"), "contents", ListLib.listNew()),
+        StdLib.lambda(
           ["id"],
-          Std.seq(
-            Std.let("props", Core.resolve_props(Core.entity(Std.var("id")))),
-            Boolean["=="](
-              Object["obj.get"](Std.var("props"), "name"),
-              Std.var("query"),
+          StdLib.seq(
+            StdLib.let(
+              "props",
+              CoreLib.resolve_props(CoreLib.entity(StdLib.var("id"))),
+            ),
+            BooleanLib.eq(
+              ObjectLib.objGet(StdLib.var("props"), "name"),
+              StdLib.var("query"),
             ),
           ),
         ),
@@ -194,25 +204,28 @@ export function seed() {
   addVerb(
     entityBaseId,
     "find_exit",
-    Std.seq(
-      Std.let("query", Std.arg(0)),
-      Std.let("locationId", Object["obj.get"](Std.caller(), "location")),
-      Std.let("location", Core.entity(Std.var("locationId"))),
+    StdLib.seq(
+      StdLib.let("query", StdLib.arg(0)),
+      StdLib.let("locationId", ObjectLib.objGet(StdLib.caller(), "location")),
+      StdLib.let("location", CoreLib.entity(StdLib.var("locationId"))),
       // Search exits
-      List["list.find"](
-        Object["obj.get"](Std.var("location"), "exits"),
-        Std.lambda(
+      ListLib.listFind(
+        ObjectLib.objGet(StdLib.var("location"), "exits"),
+        StdLib.lambda(
           ["id"],
-          Std.seq(
-            Std.let("props", Core.resolve_props(Core.entity(Std.var("id")))),
-            Boolean.or(
-              Boolean["=="](
-                Object["obj.get"](Std.var("props"), "name"),
-                Std.var("query"),
+          StdLib.seq(
+            StdLib.let(
+              "props",
+              CoreLib.resolve_props(CoreLib.entity(StdLib.var("id"))),
+            ),
+            BooleanLib.or(
+              BooleanLib.eq(
+                ObjectLib.objGet(StdLib.var("props"), "name"),
+                StdLib.var("query"),
               ),
-              Boolean["=="](
-                Object["obj.get"](Std.var("props"), "direction"),
-                Std.var("query"),
+              BooleanLib.eq(
+                ObjectLib.objGet(StdLib.var("props"), "direction"),
+                StdLib.var("query"),
               ),
             ),
           ),
@@ -224,32 +237,35 @@ export function seed() {
   addVerb(
     entityBaseId,
     "on_enter",
-    Std.seq(
-      Std.let("mover", Std.arg(0)),
-      Std.let(
+    StdLib.seq(
+      StdLib.let("mover", StdLib.arg(0)),
+      StdLib.let(
         "cap",
-        Kernel.getCapability(
+        KernelLib.getCapability(
           "entity.control",
-          Object["obj.new"](["target_id", Object["obj.get"](Std.this(), "id")]),
+          ObjectLib.objNew([
+            "target_id",
+            ObjectLib.objGet(StdLib.this(), "id"),
+          ]),
         ),
       ),
-      Std.if(
-        Std.var("cap"),
-        Std.seq(
-          Std.let(
+      StdLib.if(
+        StdLib.var("cap"),
+        StdLib.seq(
+          StdLib.let(
             "contents",
-            Object["obj.get"](Std.this(), "contents", List["list.new"]()),
+            ObjectLib.objGet(StdLib.this(), "contents", ListLib.listNew()),
           ),
-          List["list.push"](
-            Std.var("contents"),
-            Object["obj.get"](Std.var("mover"), "id"),
+          ListLib.listPush(
+            StdLib.var("contents"),
+            ObjectLib.objGet(StdLib.var("mover"), "id"),
           ),
-          Core.set_entity(
-            Std.var("cap"),
-            Object["obj.set"](Std.this(), "contents", Std.var("contents")),
+          CoreLib.set_entity(
+            StdLib.var("cap"),
+            ObjectLib.objSet(StdLib.this(), "contents", StdLib.var("contents")),
           ),
         ),
-        Std.send("message", "The room refuses you."),
+        StdLib.send("message", "The room refuses you."),
       ),
     ),
   );
@@ -257,41 +273,48 @@ export function seed() {
   addVerb(
     entityBaseId,
     "on_leave",
-    Std.seq(
-      Std.let("mover", Std.arg(0)),
-      Std.let(
+    StdLib.seq(
+      StdLib.let("mover", StdLib.arg(0)),
+      StdLib.let(
         "cap",
-        Kernel.getCapability(
+        KernelLib.getCapability(
           "entity.control",
-          Object["obj.new"](["target_id", Object["obj.get"](Std.this(), "id")]),
+          ObjectLib.objNew([
+            "target_id",
+            ObjectLib.objGet(StdLib.this(), "id"),
+          ]),
         ),
       ),
-      Std.if(
-        Std.var("cap"),
-        Std.seq(
-          Std.let(
+      StdLib.if(
+        StdLib.var("cap"),
+        StdLib.seq(
+          StdLib.let(
             "contents",
-            Object["obj.get"](Std.this(), "contents", List["list.new"]()),
+            ObjectLib.objGet(StdLib.this(), "contents", ListLib.listNew()),
           ),
-          Std.let(
+          StdLib.let(
             "newContents",
-            List["list.filter"](
-              Std.var("contents"),
-              Std.lambda(
+            ListLib.listFilter(
+              StdLib.var("contents"),
+              StdLib.lambda(
                 ["id"],
-                Boolean["!="](
-                  Std.var("id"),
-                  Object["obj.get"](Std.var("mover"), "id"),
+                BooleanLib.neq(
+                  StdLib.var("id"),
+                  ObjectLib.objGet(StdLib.var("mover"), "id"),
                 ),
               ),
             ),
           ),
-          Core.set_entity(
-            Std.var("cap"),
-            Object["obj.set"](Std.this(), "contents", Std.var("newContents")),
+          CoreLib.set_entity(
+            StdLib.var("cap"),
+            ObjectLib.objSet(
+              StdLib.this(),
+              "contents",
+              StdLib.var("newContents"),
+            ),
           ),
         ),
-        Std.send("message", "The room refuses to let you go."),
+        StdLib.send("message", "The room refuses to let you go."),
       ),
     ),
   );
@@ -299,57 +322,57 @@ export function seed() {
   addVerb(
     entityBaseId,
     "move",
-    Std.seq(
-      Std.let("arg", Std.arg(0)),
-      Std.if(
-        Boolean.not(Std.var("arg")),
-        Std.send("message", "Where do you want to go?"),
-        Std.seq(
-          Std.let("destId", null),
-          Std.if(
-            Boolean["=="](Std.typeof(Std.var("arg")), "number"),
-            Std.let("destId", Std.var("arg")),
-            Std.seq(
-              Std.let(
+    StdLib.seq(
+      StdLib.let("arg", StdLib.arg(0)),
+      StdLib.if(
+        BooleanLib.not(StdLib.var("arg")),
+        StdLib.send("message", "Where do you want to go?"),
+        StdLib.seq(
+          StdLib.let("destId", null),
+          StdLib.if(
+            BooleanLib.eq(StdLib.typeof(StdLib.var("arg")), "number"),
+            StdLib.let("destId", StdLib.var("arg")),
+            StdLib.seq(
+              StdLib.let(
                 "exitId",
-                Core.call(Std.this(), "find_exit", Std.var("arg")),
+                CoreLib.call(StdLib.this(), "find_exit", StdLib.var("arg")),
               ),
-              Std.if(
-                Std.var("exitId"),
-                Std.let(
+              StdLib.if(
+                StdLib.var("exitId"),
+                StdLib.let(
                   "destId",
-                  Object["obj.get"](
-                    Core.resolve_props(Core.entity(Std.var("exitId"))),
+                  ObjectLib.objGet(
+                    CoreLib.resolve_props(CoreLib.entity(StdLib.var("exitId"))),
                     "destination",
                   ),
                 ),
               ),
             ),
           ),
-          Std.if(
-            Std.var("destId"),
-            Std.seq(
-              Std.let("mover", Std.caller()),
+          StdLib.if(
+            StdLib.var("destId"),
+            StdLib.seq(
+              StdLib.let("mover", StdLib.caller()),
               // Recursive Check
-              Std.let("checkId", Std.var("destId")),
-              Std.let("isRecursive", false),
-              Std.while(
-                Std.var("checkId"),
-                Std.seq(
-                  Std.if(
-                    Boolean["=="](
-                      Std.var("checkId"),
-                      Object["obj.get"](Std.var("mover"), "id"),
+              StdLib.let("checkId", StdLib.var("destId")),
+              StdLib.let("isRecursive", false),
+              StdLib.while(
+                StdLib.var("checkId"),
+                StdLib.seq(
+                  StdLib.if(
+                    BooleanLib.eq(
+                      StdLib.var("checkId"),
+                      ObjectLib.objGet(StdLib.var("mover"), "id"),
                     ),
-                    Std.seq(
-                      Std.set("isRecursive", true),
-                      Std.set("checkId", null), // Break
+                    StdLib.seq(
+                      StdLib.set("isRecursive", true),
+                      StdLib.set("checkId", null), // Break
                     ),
                     // Step up
-                    Std.set(
+                    StdLib.set(
                       "checkId",
-                      Object["obj.get"](
-                        Core.entity(Std.var("checkId")),
+                      ObjectLib.objGet(
+                        CoreLib.entity(StdLib.var("checkId")),
                         "location",
                         null,
                       ),
@@ -357,57 +380,71 @@ export function seed() {
                   ),
                 ),
               ),
-              Std.if(
-                Std.var("isRecursive"),
-                Std.send("message", "You can't put something inside itself."),
-                Std.seq(
-                  Std.let(
+              StdLib.if(
+                StdLib.var("isRecursive"),
+                StdLib.send(
+                  "message",
+                  "You can't put something inside itself.",
+                ),
+                StdLib.seq(
+                  StdLib.let(
                     "oldLocId",
-                    Object["obj.get"](Std.var("mover"), "location"),
+                    ObjectLib.objGet(StdLib.var("mover"), "location"),
                   ),
-                  Std.let("oldLoc", Core.entity(Std.var("oldLocId"))),
-                  Std.let("newLoc", Core.entity(Std.var("destId"))),
+                  StdLib.let("oldLoc", CoreLib.entity(StdLib.var("oldLocId"))),
+                  StdLib.let("newLoc", CoreLib.entity(StdLib.var("destId"))),
 
                   // Leave old loc
-                  Core.call(Std.var("oldLoc"), "on_leave", Std.var("mover")),
+                  CoreLib.call(
+                    StdLib.var("oldLoc"),
+                    "on_leave",
+                    StdLib.var("mover"),
+                  ),
 
                   // Enter new loc
-                  Core.call(Std.var("newLoc"), "on_enter", Std.var("mover")),
+                  CoreLib.call(
+                    StdLib.var("newLoc"),
+                    "on_enter",
+                    StdLib.var("mover"),
+                  ),
 
                   // Update mover location (needs self control)
-                  Std.let(
+                  StdLib.let(
                     "selfCap",
-                    Kernel.getCapability(
+                    KernelLib.getCapability(
                       "entity.control",
-                      Object["obj.new"]([
+                      ObjectLib.objNew([
                         "target_id",
-                        Object["obj.get"](Std.var("mover"), "id"),
+                        ObjectLib.objGet(StdLib.var("mover"), "id"),
                       ]),
                     ),
                   ),
 
-                  Std.if(
-                    Std.var("selfCap"),
-                    Std.seq(
-                      Object["obj.set"](
-                        Std.var("mover"),
+                  StdLib.if(
+                    StdLib.var("selfCap"),
+                    StdLib.seq(
+                      ObjectLib.objSet(
+                        StdLib.var("mover"),
                         "location",
-                        Std.var("destId"),
+                        StdLib.var("destId"),
                       ),
-                      Core.set_entity(Std.var("selfCap"), Std.var("mover")),
+                      CoreLib.set_entity(
+                        StdLib.var("selfCap"),
+                        StdLib.var("mover"),
+                      ),
                     ),
-                    Std.send("message", "You cannot move yourself."),
+                    StdLib.send("message", "You cannot move yourself."),
                   ),
 
-                  Std.send(
+                  StdLib.send(
                     "room_id",
-                    Object["obj.new"](["roomId", Std.var("destId")]),
+                    ObjectLib.objNew(["roomId", StdLib.var("destId")]),
                   ),
-                  Core.call(Std.caller(), "look"),
+                  CoreLib.call(StdLib.caller(), "look"),
                 ),
               ),
             ),
-            Std.send("message", "That way leads nowhere."),
+            StdLib.send("message", "That way leads nowhere."),
           ),
         ),
       ),
@@ -417,13 +454,16 @@ export function seed() {
   addVerb(
     entityBaseId,
     "say",
-    Std.send("message", "Say is not yet implemented."),
+    StdLib.send("message", "Say is not yet implemented."),
   );
 
   addVerb(
     entityBaseId,
     "tell",
-    Std.seq(Std.let("msg", Std.arg(0)), Std.send("message", Std.var("msg"))),
+    StdLib.seq(
+      StdLib.let("msg", StdLib.arg(0)),
+      StdLib.send("message", StdLib.var("msg")),
+    ),
   );
 
   // 3. Create Humanoid Base
@@ -491,73 +531,79 @@ export function seed() {
   addVerb(
     playerBaseId,
     "look",
-    Std.if(
-      List["list.empty"](Std.args()),
-      Std.seq(
-        Std.let(
+    StdLib.if(
+      ListLib.listEmpty(StdLib.args()),
+      StdLib.seq(
+        StdLib.let(
           "room",
-          Core.resolve_props(
-            Core.entity(Object["obj.get"](Std.caller(), "location")),
+          CoreLib.resolve_props(
+            CoreLib.entity(ObjectLib.objGet(StdLib.caller(), "location")),
           ),
         ),
-        Std.let(
+        StdLib.let(
           "contents",
-          Object["obj.get"](Std.var("room"), "contents", List["list.new"]()),
+          ObjectLib.objGet(StdLib.var("room"), "contents", ListLib.listNew()),
         ),
-        Std.let(
+        StdLib.let(
           "exits",
-          Object["obj.get"](Std.var("room"), "exits", List["list.new"]()),
+          ObjectLib.objGet(StdLib.var("room"), "exits", ListLib.listNew()),
         ),
-        Std.let(
+        StdLib.let(
           "resolvedContents",
-          List["list.map"](
-            Std.var("contents"),
-            Std.lambda(["id"], Core.resolve_props(Core.entity(Std.var("id")))),
+          ListLib.listMap(
+            StdLib.var("contents"),
+            StdLib.lambda(
+              ["id"],
+              CoreLib.resolve_props(CoreLib.entity(StdLib.var("id"))),
+            ),
           ),
         ),
-        Std.let(
+        StdLib.let(
           "resolvedExits",
-          List["list.map"](
-            Std.var("exits"),
-            Std.lambda(["id"], Core.resolve_props(Core.entity(Std.var("id")))),
+          ListLib.listMap(
+            StdLib.var("exits"),
+            StdLib.lambda(
+              ["id"],
+              CoreLib.resolve_props(CoreLib.entity(StdLib.var("id"))),
+            ),
           ),
         ),
-        Std.send(
+        StdLib.send(
           "update",
-          Object["obj.new"]([
+          ObjectLib.objNew([
             "entities",
-            List["list.concat"](
-              List["list.new"](Std.var("room")),
-              List["list.concat"](
-                Std.var("resolvedContents"),
-                Std.var("resolvedExits"),
+            ListLib.listConcat(
+              ListLib.listNew(StdLib.var("room")),
+              ListLib.listConcat(
+                StdLib.var("resolvedContents"),
+                StdLib.var("resolvedExits"),
               ),
             ),
           ]),
         ),
       ),
-      Std.seq(
-        Std.let("targetName", Std.arg(0)),
-        Std.let(
+      StdLib.seq(
+        StdLib.let("targetName", StdLib.arg(0)),
+        StdLib.let(
           "targetId",
-          Core.call(Std.caller(), "find", Std.var("targetName")),
+          CoreLib.call(StdLib.caller(), "find", StdLib.var("targetName")),
         ),
-        Std.if(
-          Std.var("targetId"),
-          Std.seq(
-            Std.let(
+        StdLib.if(
+          StdLib.var("targetId"),
+          StdLib.seq(
+            StdLib.let(
               "target",
-              Core.resolve_props(Core.entity(Std.var("targetId"))),
+              CoreLib.resolve_props(CoreLib.entity(StdLib.var("targetId"))),
             ),
-            Std.send(
+            StdLib.send(
               "update",
-              Object["obj.new"]([
+              ObjectLib.objNew([
                 "entities",
-                List["list.new"](Std.var("target")),
+                ListLib.listNew(StdLib.var("target")),
               ]),
             ),
           ),
-          Std.send("message", "You don't see that here."),
+          StdLib.send("message", "You don't see that here."),
         ),
       ),
     ),
@@ -566,150 +612,162 @@ export function seed() {
   addVerb(
     playerBaseId,
     "inventory",
-    Std.seq(
-      Std.let("player", Core.resolve_props(Std.caller())),
-      Std.let(
+    StdLib.seq(
+      StdLib.let("player", CoreLib.resolve_props(StdLib.caller())),
+      StdLib.let(
         "contents",
-        Object["obj.get"](Std.var("player"), "contents", List["list.new"]()),
+        ObjectLib.objGet(StdLib.var("player"), "contents", ListLib.listNew()),
       ),
-      Std.let(
+      StdLib.let(
         "resolvedItems",
-        List["list.map"](
-          Std.var("contents"),
-          Std.lambda(["id"], Core.resolve_props(Core.entity(Std.var("id")))),
+        ListLib.listMap(
+          StdLib.var("contents"),
+          StdLib.lambda(
+            ["id"],
+            CoreLib.resolve_props(CoreLib.entity(StdLib.var("id"))),
+          ),
         ),
       ),
-      Std.let(
+      StdLib.let(
         "finalList",
-        List["list.concat"](
-          List["list.new"](Std.var("player")),
-          Std.var("resolvedItems"),
+        ListLib.listConcat(
+          ListLib.listNew(StdLib.var("player")),
+          StdLib.var("resolvedItems"),
         ),
       ),
-      Std.send("update", Object["obj.new"](["entities", Std.var("finalList")])),
+      StdLib.send(
+        "update",
+        ObjectLib.objNew(["entities", StdLib.var("finalList")]),
+      ),
     ),
   );
 
   addVerb(
     playerBaseId,
     "whoami",
-    Std.send(
+    StdLib.send(
       "player_id",
-      Object["obj.new"](["playerId", Object["obj.get"](Std.caller(), "id")]),
+      ObjectLib.objNew(["playerId", ObjectLib.objGet(StdLib.caller(), "id")]),
     ),
   );
 
   addVerb(
     playerBaseId,
     "dig",
-    Std.seq(
-      Std.let("direction", Std.arg(0)),
-      Std.let(
+    StdLib.seq(
+      StdLib.let("direction", StdLib.arg(0)),
+      StdLib.let(
         "roomName",
-        Str["str.join"](List["list.slice"](Std.args(), 1), " "),
+        StringLib.strJoin(ListLib.listSlice(StdLib.args(), 1), " "),
       ),
-      Std.if(
-        Boolean.not(Std.var("direction")),
-        Std.send("message", "Where do you want to dig?"),
-        Std.seq(
+      StdLib.if(
+        BooleanLib.not(StdLib.var("direction")),
+        StdLib.send("message", "Where do you want to dig?"),
+        StdLib.seq(
           // Get Capabilities
-          Std.let("createCap", Kernel.getCapability("sys.create")),
-          Std.let(
+          StdLib.let("createCap", KernelLib.getCapability("sys.create")),
+          StdLib.let(
             "controlCap",
-            Kernel.getCapability(
+            KernelLib.getCapability(
               "entity.control",
-              Object["obj.new"]([
+              ObjectLib.objNew([
                 "target_id",
-                Object["obj.get"](Std.caller(), "location"),
+                ObjectLib.objGet(StdLib.caller(), "location"),
               ]),
             ),
           ),
           // Try wildcard if specific control cap missing
-          Std.if(
-            Boolean.not(Std.var("controlCap")),
-            Std.set(
+          StdLib.if(
+            BooleanLib.not(StdLib.var("controlCap")),
+            StdLib.set(
               "controlCap",
-              Kernel.getCapability(
+              KernelLib.getCapability(
                 "entity.control",
-                Object["obj.new"](["*", true]),
+                ObjectLib.objNew(["*", true]),
               ),
             ),
           ),
 
-          Std.if(
-            Boolean.and(Std.var("createCap"), Std.var("controlCap")),
-            Std.seq(
-              Std.let("newRoomData", Object["obj.new"]()),
-              Object["obj.set"](
-                Std.var("newRoomData"),
+          StdLib.if(
+            BooleanLib.and(StdLib.var("createCap"), StdLib.var("controlCap")),
+            StdLib.seq(
+              StdLib.let("newRoomData", ObjectLib.objNew()),
+              ObjectLib.objSet(
+                StdLib.var("newRoomData"),
                 "name",
-                Std.var("roomName"),
+                StdLib.var("roomName"),
               ),
-              Std.let(
+              StdLib.let(
                 "newRoomId",
-                Core.create(Std.var("createCap"), Std.var("newRoomData")),
+                CoreLib.create(
+                  StdLib.var("createCap"),
+                  StdLib.var("newRoomData"),
+                ),
               ),
 
               // Create exit
-              Std.let("exitData", Object["obj.new"]()),
-              Object["obj.set"](
-                Std.var("exitData"),
+              StdLib.let("exitData", ObjectLib.objNew()),
+              ObjectLib.objSet(
+                StdLib.var("exitData"),
                 "name",
-                Std.var("direction"),
+                StdLib.var("direction"),
               ),
-              Object["obj.set"](
-                Std.var("exitData"),
+              ObjectLib.objSet(
+                StdLib.var("exitData"),
                 "location",
-                Object["obj.get"](Std.caller(), "location"),
+                ObjectLib.objGet(StdLib.caller(), "location"),
               ),
-              Object["obj.set"](
-                Std.var("exitData"),
+              ObjectLib.objSet(
+                StdLib.var("exitData"),
                 "direction",
-                Std.var("direction"),
+                StdLib.var("direction"),
               ),
-              Object["obj.set"](
-                Std.var("exitData"),
+              ObjectLib.objSet(
+                StdLib.var("exitData"),
                 "destination",
-                Std.var("newRoomId"),
+                StdLib.var("newRoomId"),
               ),
-              Std.let(
+              StdLib.let(
                 "exitId",
-                Core.create(Std.var("createCap"), Std.var("exitData")),
+                CoreLib.create(StdLib.var("createCap"), StdLib.var("exitData")),
               ),
               // Set prototype to Entity Base
-              Core.set_prototype(
-                Std.var("controlCap"),
-                Core.entity(Std.var("newRoomId")),
+              CoreLib.set_prototype(
+                StdLib.var("controlCap"),
+                CoreLib.entity(StdLib.var("newRoomId")),
                 entityBaseId,
               ),
 
               // Update current room exits
-              Std.let(
+              StdLib.let(
                 "currentRoom",
-                Core.entity(Object["obj.get"](Std.caller(), "location")),
+                CoreLib.entity(ObjectLib.objGet(StdLib.caller(), "location")),
               ),
-              Std.let(
+              StdLib.let(
                 "currentExits",
-                Object["obj.get"](
-                  Std.var("currentRoom"),
+                ObjectLib.objGet(
+                  StdLib.var("currentRoom"),
                   "exits",
-                  List["list.new"](),
+                  ListLib.listNew(),
                 ),
               ),
-              List["list.push"](Std.var("currentExits"), Std.var("exitId")),
-              Core.set_entity(
-                Std.var("controlCap"),
-                Object["obj.set"](
-                  Std.var("currentRoom"),
+              ListLib.listPush(
+                StdLib.var("currentExits"),
+                StdLib.var("exitId"),
+              ),
+              CoreLib.set_entity(
+                StdLib.var("controlCap"),
+                ObjectLib.objSet(
+                  StdLib.var("currentRoom"),
                   "exits",
-                  Std.var("currentExits"),
+                  StdLib.var("currentExits"),
                 ),
               ),
 
               // Move player
-              Core.call(Std.caller(), "move", Std.var("direction")),
+              CoreLib.call(StdLib.caller(), "move", StdLib.var("direction")),
             ),
-            Std.send("message", "You do not have permission to dig here."),
+            StdLib.send("message", "You do not have permission to dig here."),
           ),
         ),
       ),
@@ -719,89 +777,96 @@ export function seed() {
   addVerb(
     playerBaseId,
     "create",
-    Std.seq(
-      Std.let("name", Std.arg(0)),
-      Std.if(
-        Boolean.not(Std.var("name")),
-        Std.send("message", "What do you want to create?"),
-        Std.seq(
+    StdLib.seq(
+      StdLib.let("name", StdLib.arg(0)),
+      StdLib.if(
+        BooleanLib.not(StdLib.var("name")),
+        StdLib.send("message", "What do you want to create?"),
+        StdLib.seq(
           // Get Capabilities
-          Std.let("createCap", Kernel.getCapability("sys.create")),
-          Std.let(
+          StdLib.let("createCap", KernelLib.getCapability("sys.create")),
+          StdLib.let(
             "controlCap",
-            Kernel.getCapability(
+            KernelLib.getCapability(
               "entity.control",
-              Object["obj.new"]([
+              ObjectLib.objNew([
                 "target_id",
-                Object["obj.get"](Std.caller(), "location"),
+                ObjectLib.objGet(StdLib.caller(), "location"),
               ]),
             ),
           ),
           // Try wildcard
-          Std.if(
-            Boolean.not(Std.var("controlCap")),
-            Std.set(
+          StdLib.if(
+            BooleanLib.not(StdLib.var("controlCap")),
+            StdLib.set(
               "controlCap",
-              Kernel.getCapability(
+              KernelLib.getCapability(
                 "entity.control",
-                Object["obj.new"](["*", true]),
+                ObjectLib.objNew(["*", true]),
               ),
             ),
           ),
 
-          Std.if(
-            Boolean.and(Std.var("createCap"), Std.var("controlCap")),
-            Std.seq(
-              Std.let("itemData", Object["obj.new"]()),
-              Object["obj.set"](Std.var("itemData"), "name", Std.var("name")),
-              Object["obj.set"](
-                Std.var("itemData"),
-                "location",
-                Object["obj.get"](Std.caller(), "location"),
+          StdLib.if(
+            BooleanLib.and(StdLib.var("createCap"), StdLib.var("controlCap")),
+            StdLib.seq(
+              StdLib.let("itemData", ObjectLib.objNew()),
+              ObjectLib.objSet(
+                StdLib.var("itemData"),
+                "name",
+                StdLib.var("name"),
               ),
-              Std.let(
+              ObjectLib.objSet(
+                StdLib.var("itemData"),
+                "location",
+                ObjectLib.objGet(StdLib.caller(), "location"),
+              ),
+              StdLib.let(
                 "itemId",
-                Core.create(Std.var("createCap"), Std.var("itemData")),
+                CoreLib.create(StdLib.var("createCap"), StdLib.var("itemData")),
               ),
               // Set prototype to Entity Base
-              Core.set_prototype(
-                Std.var("controlCap"),
-                Core.entity(Std.var("itemId")),
+              CoreLib.set_prototype(
+                StdLib.var("controlCap"),
+                CoreLib.entity(StdLib.var("itemId")),
                 entityBaseId,
               ),
 
               // Update room contents
-              Std.let(
+              StdLib.let(
                 "room",
-                Core.entity(Object["obj.get"](Std.caller(), "location")),
+                CoreLib.entity(ObjectLib.objGet(StdLib.caller(), "location")),
               ),
-              Std.let(
+              StdLib.let(
                 "contents",
-                Object["obj.get"](
-                  Std.var("room"),
+                ObjectLib.objGet(
+                  StdLib.var("room"),
                   "contents",
-                  List["list.new"](),
+                  ListLib.listNew(),
                 ),
               ),
-              List["list.push"](Std.var("contents"), Std.var("itemId")),
-              Core.set_entity(
-                Std.var("controlCap"),
-                Object["obj.set"](
-                  Std.var("room"),
+              ListLib.listPush(StdLib.var("contents"), StdLib.var("itemId")),
+              CoreLib.set_entity(
+                StdLib.var("controlCap"),
+                ObjectLib.objSet(
+                  StdLib.var("room"),
                   "contents",
-                  Std.var("contents"),
+                  StdLib.var("contents"),
                 ),
               ),
 
-              Std.send(
+              StdLib.send(
                 "message",
-                Str["str.concat"]("You create ", Std.var("name"), "."),
+                StringLib.strConcat("You create ", StdLib.var("name"), "."),
               ),
-              Core.call(Std.caller(), "look"),
+              CoreLib.call(StdLib.caller(), "look"),
               // Return item ID
-              Std.var("itemId"),
+              StdLib.var("itemId"),
             ),
-            Std.send("message", "You do not have permission to create here."),
+            StdLib.send(
+              "message",
+              "You do not have permission to create here.",
+            ),
           ),
         ),
       ),
@@ -811,66 +876,66 @@ export function seed() {
   addVerb(
     playerBaseId,
     "set",
-    Std.seq(
-      Std.let("targetName", Std.arg(0)),
-      Std.let("propName", Std.arg(1)),
-      Std.let("value", Std.arg(2)),
-      Std.if(
-        Boolean.or(
-          Boolean.not(Std.var("targetName")),
-          Boolean.not(Std.var("propName")),
+    StdLib.seq(
+      StdLib.let("targetName", StdLib.arg(0)),
+      StdLib.let("propName", StdLib.arg(1)),
+      StdLib.let("value", StdLib.arg(2)),
+      StdLib.if(
+        BooleanLib.or(
+          BooleanLib.not(StdLib.var("targetName")),
+          BooleanLib.not(StdLib.var("propName")),
         ),
-        Std.send("message", "Usage: set <target> <prop> <value>"),
-        Std.seq(
-          Std.let(
+        StdLib.send("message", "Usage: set <target> <prop> <value>"),
+        StdLib.seq(
+          StdLib.let(
             "targetId",
-            Core.call(Std.this(), "find", Std.var("targetName")),
+            CoreLib.call(StdLib.this(), "find", StdLib.var("targetName")),
           ),
-          Std.if(
-            Std.var("targetId"),
-            Std.seq(
-              Std.seq(
+          StdLib.if(
+            StdLib.var("targetId"),
+            StdLib.seq(
+              StdLib.seq(
                 // Get Capability
-                Std.let(
+                StdLib.let(
                   "controlCap",
-                  Kernel.getCapability(
+                  KernelLib.getCapability(
                     "entity.control",
-                    Object["obj.new"](["target_id", Std.var("targetId")]),
+                    ObjectLib.objNew(["target_id", StdLib.var("targetId")]),
                   ),
                 ),
-                Std.if(
-                  Boolean.not(Std.var("controlCap")),
-                  Std.set(
+                StdLib.if(
+                  BooleanLib.not(StdLib.var("controlCap")),
+                  StdLib.set(
                     "controlCap",
-                    Kernel.getCapability(
+                    KernelLib.getCapability(
                       "entity.control",
-                      Object["obj.new"](["*", true]),
+                      ObjectLib.objNew(["*", true]),
                     ),
                   ),
                 ),
-                Std.if(
-                  Std.var("controlCap"),
-                  Std.seq(
-                    Core.set_entity(
-                      Std.var("controlCap"),
-                      Object["obj.merge"](
-                        Core.entity(Std.var("targetId")),
-                        Object["obj.new"]([
-                          Std.var("propName"),
-                          Std.var("value"),
+                StdLib.if(
+                  StdLib.var("controlCap"),
+                  StdLib.seq(
+                    CoreLib.set_entity(
+                      StdLib.var("controlCap"),
+                      ObjectLib.objMerge(
+                        CoreLib.entity(StdLib.var("targetId")),
+                        ObjectLib.objNew([
+                          StdLib.var("propName"),
+                          StdLib.var("value"),
                         ]),
                       ),
                     ),
-                    Std.send("message", "Property set."),
+                    StdLib.send("message", "Property set."),
                   ),
-                  Std.send(
+                  StdLib.send(
                     "message",
                     "You do not have permission to modify this object.",
                   ),
                 ),
               ),
             ),
-            Std.send("message", "I don't see that here."),
+            StdLib.send("message", "I don't see that here."),
           ),
         ),
       ),
@@ -1117,7 +1182,7 @@ export function seed() {
   addVerb(
     watchId,
     "tell",
-    Std.send("message", Time["time.format"](Time["time.now"](), "time")),
+    StdLib.send("message", TimeLib.timeFormat(TimeLib.timeNow(), "time")),
   );
 
   // Teleporter Item
@@ -1134,48 +1199,48 @@ export function seed() {
   addVerb(
     teleporterId,
     "teleport",
-    Std.seq(
-      Std.let("mover", Std.caller()),
-      Std.let("destId", Object["obj.get"](Std.this(), "destination")),
-      Std.let("oldLocId", Object["obj.get"](Std.var("mover"), "location")),
-      Std.let("oldLoc", Core.entity(Std.var("oldLocId"))),
-      Std.let("newLoc", Core.entity(Std.var("destId"))),
-      Core.set_entity(
+    StdLib.seq(
+      StdLib.let("mover", StdLib.caller()),
+      StdLib.let("destId", ObjectLib.objGet(StdLib.this(), "destination")),
+      StdLib.let("oldLocId", ObjectLib.objGet(StdLib.var("mover"), "location")),
+      StdLib.let("oldLoc", CoreLib.entity(StdLib.var("oldLocId"))),
+      StdLib.let("newLoc", CoreLib.entity(StdLib.var("destId"))),
+      CoreLib.set_entity(
         // Update mover
-        Object["obj.merge"](
-          Std.var("mover"),
-          Object["obj.new"](["location", Std.var("destId")]),
+        ObjectLib.objMerge(
+          StdLib.var("mover"),
+          ObjectLib.objNew(["location", StdLib.var("destId")]),
         ),
         // Update old location
-        Object["obj.merge"](
-          Std.var("oldLoc"),
-          Object["obj.new"]([
+        ObjectLib.objMerge(
+          StdLib.var("oldLoc"),
+          ObjectLib.objNew([
             "contents",
-            List["list.filter"](
-              Object["obj.get"](Std.var("oldLoc"), "contents"),
-              Std.lambda(
+            ListLib.listFilter(
+              ObjectLib.objGet(StdLib.var("oldLoc"), "contents"),
+              StdLib.lambda(
                 ["id"],
-                Boolean["!="](
-                  Std.var("id"),
-                  Object["obj.get"](Std.var("mover"), "id"),
+                BooleanLib.neq(
+                  StdLib.var("id"),
+                  ObjectLib.objGet(StdLib.var("mover"), "id"),
                 ),
               ),
             ),
           ]),
         ),
         // Update new location
-        Object["obj.merge"](
-          Std.var("newLoc"),
-          Object["obj.new"]([
+        ObjectLib.objMerge(
+          StdLib.var("newLoc"),
+          ObjectLib.objNew([
             "contents",
-            List["list.concat"](
-              Object["obj.get"](Std.var("newLoc"), "contents"),
-              List["list.new"](Object["obj.get"](Std.var("mover"), "id")),
+            ListLib.listConcat(
+              ObjectLib.objGet(StdLib.var("newLoc"), "contents"),
+              ListLib.listNew(ObjectLib.objGet(StdLib.var("mover"), "id")),
             ),
           ]),
         ),
       ),
-      Std.send("message", "Whoosh! You have been teleported."),
+      StdLib.send("message", "Whoosh! You have been teleported."),
     ),
   );
 
@@ -1193,7 +1258,7 @@ export function seed() {
     statusId,
     "check",
     // world.entities missing
-    Std.send("message", "Status check disabled."),
+    StdLib.send("message", "Status check disabled."),
   );
 
   console.log("Seeding complete!");
@@ -1219,12 +1284,15 @@ export function seed() {
   addVerb(
     colorLibId,
     "random_color",
-    List["list.get"](
-      Object["obj.get"](Std.this(), "colors"),
+    ListLib.listGet(
+      ObjectLib.objGet(StdLib.this(), "colors"),
       // random(0, len-1)
-      Math.random(
+      MathLib.random(
         0,
-        Math["-"](List["list.len"](Object["obj.get"](Std.this(), "colors")), 1),
+        MathLib.sub(
+          ListLib.listLen(ObjectLib.objGet(StdLib.this(), "colors")),
+          1,
+        ),
       ),
     ),
   );
@@ -1245,20 +1313,20 @@ export function seed() {
   addVerb(
     moodRingId,
     "update_color",
-    Std.seq(
-      Std.let("libId", Object["obj.get"](Std.this(), "color_lib")),
-      Std.let("newColor", Core.call(Std.var("libId"), "random_color")),
-      Core.set_entity(
-        Object["obj.set"](
-          Std.this(),
+    StdLib.seq(
+      StdLib.let("libId", ObjectLib.objGet(StdLib.this(), "color_lib")),
+      StdLib.let("newColor", CoreLib.call(StdLib.var("libId"), "random_color")),
+      CoreLib.set_entity(
+        ObjectLib.objSet(
+          StdLib.this(),
           "adjectives",
-          List["list.new"](
-            Str["str.concat"]("color:", Std.var("newColor")),
+          ListLib.listNew(
+            StringLib.strConcat("color:", StdLib.var("newColor")),
             "material:silver",
           ),
         ),
       ),
-      Core.schedule("update_color", List["list.new"](), 5000),
+      CoreLib.schedule("update_color", ListLib.listNew(), 5000),
     ),
   );
 
@@ -1267,7 +1335,7 @@ export function seed() {
   addVerb(
     moodRingId,
     "touch",
-    Core.schedule("update_color", List["list.new"](), 0),
+    CoreLib.schedule("update_color", ListLib.listNew(), 0),
   );
 
   // --- Advanced Items ---
@@ -1288,11 +1356,11 @@ export function seed() {
   addVerb(
     dynamicRingId,
     "get_adjectives",
-    List["list.new"](
-      Str["str.concat"](
+    ListLib.listNew(
+      StringLib.strConcat(
         "color:hsl(",
-        Str["str.concat"](
-          Math["*"](Time["time.to_timestamp"](Time["time.now"]()), 0.1),
+        StringLib.strConcat(
+          MathLib.mul(TimeLib.timeToTimestamp(TimeLib.timeNow()), 0.1),
           ", 100%, 50%)",
         ),
       ), // Rotating hue
@@ -1310,22 +1378,22 @@ export function seed() {
   addVerb(
     specialWatchId,
     "tick",
-    Std.seq(
+    StdLib.seq(
       // broadcast missing
-      Std.send(
+      StdLib.send(
         "message",
-        Str["str.concat"](
+        StringLib.strConcat(
           "Tick Tock: ",
-          Time["time.format"](Time["time.now"](), "time"),
+          TimeLib.timeFormat(TimeLib.timeNow(), "time"),
         ),
       ),
-      Core.schedule("tick", List["list.new"](), 10000),
+      CoreLib.schedule("tick", ListLib.listNew(), 10000),
     ),
   );
   addVerb(
     specialWatchId,
     "start",
-    Core.schedule("tick", List["list.new"](), 0),
+    CoreLib.schedule("tick", ListLib.listNew(), 0),
   );
 
   // 3. Clock (Room Broadcast)
@@ -1340,19 +1408,19 @@ export function seed() {
   addVerb(
     clockId,
     "tick",
-    Std.seq(
+    StdLib.seq(
       // broadcast missing
-      Std.send(
+      StdLib.send(
         "message",
-        Str["str.concat"](
+        StringLib.strConcat(
           "BONG! It is ",
-          Time["time.format"](Time["time.now"](), "time"),
+          TimeLib.timeFormat(TimeLib.timeNow(), "time"),
         ),
       ),
-      Core.schedule("tick", List["list.new"](), 15000),
+      CoreLib.schedule("tick", ListLib.listNew(), 15000),
     ),
   );
-  addVerb(clockId, "start", Core.schedule("tick", List["list.new"](), 0));
+  addVerb(clockId, "start", CoreLib.schedule("tick", ListLib.listNew(), 0));
 
   // 4. Clock Tower (Global Broadcast)
   const towerId = createEntity({
@@ -1364,19 +1432,19 @@ export function seed() {
   addVerb(
     towerId,
     "toll",
-    Std.seq(
+    StdLib.seq(
       // broadcast missing
-      Std.send(
+      StdLib.send(
         "message",
-        Str["str.concat"](
+        StringLib.strConcat(
           "The Clock Tower tolls: ",
-          Time["time.format"](Time["time.now"](), "time"),
+          TimeLib.timeFormat(TimeLib.timeNow(), "time"),
         ),
       ),
-      Core.schedule("toll", List["list.new"](), 60000),
+      CoreLib.schedule("toll", ListLib.listNew(), 60000),
     ),
   );
-  addVerb(towerId, "start", Core.schedule("toll", List["list.new"](), 0));
+  addVerb(towerId, "start", CoreLib.schedule("toll", ListLib.listNew(), 0));
 
   // 5. Mailbox
   // A prototype for mailboxes.
@@ -1395,7 +1463,7 @@ export function seed() {
     mailboxProtoId,
     "deposit",
     // give missing
-    Std.send("message", "Deposit disabled."),
+    StdLib.send("message", "Deposit disabled."),
     { call: "public" },
   ); // Anyone can call deposit
 

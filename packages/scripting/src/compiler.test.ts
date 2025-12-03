@@ -44,23 +44,23 @@ describe("Compiler", () => {
   });
 
   test("math", () => {
-    expect(run(MathLib["+"](1, 2))).toBe(3);
-    expect(run(MathLib["-"](5, 3))).toBe(2);
-    expect(run(MathLib["*"](2, 3))).toBe(6);
-    expect(run(MathLib["/"](6, 2))).toBe(3);
+    expect(run(MathLib.add(1, 2))).toBe(3);
+    expect(run(MathLib.sub(5, 3))).toBe(2);
+    expect(run(MathLib.mul(2, 3))).toBe(6);
+    expect(run(MathLib.div(6, 2))).toBe(3);
   });
 
   test("math extended", () => {
-    expect(run(MathLib["%"](10, 3))).toBe(1);
-    expect(run(MathLib["^"](2, 3))).toBe(8);
+    expect(run(MathLib.mod(10, 3))).toBe(1);
+    expect(run(MathLib.pow(2, 3))).toBe(8);
   });
 
   test("logic", () => {
     expect(run(BooleanLib.and(true, true))).toBe(true);
     expect(run(BooleanLib.or(true, false))).toBe(true);
     expect(run(BooleanLib.not(true))).toBe(false);
-    expect(run(BooleanLib["=="](1, 1))).toBe(true);
-    expect(run(BooleanLib[">"](2, 1))).toBe(true);
+    expect(run(BooleanLib.eq(1, 1))).toBe(true);
+    expect(run(BooleanLib.gt(2, 1))).toBe(true);
   });
 
   test("variables", () => {
@@ -82,8 +82,8 @@ describe("Compiler", () => {
       Std.let("sum", 0),
       Std.for(
         "x",
-        List["list.new"](1, 2, 3),
-        Std.let("sum", MathLib["+"](Std.var("sum"), Std.var("x"))),
+        List.listNew(1, 2, 3),
+        Std.let("sum", MathLib.add(Std.var("sum"), Std.var("x"))),
       ),
       Std.var("sum"),
     );
@@ -101,10 +101,10 @@ describe("Compiler", () => {
   });
 
   test("comparisons", () => {
-    expect(run(BooleanLib["!="](1, 2))).toBe(true);
-    expect(run(BooleanLib["<"](1, 2))).toBe(true);
-    expect(run(BooleanLib[">="](2, 2))).toBe(true);
-    expect(run(BooleanLib["<="](2, 2))).toBe(true);
+    expect(run(BooleanLib.neq(1, 2))).toBe(true);
+    expect(run(BooleanLib.lt(1, 2))).toBe(true);
+    expect(run(BooleanLib.gte(2, 2))).toBe(true);
+    expect(run(BooleanLib.lte(2, 2))).toBe(true);
   });
 
   test("if else", () => {
@@ -120,7 +120,7 @@ describe("Compiler", () => {
 
   test("lambda & apply", () => {
     // (lambda (x) (+ x 1))
-    const inc = Std.lambda(["x"], MathLib["+"](Std.var("x"), 1));
+    const inc = Std.lambda(["x"], MathLib.add(Std.var("x"), 1));
     expect(run(Std.apply(inc, 1))).toBe(2);
   });
 
@@ -132,7 +132,7 @@ describe("Compiler", () => {
           Std.let("x", 10),
           Std.let(
             "addX",
-            Std.lambda(["y"], MathLib["+"](Std.var("x"), Std.var("y"))),
+            Std.lambda(["y"], MathLib.add(Std.var("x"), Std.var("y"))),
           ),
           Std.apply(Std.var("addX"), 5),
         ),
@@ -159,13 +159,13 @@ describe("Compiler", () => {
 
   test("object operations", () => {
     const script = Std.seq(
-      Std.let("o", ObjectLib["obj.new"](["a", 1], ["b", 2])),
-      ObjectLib["obj.set"](Std.var("o"), "c", 3),
-      Std.let("res", ObjectLib["obj.get"](Std.var("o"), "c")),
-      Std.let("hasB", ObjectLib["obj.has"](Std.var("o"), "b")),
-      ObjectLib["obj.del"](Std.var("o"), "b"),
-      Std.let("hasBAfter", ObjectLib["obj.has"](Std.var("o"), "b")),
-      List["list.new"](Std.var("res"), Std.var("hasB"), Std.var("hasBAfter")),
+      Std.let("o", ObjectLib.objNew(["a", 1], ["b", 2])),
+      ObjectLib.objSet(Std.var("o"), "c", 3),
+      Std.let("res", ObjectLib.objGet(Std.var("o"), "c")),
+      Std.let("hasB", ObjectLib.objHas(Std.var("o"), "b")),
+      ObjectLib.objDel(Std.var("o"), "b"),
+      Std.let("hasBAfter", ObjectLib.objHas(Std.var("o"), "b")),
+      List.listNew(Std.var("res"), Std.var("hasB"), Std.var("hasBAfter")),
     );
 
     const res = run(script);

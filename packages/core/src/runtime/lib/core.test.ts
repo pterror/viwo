@@ -4,9 +4,9 @@ import {
   ScriptContext,
   registerLibrary,
   createScriptContext,
-  ListLib as List,
+  ListLib,
   ScriptError,
-  StdLib as Std,
+  StdLib,
 } from "@viwo/scripting";
 import { createLibraryTester } from "@viwo/scripting/test-utils";
 import * as Core from "./core";
@@ -47,7 +47,7 @@ mock.module("../../repo", () => ({
         id: 2,
         entity_id: 102,
         name: "fail",
-        code: Std.throw("verb failed"),
+        code: StdLib.throw("verb failed"),
         permissions: {},
       };
     }
@@ -56,7 +56,7 @@ mock.module("../../repo", () => ({
         id: 3,
         entity_id: 103,
         name: "say_hello",
-        code: Std.send("message", "Hello!"),
+        code: StdLib.send("message", "Hello!"),
         permissions: {},
       };
     }
@@ -99,8 +99,8 @@ mock.module("../../scheduler", () => ({
 
 createLibraryTester(Core, "Core Library", (test) => {
   registerLibrary(Core);
-  registerLibrary(List);
-  registerLibrary(Std);
+  registerLibrary(ListLib);
+  registerLibrary(StdLib);
 
   let ctx: ScriptContext;
   const sysCreateCap = { __brand: "Capability" as const, id: cap1 };
@@ -143,7 +143,7 @@ createLibraryTester(Core, "Core Library", (test) => {
   });
 
   test("schedule", () => {
-    evaluate(Core.schedule("verb", List["list.new"](), 100), ctx);
+    evaluate(Core.schedule("verb", ListLib.listNew(), 100), ctx);
   });
 
   // Entity Introspection
@@ -203,7 +203,7 @@ createLibraryTester(Core, "Core Library", (test) => {
 
     expect(() =>
       evaluate(
-        Core.sudo(fakeCap, { id: 101 }, "get_dynamic", List["list.new"]()),
+        Core.sudo(fakeCap, { id: 101 }, "get_dynamic", ListLib.listNew()),
         userCtx,
       ),
     ).toThrow("Invalid capability"); // Or "Capability not owned"
@@ -218,7 +218,7 @@ createLibraryTester(Core, "Core Library", (test) => {
     });
     expect(
       evaluate(
-        Core.sudo(sysSudoCap, { id: 101 }, "get_dynamic", List["list.new"]()),
+        Core.sudo(sysSudoCap, { id: 101 }, "get_dynamic", ListLib.listNew()),
         systemCtx,
       ),
     ).toBe("resolved_value");
@@ -233,7 +233,7 @@ createLibraryTester(Core, "Core Library", (test) => {
     });
     expect(
       evaluate(
-        Core.sudo(botSudoCap, { id: 101 }, "get_dynamic", List["list.new"]()),
+        Core.sudo(botSudoCap, { id: 101 }, "get_dynamic", ListLib.listNew()),
         botCtx,
       ),
     ).toBe("resolved_value");
@@ -250,7 +250,7 @@ createLibraryTester(Core, "Core Library", (test) => {
     });
 
     evaluate(
-      Core.sudo(botSudoCap, { id: 103 }, "say_hello", List["list.new"]()),
+      Core.sudo(botSudoCap, { id: 103 }, "say_hello", ListLib.listNew()),
       botForwardCtx,
     );
 

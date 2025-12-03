@@ -6,10 +6,10 @@ import {
   createCapability,
 } from "../repo";
 import {
-  StdLib as Std,
-  ObjectLib as Object,
-  StringLib as String,
-  ListLib as List,
+  StdLib,
+  ObjectLib,
+  StringLib,
+  ListLib,
   BooleanLib,
 } from "@viwo/scripting";
 import * as CoreLib from "../runtime/lib/core";
@@ -73,72 +73,85 @@ export function seedHotel(
   addVerb(
     hotelRoomProtoId,
     "leave",
-    Std.seq(
-      CoreLib.call(Std.caller(), "move", hotelLobbyId), // Move player out first
+    StdLib.seq(
+      CoreLib.call(StdLib.caller(), "move", hotelLobbyId), // Move player out first
       CoreLib.call(
-        Std.caller(),
+        StdLib.caller(),
         "tell",
         "You leave the room and it fades away behind you.",
       ),
-      Std.let(
+      StdLib.let(
         "cap",
         KernelLib.getCapability(
           "entity.control",
-          Object["obj.new"](["target_id", Object["obj.get"](Std.this(), "id")]),
+          ObjectLib.objNew([
+            "target_id",
+            ObjectLib.objGet(StdLib.this(), "id"),
+          ]),
         ),
       ),
-      CoreLib.destroy(Std.var("cap"), Std.this()), // Destroy the room
+      CoreLib.destroy(StdLib.var("cap"), StdLib.this()), // Destroy the room
     ),
   );
 
   // Update 'leave' verb to use prop
   updateVerb(
     getVerb(hotelRoomProtoId, "leave")!.id,
-    Std.seq(
-      Std.let("lobbyId", Object["obj.get"](Std.this(), "lobby_id")),
-      CoreLib.call(Std.caller(), "move", Std.var("lobbyId")),
+    StdLib.seq(
+      StdLib.let("lobbyId", ObjectLib.objGet(StdLib.this(), "lobby_id")),
+      CoreLib.call(StdLib.caller(), "move", StdLib.var("lobbyId")),
       CoreLib.call(
-        Std.caller(),
+        StdLib.caller(),
         "tell",
         "You leave the room and it fades away behind you.",
       ),
       // Destroy contents (furnishings)
-      Std.let("freshThis", CoreLib.entity(Object["obj.get"](Std.this(), "id"))),
-      Std.let(
-        "contents",
-        Object["obj.get"](Std.var("freshThis"), "contents", List["list.new"]()),
+      StdLib.let(
+        "freshThis",
+        CoreLib.entity(ObjectLib.objGet(StdLib.this(), "id")),
       ),
-      Std.for(
+      StdLib.let(
+        "contents",
+        ObjectLib.objGet(
+          StdLib.var("freshThis"),
+          "contents",
+          ListLib.listNew(),
+        ),
+      ),
+      StdLib.for(
         "itemId",
-        Std.var("contents"),
-        Std.seq(
-          Std.let("item", CoreLib.entity(Std.var("itemId"))),
-          Std.if(
-            Std.var("item"),
-            Std.seq(
-              Std.let(
+        StdLib.var("contents"),
+        StdLib.seq(
+          StdLib.let("item", CoreLib.entity(StdLib.var("itemId"))),
+          StdLib.if(
+            StdLib.var("item"),
+            StdLib.seq(
+              StdLib.let(
                 "itemCap",
                 KernelLib.getCapability(
                   "entity.control",
-                  Object["obj.new"]([
+                  ObjectLib.objNew([
                     "target_id",
-                    Object["obj.get"](Std.var("item"), "id"),
+                    ObjectLib.objGet(StdLib.var("item"), "id"),
                   ]),
                 ),
               ),
-              CoreLib.destroy(Std.var("itemCap"), Std.var("item")),
+              CoreLib.destroy(StdLib.var("itemCap"), StdLib.var("item")),
             ),
           ),
         ),
       ),
-      Std.let(
+      StdLib.let(
         "cap",
         KernelLib.getCapability(
           "entity.control",
-          Object["obj.new"](["target_id", Object["obj.get"](Std.this(), "id")]),
+          ObjectLib.objNew([
+            "target_id",
+            ObjectLib.objGet(StdLib.this(), "id"),
+          ]),
         ),
       ),
-      CoreLib.destroy(Std.var("cap"), Std.this()),
+      CoreLib.destroy(StdLib.var("cap"), StdLib.this()),
     ),
   );
 
@@ -196,16 +209,19 @@ export function seedHotel(
   addVerb(
     elevatorId,
     "push",
-    Std.seq(
-      Std.let("floor", Std.arg(0)),
-      Object["obj.set"](Std.this(), "current_floor", Std.var("floor")),
-      CoreLib.set_entity(KernelLib.getCapability("entity.control"), Std.this()),
+    StdLib.seq(
+      StdLib.let("floor", StdLib.arg(0)),
+      ObjectLib.objSet(StdLib.this(), "current_floor", StdLib.var("floor")),
+      CoreLib.set_entity(
+        KernelLib.getCapability("entity.control"),
+        StdLib.this(),
+      ),
       CoreLib.call(
-        Std.caller(),
+        StdLib.caller(),
         "tell",
-        String["str.concat"](
+        StringLib.strConcat(
           "The elevator hums and moves to floor ",
-          Std.var("floor"),
+          StdLib.var("floor"),
           ".",
         ),
       ),
@@ -216,83 +232,91 @@ export function seedHotel(
   addVerb(
     elevatorId,
     "out",
-    Std.seq(
-      Std.let("floor", Object["obj.get"](Std.this(), "current_floor")),
+    StdLib.seq(
+      StdLib.let("floor", ObjectLib.objGet(StdLib.this(), "current_floor")),
       // If floor 1, go to Main Hotel Lobby? Or just create Floor 1 Lobby?
       // Let's say Floor 1 is the Main Lobby.
-      Std.if(
-        BooleanLib["=="](Std.var("floor"), 1),
-        Std.seq(
-          CoreLib.call(Std.caller(), "move", hotelLobbyId),
+      StdLib.if(
+        BooleanLib.eq(StdLib.var("floor"), 1),
+        StdLib.seq(
+          CoreLib.call(StdLib.caller(), "move", hotelLobbyId),
           CoreLib.call(
-            Std.caller(),
+            StdLib.caller(),
             "tell",
             "The doors open to the Grand Lobby.",
           ),
         ),
-        Std.seq(
+        StdLib.seq(
           // Create Ephemeral Floor Lobby
-          Std.let("createCap", KernelLib.getCapability("sys.create")),
-          Std.let("lobbyData", {}),
-          Object["obj.set"](
-            Std.var("lobbyData"),
+          StdLib.let("createCap", KernelLib.getCapability("sys.create")),
+          StdLib.let("lobbyData", {}),
+          ObjectLib.objSet(
+            StdLib.var("lobbyData"),
             "name",
-            String["str.concat"]("Floor ", Std.var("floor"), " Lobby"),
+            StringLib.strConcat("Floor ", StdLib.var("floor"), " Lobby"),
           ),
-          Object["obj.set"](Std.var("lobbyData"), "kind", "ROOM"),
+          ObjectLib.objSet(StdLib.var("lobbyData"), "kind", "ROOM"),
 
-          Object["obj.set"](
-            Std.var("lobbyData"),
+          ObjectLib.objSet(
+            StdLib.var("lobbyData"),
             "description",
-            String["str.concat"](
+            StringLib.strConcat(
               "The lobby of floor ",
-              Std.var("floor"),
+              StdLib.var("floor"),
               ". West and East wings extend from here.",
             ),
           ),
-          Object["obj.set"](Std.var("lobbyData"), "floor", Std.var("floor")),
-          Object["obj.set"](Std.var("lobbyData"), "elevator_id", elevatorId),
-          Std.let(
-            "lobbyId",
-            CoreLib.create(Std.var("createCap"), Std.var("lobbyData")),
+          ObjectLib.objSet(
+            StdLib.var("lobbyData"),
+            "floor",
+            StdLib.var("floor"),
           ),
-          Std.let("filter", Object["obj.new"]()),
-          Object["obj.set"](Std.var("filter"), "target_id", Std.var("lobbyId")),
+          ObjectLib.objSet(StdLib.var("lobbyData"), "elevator_id", elevatorId),
+          StdLib.let(
+            "lobbyId",
+            CoreLib.create(StdLib.var("createCap"), StdLib.var("lobbyData")),
+          ),
+          StdLib.let("filter", ObjectLib.objNew()),
+          ObjectLib.objSet(
+            StdLib.var("filter"),
+            "target_id",
+            StdLib.var("lobbyId"),
+          ),
           CoreLib.set_prototype(
-            KernelLib.getCapability("entity.control", Std.var("filter")),
-            CoreLib.entity(Std.var("lobbyId")),
+            KernelLib.getCapability("entity.control", StdLib.var("filter")),
+            CoreLib.entity(StdLib.var("lobbyId")),
             floorLobbyProtoId,
           ),
           // Give capabilities to Lobby
           // 1. sys.create
-          Std.let(
+          StdLib.let(
             "lobbyCreateCap",
-            KernelLib.delegate(Std.var("createCap"), {}),
+            KernelLib.delegate(StdLib.var("createCap"), {}),
           ),
           KernelLib.giveCapability(
-            Std.var("lobbyCreateCap"),
-            CoreLib.entity(Std.var("lobbyId")),
+            StdLib.var("lobbyCreateCap"),
+            CoreLib.entity(StdLib.var("lobbyId")),
           ),
           // 2. entity.control (self)
-          Std.let(
+          StdLib.let(
             "lobbyControlCap",
             KernelLib.delegate(
-              KernelLib.getCapability("entity.control", Std.var("filter")),
+              KernelLib.getCapability("entity.control", StdLib.var("filter")),
               {},
             ),
           ),
           KernelLib.giveCapability(
-            Std.var("lobbyControlCap"),
-            CoreLib.entity(Std.var("lobbyId")),
+            StdLib.var("lobbyControlCap"),
+            CoreLib.entity(StdLib.var("lobbyId")),
           ),
 
-          CoreLib.call(Std.caller(), "move", Std.var("lobbyId")),
+          CoreLib.call(StdLib.caller(), "move", StdLib.var("lobbyId")),
           CoreLib.call(
-            Std.caller(),
+            StdLib.caller(),
             "tell",
-            String["str.concat"](
+            StringLib.strConcat(
               "The doors open to Floor ",
-              Std.var("floor"),
+              StdLib.var("floor"),
               ".",
             ),
           ),
@@ -307,18 +331,21 @@ export function seedHotel(
   addVerb(
     floorLobbyProtoId,
     "elevator",
-    Std.seq(
-      Std.let("elevId", Object["obj.get"](Std.this(), "elevator_id")),
-      CoreLib.call(Std.caller(), "move", Std.var("elevId")),
-      CoreLib.call(Std.caller(), "tell", "You step back into the elevator."),
-      Std.let(
+    StdLib.seq(
+      StdLib.let("elevId", ObjectLib.objGet(StdLib.this(), "elevator_id")),
+      CoreLib.call(StdLib.caller(), "move", StdLib.var("elevId")),
+      CoreLib.call(StdLib.caller(), "tell", "You step back into the elevator."),
+      StdLib.let(
         "cap",
         KernelLib.getCapability(
           "entity.control",
-          Object["obj.new"](["target_id", Object["obj.get"](Std.this(), "id")]),
+          ObjectLib.objNew([
+            "target_id",
+            ObjectLib.objGet(StdLib.this(), "id"),
+          ]),
         ),
       ),
-      CoreLib.destroy(Std.var("cap"), Std.this()),
+      CoreLib.destroy(StdLib.var("cap"), StdLib.this()),
     ),
   );
 
@@ -326,62 +353,65 @@ export function seedHotel(
   addVerb(
     floorLobbyProtoId,
     "west",
-    Std.seq(
-      Std.let("floor", Object["obj.get"](Std.this(), "floor")),
-      Std.let("createCap", KernelLib.getCapability("sys.create")),
-      Std.let("wingData", {}),
-      Object["obj.set"](
-        Std.var("wingData"),
+    StdLib.seq(
+      StdLib.let("floor", ObjectLib.objGet(StdLib.this(), "floor")),
+      StdLib.let("createCap", KernelLib.getCapability("sys.create")),
+      StdLib.let("wingData", {}),
+      ObjectLib.objSet(
+        StdLib.var("wingData"),
         "name",
-        String["str.concat"]("Floor ", Std.var("floor"), " West Wing"),
+        StringLib.strConcat("Floor ", StdLib.var("floor"), " West Wing"),
       ),
-      Object["obj.set"](Std.var("wingData"), "kind", "ROOM"),
+      ObjectLib.objSet(StdLib.var("wingData"), "kind", "ROOM"),
 
-      Object["obj.set"](
-        Std.var("wingData"),
+      ObjectLib.objSet(
+        StdLib.var("wingData"),
         "description",
         "A long hallway. Rooms 01-50 are here.",
       ),
-      Object["obj.set"](Std.var("wingData"), "floor", Std.var("floor")),
-      Object["obj.set"](Std.var("wingData"), "side", "West"),
-      Object["obj.set"](
-        Std.var("wingData"),
+      ObjectLib.objSet(StdLib.var("wingData"), "floor", StdLib.var("floor")),
+      ObjectLib.objSet(StdLib.var("wingData"), "side", "West"),
+      ObjectLib.objSet(
+        StdLib.var("wingData"),
         "return_id",
-        Object["obj.get"](Std.this(), "id"),
+        ObjectLib.objGet(StdLib.this(), "id"),
       ), // Return to THIS lobby
-      Std.let(
+      StdLib.let(
         "wingId",
-        CoreLib.create(Std.var("createCap"), Std.var("wingData")),
+        CoreLib.create(StdLib.var("createCap"), StdLib.var("wingData")),
       ),
-      Std.let("filter", Object["obj.new"]()),
-      Object["obj.set"](Std.var("filter"), "target_id", Std.var("wingId")),
+      StdLib.let("filter", ObjectLib.objNew()),
+      ObjectLib.objSet(StdLib.var("filter"), "target_id", StdLib.var("wingId")),
       CoreLib.set_prototype(
-        KernelLib.getCapability("entity.control", Std.var("filter")),
-        CoreLib.entity(Std.var("wingId")),
+        KernelLib.getCapability("entity.control", StdLib.var("filter")),
+        CoreLib.entity(StdLib.var("wingId")),
         wingProtoId,
       ),
       // Give capabilities to Wing
       // 1. sys.create
-      Std.let("wingCreateCap", KernelLib.delegate(Std.var("createCap"), {})),
+      StdLib.let(
+        "wingCreateCap",
+        KernelLib.delegate(StdLib.var("createCap"), {}),
+      ),
       KernelLib.giveCapability(
-        Std.var("wingCreateCap"),
-        CoreLib.entity(Std.var("wingId")),
+        StdLib.var("wingCreateCap"),
+        CoreLib.entity(StdLib.var("wingId")),
       ),
       // 2. entity.control (self)
-      Std.let(
+      StdLib.let(
         "wingControlCap",
         KernelLib.delegate(
-          KernelLib.getCapability("entity.control", Std.var("filter")),
+          KernelLib.getCapability("entity.control", StdLib.var("filter")),
           {},
         ),
       ),
       KernelLib.giveCapability(
-        Std.var("wingControlCap"),
-        CoreLib.entity(Std.var("wingId")),
+        StdLib.var("wingControlCap"),
+        CoreLib.entity(StdLib.var("wingId")),
       ),
 
-      CoreLib.call(Std.caller(), "move", Std.var("wingId")),
-      CoreLib.call(Std.caller(), "tell", "You walk down the West Wing."),
+      CoreLib.call(StdLib.caller(), "move", StdLib.var("wingId")),
+      CoreLib.call(StdLib.caller(), "tell", "You walk down the West Wing."),
     ),
   );
 
@@ -389,62 +419,65 @@ export function seedHotel(
   addVerb(
     floorLobbyProtoId,
     "east",
-    Std.seq(
-      Std.let("floor", Object["obj.get"](Std.this(), "floor")),
-      Std.let("createCap", KernelLib.getCapability("sys.create")),
-      Std.let("wingData", Object["obj.new"]()),
-      Object["obj.set"](
-        Std.var("wingData"),
+    StdLib.seq(
+      StdLib.let("floor", ObjectLib.objGet(StdLib.this(), "floor")),
+      StdLib.let("createCap", KernelLib.getCapability("sys.create")),
+      StdLib.let("wingData", ObjectLib.objNew()),
+      ObjectLib.objSet(
+        StdLib.var("wingData"),
         "name",
-        String["str.concat"]("Floor ", Std.var("floor"), " East Wing"),
+        StringLib.strConcat("Floor ", StdLib.var("floor"), " East Wing"),
       ),
-      Object["obj.set"](Std.var("wingData"), "kind", "ROOM"),
+      ObjectLib.objSet(StdLib.var("wingData"), "kind", "ROOM"),
 
-      Object["obj.set"](
-        Std.var("wingData"),
+      ObjectLib.objSet(
+        StdLib.var("wingData"),
         "description",
         "A long hallway. Rooms 51-99 are here.",
       ),
-      Object["obj.set"](Std.var("wingData"), "floor", Std.var("floor")),
-      Object["obj.set"](Std.var("wingData"), "side", "East"),
-      Object["obj.set"](
-        Std.var("wingData"),
+      ObjectLib.objSet(StdLib.var("wingData"), "floor", StdLib.var("floor")),
+      ObjectLib.objSet(StdLib.var("wingData"), "side", "East"),
+      ObjectLib.objSet(
+        StdLib.var("wingData"),
         "return_id",
-        Object["obj.get"](Std.this(), "id"),
+        ObjectLib.objGet(StdLib.this(), "id"),
       ),
-      Std.let(
+      StdLib.let(
         "wingId",
-        CoreLib.create(Std.var("createCap"), Std.var("wingData")),
+        CoreLib.create(StdLib.var("createCap"), StdLib.var("wingData")),
       ),
-      Std.let("filter", Object["obj.new"]()),
-      Object["obj.set"](Std.var("filter"), "target_id", Std.var("wingId")),
+      StdLib.let("filter", ObjectLib.objNew()),
+      ObjectLib.objSet(StdLib.var("filter"), "target_id", StdLib.var("wingId")),
       CoreLib.set_prototype(
-        KernelLib.getCapability("entity.control", Std.var("filter")),
-        CoreLib.entity(Std.var("wingId")),
+        KernelLib.getCapability("entity.control", StdLib.var("filter")),
+        CoreLib.entity(StdLib.var("wingId")),
         wingProtoId,
       ),
       // Give capabilities to Wing
       // 1. sys.create
-      Std.let("wingCreateCap", KernelLib.delegate(Std.var("createCap"), {})),
+      StdLib.let(
+        "wingCreateCap",
+        KernelLib.delegate(StdLib.var("createCap"), {}),
+      ),
       KernelLib.giveCapability(
-        Std.var("wingCreateCap"),
-        CoreLib.entity(Std.var("wingId")),
+        StdLib.var("wingCreateCap"),
+        CoreLib.entity(StdLib.var("wingId")),
       ),
       // 2. entity.control (self)
-      Std.let(
+      StdLib.let(
         "wingControlCap",
         KernelLib.delegate(
-          KernelLib.getCapability("entity.control", Std.var("filter")),
+          KernelLib.getCapability("entity.control", StdLib.var("filter")),
           {},
         ),
       ),
       KernelLib.giveCapability(
-        Std.var("wingControlCap"),
-        CoreLib.entity(Std.var("wingId")),
+        StdLib.var("wingControlCap"),
+        CoreLib.entity(StdLib.var("wingId")),
       ),
 
-      CoreLib.call(Std.caller(), "move", Std.var("wingId")),
-      CoreLib.call(Std.caller(), "tell", "You walk down the East Wing."),
+      CoreLib.call(StdLib.caller(), "move", StdLib.var("wingId")),
+      CoreLib.call(StdLib.caller(), "tell", "You walk down the East Wing."),
     ),
   );
 
@@ -473,18 +506,21 @@ export function seedHotel(
   addVerb(
     wingProtoId,
     "back",
-    Std.seq(
-      Std.let("returnId", Object["obj.get"](Std.this(), "return_id")),
-      CoreLib.call(Std.caller(), "move", Std.var("returnId")),
-      CoreLib.call(Std.caller(), "tell", "You head back to the lobby."),
-      Std.let(
+    StdLib.seq(
+      StdLib.let("returnId", ObjectLib.objGet(StdLib.this(), "return_id")),
+      CoreLib.call(StdLib.caller(), "move", StdLib.var("returnId")),
+      CoreLib.call(StdLib.caller(), "tell", "You head back to the lobby."),
+      StdLib.let(
         "cap",
         KernelLib.getCapability(
           "entity.control",
-          Object["obj.new"](["target_id", Object["obj.get"](Std.this(), "id")]),
+          ObjectLib.objNew([
+            "target_id",
+            ObjectLib.objGet(StdLib.this(), "id"),
+          ]),
         ),
       ),
-      CoreLib.destroy(Std.var("cap"), Std.this()),
+      CoreLib.destroy(StdLib.var("cap"), StdLib.this()),
     ),
   );
 
@@ -492,183 +528,204 @@ export function seedHotel(
   addVerb(
     wingProtoId,
     "enter",
-    Std.seq(
-      Std.let("roomNum", Std.arg(0)),
-      Std.let("valid", true),
+    StdLib.seq(
+      StdLib.let("roomNum", StdLib.arg(0)),
+      StdLib.let("valid", true),
       // Validate room number matches wing side
-      Std.let("side", Object["obj.get"](Std.this(), "side")),
-      Std.if(
-        BooleanLib["=="](Std.var("side"), "West"),
-        Std.if(
+      StdLib.let("side", ObjectLib.objGet(StdLib.this(), "side")),
+      StdLib.if(
+        BooleanLib.eq(StdLib.var("side"), "West"),
+        StdLib.if(
           BooleanLib.or(
-            BooleanLib["<"](Std.var("roomNum"), 1),
-            BooleanLib[">"](Std.var("roomNum"), 50),
+            BooleanLib.lt(StdLib.var("roomNum"), 1),
+            BooleanLib.gt(StdLib.var("roomNum"), 50),
           ),
-          Std.seq(
+          StdLib.seq(
             CoreLib.call(
-              Std.caller(),
+              StdLib.caller(),
               "tell",
               "Room numbers in the West Wing are 1-50.",
             ),
-            Std.set("valid", false),
+            StdLib.set("valid", false),
           ),
         ),
       ),
-      Std.if(
-        BooleanLib["=="](Std.var("side"), "East"),
-        Std.if(
+      StdLib.if(
+        BooleanLib.eq(StdLib.var("side"), "East"),
+        StdLib.if(
           BooleanLib.or(
-            BooleanLib["<"](Std.var("roomNum"), 51),
-            BooleanLib[">"](Std.var("roomNum"), 99),
+            BooleanLib.lt(StdLib.var("roomNum"), 51),
+            BooleanLib.gt(StdLib.var("roomNum"), 99),
           ),
-          Std.seq(
+          StdLib.seq(
             CoreLib.call(
-              Std.caller(),
+              StdLib.caller(),
               "tell",
               "Room numbers in the East Wing are 51-99.",
             ),
-            Std.set("valid", false),
+            StdLib.set("valid", false),
           ),
         ),
       ),
       // Execute if valid
-      Std.if(
-        Std.var("valid"),
-        Std.seq(
-          Std.let("createCap", KernelLib.getCapability("sys.create")),
-          Std.let("roomData", Object["obj.new"]()),
-          Object["obj.set"](
-            Std.var("roomData"),
+      StdLib.if(
+        StdLib.var("valid"),
+        StdLib.seq(
+          StdLib.let("createCap", KernelLib.getCapability("sys.create")),
+          StdLib.let("roomData", ObjectLib.objNew()),
+          ObjectLib.objSet(
+            StdLib.var("roomData"),
             "name",
-            String["str.concat"]("Room ", Std.var("roomNum")),
+            StringLib.strConcat("Room ", StdLib.var("roomNum")),
           ),
-          Object["obj.set"](Std.var("roomData"), "kind", "ROOM"),
+          ObjectLib.objSet(StdLib.var("roomData"), "kind", "ROOM"),
 
-          Object["obj.set"](
-            Std.var("roomData"),
+          ObjectLib.objSet(
+            StdLib.var("roomData"),
             "description",
             "A standard hotel room.",
           ),
-          Object["obj.set"](
-            Std.var("roomData"),
+          ObjectLib.objSet(
+            StdLib.var("roomData"),
             "lobby_id",
-            Object["obj.get"](Std.this(), "id"),
+            ObjectLib.objGet(StdLib.this(), "id"),
           ), // Return to THIS wing
-          Std.let(
+          StdLib.let(
             "roomId",
-            CoreLib.create(Std.var("createCap"), Std.var("roomData")),
+            CoreLib.create(StdLib.var("createCap"), StdLib.var("roomData")),
           ),
-          Std.let("roomFilter", Object["obj.new"]()),
-          Object["obj.set"](
-            Std.var("roomFilter"),
+          StdLib.let("roomFilter", ObjectLib.objNew()),
+          ObjectLib.objSet(
+            StdLib.var("roomFilter"),
             "target_id",
-            Std.var("roomId"),
+            StdLib.var("roomId"),
           ),
           CoreLib.set_prototype(
-            KernelLib.getCapability("entity.control", Std.var("roomFilter")),
-            CoreLib.entity(Std.var("roomId")),
+            KernelLib.getCapability("entity.control", StdLib.var("roomFilter")),
+            CoreLib.entity(StdLib.var("roomId")),
             hotelRoomProtoId,
           ),
           // Furnish the room
-          Std.let("bedData", Object["obj.new"]()),
-          Object["obj.set"](Std.var("bedData"), "name", "Bed"),
-          Object["obj.set"](Std.var("bedData"), "kind", "ITEM"),
-          Object["obj.set"](Std.var("bedData"), "location", Std.var("roomId")),
-          Std.let(
-            "bedId",
-            CoreLib.create(Std.var("createCap"), Std.var("bedData")),
+          StdLib.let("bedData", ObjectLib.objNew()),
+          ObjectLib.objSet(StdLib.var("bedData"), "name", "Bed"),
+          ObjectLib.objSet(StdLib.var("bedData"), "kind", "ITEM"),
+          ObjectLib.objSet(
+            StdLib.var("bedData"),
+            "location",
+            StdLib.var("roomId"),
           ),
-          Std.let("bedFilter", Object["obj.new"]()),
-          Object["obj.set"](
-            Std.var("bedFilter"),
+          StdLib.let(
+            "bedId",
+            CoreLib.create(StdLib.var("createCap"), StdLib.var("bedData")),
+          ),
+          StdLib.let("bedFilter", ObjectLib.objNew()),
+          ObjectLib.objSet(
+            StdLib.var("bedFilter"),
             "target_id",
-            Std.var("bedId"),
+            StdLib.var("bedId"),
           ),
           CoreLib.set_prototype(
-            KernelLib.getCapability("entity.control", Std.var("bedFilter")),
-            CoreLib.entity(Std.var("bedId")),
+            KernelLib.getCapability("entity.control", StdLib.var("bedFilter")),
+            CoreLib.entity(StdLib.var("bedId")),
             bedProtoId,
           ),
           KernelLib.giveCapability(
-            KernelLib.getCapability("entity.control", Std.var("bedFilter")),
-            CoreLib.entity(Std.var("roomId")),
+            KernelLib.getCapability("entity.control", StdLib.var("bedFilter")),
+            CoreLib.entity(StdLib.var("roomId")),
           ),
-          Std.let("lampData", Object["obj.new"]()),
-          Object["obj.set"](Std.var("lampData"), "name", "Lamp"),
-          Object["obj.set"](Std.var("lampData"), "kind", "ITEM"),
-          Object["obj.set"](Std.var("lampData"), "location", Std.var("roomId")),
-          Std.let(
+          StdLib.let("lampData", ObjectLib.objNew()),
+          ObjectLib.objSet(StdLib.var("lampData"), "name", "Lamp"),
+          ObjectLib.objSet(StdLib.var("lampData"), "kind", "ITEM"),
+          ObjectLib.objSet(
+            StdLib.var("lampData"),
+            "location",
+            StdLib.var("roomId"),
+          ),
+          StdLib.let(
             "lampId",
-            CoreLib.create(Std.var("createCap"), Std.var("lampData")),
+            CoreLib.create(StdLib.var("createCap"), StdLib.var("lampData")),
           ),
-          Std.let("lampFilter", Object["obj.new"]()),
-          Object["obj.set"](
-            Std.var("lampFilter"),
+          StdLib.let("lampFilter", ObjectLib.objNew()),
+          ObjectLib.objSet(
+            StdLib.var("lampFilter"),
             "target_id",
-            Std.var("lampId"),
+            StdLib.var("lampId"),
           ),
           CoreLib.set_prototype(
-            KernelLib.getCapability("entity.control", Std.var("lampFilter")),
-            CoreLib.entity(Std.var("lampId")),
+            KernelLib.getCapability("entity.control", StdLib.var("lampFilter")),
+            CoreLib.entity(StdLib.var("lampId")),
             lampProtoId,
           ),
           KernelLib.giveCapability(
-            KernelLib.getCapability("entity.control", Std.var("lampFilter")),
-            CoreLib.entity(Std.var("roomId")),
+            KernelLib.getCapability("entity.control", StdLib.var("lampFilter")),
+            CoreLib.entity(StdLib.var("roomId")),
           ),
-          Std.let("chairData", Object["obj.new"]()),
-          Object["obj.set"](Std.var("chairData"), "name", "Chair"),
-          Object["obj.set"](Std.var("chairData"), "kind", "ITEM"),
-          Object["obj.set"](
-            Std.var("chairData"),
+          StdLib.let("chairData", ObjectLib.objNew()),
+          ObjectLib.objSet(StdLib.var("chairData"), "name", "Chair"),
+          ObjectLib.objSet(StdLib.var("chairData"), "kind", "ITEM"),
+          ObjectLib.objSet(
+            StdLib.var("chairData"),
             "location",
-            Std.var("roomId"),
+            StdLib.var("roomId"),
           ),
-          Std.let(
+          StdLib.let(
             "chairId",
-            CoreLib.create(Std.var("createCap"), Std.var("chairData")),
+            CoreLib.create(StdLib.var("createCap"), StdLib.var("chairData")),
           ),
-          Std.let("chairFilter", Object["obj.new"]()),
-          Object["obj.set"](
-            Std.var("chairFilter"),
+          StdLib.let("chairFilter", ObjectLib.objNew()),
+          ObjectLib.objSet(
+            StdLib.var("chairFilter"),
             "target_id",
-            Std.var("chairId"),
+            StdLib.var("chairId"),
           ),
           CoreLib.set_prototype(
-            KernelLib.getCapability("entity.control", Std.var("chairFilter")),
-            CoreLib.entity(Std.var("chairId")),
+            KernelLib.getCapability(
+              "entity.control",
+              StdLib.var("chairFilter"),
+            ),
+            CoreLib.entity(StdLib.var("chairId")),
             chairProtoId,
           ),
           KernelLib.giveCapability(
-            KernelLib.getCapability("entity.control", Std.var("chairFilter")),
-            CoreLib.entity(Std.var("roomId")),
+            KernelLib.getCapability(
+              "entity.control",
+              StdLib.var("chairFilter"),
+            ),
+            CoreLib.entity(StdLib.var("roomId")),
           ),
 
           // Update Room Contents
-          Std.let("room", CoreLib.entity(Std.var("roomId"))),
-          Std.let("contents", List["list.new"]()),
-          List["list.push"](Std.var("contents"), Std.var("bedId")),
-          List["list.push"](Std.var("contents"), Std.var("lampId")),
-          List["list.push"](Std.var("contents"), Std.var("chairId")),
-          Object["obj.set"](Std.var("room"), "contents", Std.var("contents")),
+          StdLib.let("room", CoreLib.entity(StdLib.var("roomId"))),
+          StdLib.let("contents", ListLib.listNew()),
+          ListLib.listPush(StdLib.var("contents"), StdLib.var("bedId")),
+          ListLib.listPush(StdLib.var("contents"), StdLib.var("lampId")),
+          ListLib.listPush(StdLib.var("contents"), StdLib.var("chairId")),
+          ObjectLib.objSet(
+            StdLib.var("room"),
+            "contents",
+            StdLib.var("contents"),
+          ),
           CoreLib.set_entity(
-            KernelLib.getCapability("entity.control", Std.var("roomFilter")),
-            Std.var("room"),
+            KernelLib.getCapability("entity.control", StdLib.var("roomFilter")),
+            StdLib.var("room"),
           ),
 
           KernelLib.giveCapability(
             KernelLib.delegate(
-              KernelLib.getCapability("entity.control", Std.var("roomFilter")),
+              KernelLib.getCapability(
+                "entity.control",
+                StdLib.var("roomFilter"),
+              ),
               {},
             ),
-            CoreLib.entity(Std.var("roomId")),
+            CoreLib.entity(StdLib.var("roomId")),
           ),
 
-          CoreLib.call(Std.caller(), "move", Std.var("roomId")),
+          CoreLib.call(StdLib.caller(), "move", StdLib.var("roomId")),
           CoreLib.call(
-            Std.caller(),
+            StdLib.caller(),
             "tell",
-            String["str.concat"]("You enter Room ", Std.var("roomNum"), "."),
+            StringLib.strConcat("You enter Room ", StdLib.var("roomNum"), "."),
           ),
         ),
       ),
@@ -687,22 +744,22 @@ export function seedHotel(
   addVerb(
     receptionistId,
     "on_hear",
-    Std.seq(
-      Std.let("msg", Std.arg(0)),
-      Std.let("speakerId", Std.arg(1)),
+    StdLib.seq(
+      StdLib.let("msg", StdLib.arg(0)),
+      StdLib.let("speakerId", StdLib.arg(1)),
       // Simple heuristics
-      Std.if(
-        String["str.includes"](String["str.lower"](Std.var("msg")), "room"),
+      StdLib.if(
+        StringLib.strIncludes(StringLib.strLower(StdLib.var("msg")), "room"),
         CoreLib.call(
-          Std.caller(),
+          StdLib.caller(),
           "say",
           "We have lovely rooms available on floors 1-100. Just use the elevator!",
         ),
       ),
-      Std.if(
-        String["str.includes"](String["str.lower"](Std.var("msg")), "hello"),
+      StdLib.if(
+        StringLib.strIncludes(StringLib.strLower(StdLib.var("msg")), "hello"),
         CoreLib.call(
-          Std.caller(),
+          StdLib.caller(),
           "say",
           "Welcome to the Grand Hotel! How may I help you?",
         ),
@@ -721,15 +778,15 @@ export function seedHotel(
   addVerb(
     golemId,
     "on_hear",
-    Std.seq(
-      Std.let("msg", Std.arg(0)),
-      Std.let("type", Std.arg(2)),
-      Std.if(
-        BooleanLib["=="](Std.var("type"), "tell"),
+    StdLib.seq(
+      StdLib.let("msg", StdLib.arg(0)),
+      StdLib.let("type", StdLib.arg(2)),
+      StdLib.if(
+        BooleanLib.eq(StdLib.var("type"), "tell"),
         CoreLib.call(
-          Std.caller(),
+          StdLib.caller(),
           "say",
-          String["str.concat"]("Golem echoes: ", Std.var("msg")),
+          StringLib.strConcat("Golem echoes: ", StdLib.var("msg")),
         ),
       ),
     ),
