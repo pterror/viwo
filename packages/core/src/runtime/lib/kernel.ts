@@ -42,7 +42,9 @@ export const get_capability = defineOpcode<
       return true;
     });
 
-    if (!match) return null;
+    if (!match) {
+      return null;
+    }
 
     return {
       __brand: "Capability",

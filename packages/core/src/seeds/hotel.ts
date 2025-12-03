@@ -300,7 +300,13 @@ export function seedHotel(
           // 2. entity.control (self)
           Std["let"](
             "lobbyControlCap",
-            KernelLib["get_capability"]("entity.control", Std["var"]("filter")),
+            KernelLib["delegate"](
+              KernelLib["get_capability"](
+                "entity.control",
+                Std["var"]("filter"),
+              ),
+              {},
+            ),
           ),
           KernelLib["give_capability"](
             Std["var"]("lobbyControlCap"),
@@ -405,7 +411,10 @@ export function seedHotel(
       // 2. entity.control (self)
       Std["let"](
         "wingControlCap",
-        KernelLib["get_capability"]("entity.control", Std["var"]("filter")),
+        KernelLib["delegate"](
+          KernelLib["get_capability"]("entity.control", Std["var"]("filter")),
+          {},
+        ),
       ),
       KernelLib["give_capability"](
         Std["var"]("wingControlCap"),
@@ -472,7 +481,10 @@ export function seedHotel(
       // 2. entity.control (self)
       Std["let"](
         "wingControlCap",
-        KernelLib["get_capability"]("entity.control", Std["var"]("filter")),
+        KernelLib["delegate"](
+          KernelLib["get_capability"]("entity.control", Std["var"]("filter")),
+          {},
+        ),
       ),
       KernelLib["give_capability"](
         Std["var"]("wingControlCap"),
@@ -711,9 +723,12 @@ export function seedHotel(
           ),
 
           KernelLib["give_capability"](
-            KernelLib["get_capability"](
-              "entity.control",
-              Std["var"]("roomFilter"),
+            KernelLib["delegate"](
+              KernelLib["get_capability"](
+                "entity.control",
+                Std["var"]("roomFilter"),
+              ),
+              {},
             ),
             CoreLib["entity"](Std["var"]("roomId")),
           ),
