@@ -276,17 +276,16 @@ function executeLoop(
         if (e instanceof ScriptError) {
           scriptError = e;
           if (scriptError.stackTrace.length === 0) {
-            scriptError.stackTrace = createStackTrace(
-              sp + 1,
-              stackOp,
-              stackArgs,
-            );
+            scriptError.stackTrace = [
+              ...ctx.stack,
+              ...createStackTrace(sp, stackOp, stackArgs),
+            ];
           }
         } else {
-          scriptError = new ScriptError(
-            e.message ?? String(e),
-            createStackTrace(sp + 1, stackOp, stackArgs),
-          );
+          scriptError = new ScriptError(e.message ?? String(e), [
+            ...ctx.stack,
+            ...createStackTrace(sp, stackOp, stackArgs),
+          ]);
         }
         if (!scriptError.context) {
           scriptError.context = { op: op, args: args };
