@@ -1,52 +1,67 @@
 import { defineConfig } from "vitepress";
+import { withMermaid } from "vitepress-plugin-mermaid";
+import fs from "node:fs";
+import path from "node:path";
 
-export default defineConfig({
-  base: "/viwo/",
-  title: "Viwo Docs",
-  description: "Documentation for the Viwo project",
-  themeConfig: {
-    nav: [
-      { text: "Home", link: "/" },
-      { text: "Architecture", link: "/core/architecture" },
-      { text: "Scripting", link: "/scripting/spec" },
-    ],
+// Helper to generate sidebar items dynamically
+function getSidebarItems(dir: string) {
+  const fullPath = path.join(__dirname, "..", dir);
+  if (!fs.existsSync(fullPath)) return [];
 
-    sidebar: [
-      {
-        text: "Core",
-        items: [
-          { text: "Architecture", link: "/core/architecture" },
-          { text: "Codebase Map", link: "/core/codebase_map" },
-          { text: "Scheduler", link: "/core/scheduler" },
-        ],
-      },
-      {
-        text: "Components",
-        items: [
-          { text: "Web Frontend", link: "/components/web_frontend" },
-          { text: "TUI", link: "/components/tui" },
-          { text: "Discord Bot", link: "/components/discord_bot" },
-        ],
-      },
-      {
-        text: "Scripting",
-        items: [
-          { text: "Specification", link: "/scripting/spec" },
-          { text: "Compiler", link: "/scripting/compiler" },
-          { text: "Decompiler", link: "/scripting/decompiler" },
-          { text: "Transpiler", link: "/scripting/transpiler" },
-        ],
-      },
-      {
-        text: "Reference",
-        items: [{ text: "API", link: "/reference/api" }],
-      },
-      {
-        text: "Plugins",
-        items: [{ text: "AI Integration", link: "/plugins/ai" }],
-      },
-    ],
+  return fs
+    .readdirSync(fullPath)
+    .filter((file) => file.endsWith(".md") && file !== "index.md")
+    .map((file) => {
+      const name = path.basename(file, ".md");
+      // Convert snake_case or kebab-case to Title Case for display
+      const text = name
+        .replace(/[-_]/g, " ")
+        .replace(/\b\w/g, (l) => l.toUpperCase());
+      return {
+        text,
+        link: `/${dir}/${name}`,
+      };
+    });
+}
 
-    socialLinks: [{ icon: "github", link: "https://github.com/pterror/viwo" }],
-  },
-});
+export default withMermaid(
+  defineConfig({
+    base: "/viwo/",
+    title: "Viwo Docs",
+    description: "Documentation for the Viwo project",
+    themeConfig: {
+      nav: [
+        { text: "Home", link: "/" },
+        { text: "Architecture", link: "/core/architecture" },
+        { text: "Scripting", link: "/scripting/spec" },
+      ],
+
+      sidebar: [
+        {
+          text: "Core",
+          items: getSidebarItems("core"),
+        },
+        {
+          text: "Components",
+          items: getSidebarItems("components"),
+        },
+        {
+          text: "Scripting",
+          items: getSidebarItems("scripting"),
+        },
+        {
+          text: "Reference",
+          items: getSidebarItems("reference"),
+        },
+        {
+          text: "Plugins",
+          items: getSidebarItems("plugins"),
+        },
+      ],
+
+      socialLinks: [
+        { icon: "github", link: "https://github.com/pterror/viwo" },
+      ],
+    },
+  }),
+);
