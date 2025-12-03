@@ -19,6 +19,40 @@ A capability consists of:
 - **Type**: A string identifier (e.g., `sys.mint`, `fs.read`).
 - **Params**: A JSON object containing specific constraints (e.g., `{ "path": "/home/user" }`).
 
+## Capability Hierarchy
+
+Capabilities form a hierarchy of trust, rooted in the kernel.
+
+### The Root: `sys.mint`
+
+The `sys.mint` capability is the "Root of Trust". It allows the holder to create _any_ other capability.
+
+- **Held by**: The Kernel (ID 0) and the System entity (ID 3).
+- **Power**: Infinite. Can mint `sys.sudo`, `entity.control` (wildcard), or any subsystem capability.
+
+### Hierarchy Diagram
+
+```mermaid
+graph TD
+    Root[sys.mint] -->|mint| Sudo[sys.sudo]
+    Root -->|mint| ControlAll[entity.control *]
+    Root -->|mint| FS[fs.read / fs.write]
+
+    ControlAll -->|delegate| ControlSpecific[entity.control target_id=123]
+    ControlSpecific -->|give| Entity[Entity 123]
+```
+
+### Administrative vs. Impersonation Power
+
+It is important to distinguish between "Root" administrative power and "Sudo" impersonation power.
+
+| Capability       | Params          | Power                                                                                                                                                    | Analogy                |
+| :--------------- | :-------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------- |
+| `entity.control` | `{ "*": true }` | **Administrative**. Can destroy, modify, or hijack _any_ entity, regardless of its internal logic. Bypasses all ownership checks.                        | `rm -rf /` (Root)      |
+| `sys.sudo`       | `(none)`        | **Impersonation**. Can execute _existing verbs_ on an entity as if the caller were that entity. Limited by what the entity is actually capable of doing. | `sudo -u user command` |
+
+**Why `*` exists**: Without a wildcard `entity.control`, an administrator could not delete a buggy or malicious entity that has no `delete` verb or has broken its own logic. `sys.sudo` would fail in that case because there is no valid code to execute on the target.
+
 ## Kernel Opcodes
 
 The kernel provides low-level opcodes to manage capabilities:
@@ -74,3 +108,60 @@ const content = fs.read(readCap, "/tmp/hello.txt");
 // Give it to another entity
 give_capability(readCap, someOtherEntity);
 ```
+
+## Capability Namespacing
+
+To prevent capability collisions and unauthorized minting, the `sys.mint` capability enforces namespacing.
+
+- **Namespace Parameter**: The `sys.mint` capability has a `namespace` parameter (e.g., `"user.123"`).
+- **Minting Restriction**: When minting a new capability, its type string _must_ start with the authority's namespace.
+  - Authority: `sys.mint` with `{ "namespace": "user.123" }`
+  - Allowed: `user.123.storage`, `user.123.game.score`
+  - Denied: `sys.sudo`, `fs.read`, `user.456.storage`
+
+### User Namespaces
+
+Users are typically granted a `sys.mint` capability restricted to their own namespace (e.g., `user.<id>`). This allows them to create custom capabilities for their own scripts and games without risking system stability.
+
+## Design Decisions
+
+### Why `entity.control` Wildcard?
+
+You might wonder why we use a wildcard parameter (`{ "*": true }`) on `entity.control` instead of a separate `sys.admin` capability.
+
+**Rationale**:
+
+1.  **Unified Interface**: All entity management operations (`set_entity`, `destroy`, `set_prototype`) check for `entity.control`. By using a wildcard, we allow administrators to use the exact same tools and opcodes as regular owners. A separate capability would require every opcode to check for _two_ types (`entity.control` OR `sys.admin`), increasing complexity and potential bugs.
+2.  **Simplicity**: It keeps the number of core capability types low.
+3.  **Explicit Power**: The `*` explicitly denotes "control over everything", which is semantically clear in the context of a capability system.
+
+**Trade-offs**:
+
+- It overloads the semantic meaning of the capability (specific vs global).
+- It requires careful handling in the kernel to ensure the wildcard is checked correctly (and not accidentally granted).
+
+### Why `entity.` Namespace?
+
+Currently, `entity.control` is the only capability in the `entity` namespace. You might ask if the namespace is necessary.
+
+**Rationale**:
+
+- **Consistency**: It follows the system-wide `category.action` pattern (e.g., `fs.read`, `net.http.write`, `sys.mint`).
+- **Future-proofing**: We may add other entity-related capabilities in the future, such as `entity.listen` (to eavesdrop on messages) or `entity.transfer` (if we separate ownership transfer from control).
+- **Clarity**: `control` alone is vague. `entity.control` explicitly states _what_ is being controlled.
+
+### What about `sys.admin`?
+
+You may notice there is no `sys.admin` capability. Viwo separates administrative power into two layers:
+
+1.  **Kernel Level (`entity.control` \*)**: The ability to mutate the database state of any entity. This is the "Root" power held by the System entity.
+2.  **User Level (`admin` property)**: The `can_edit` verb checks for an `admin: true` property on the user entity. This allows trusted users to perform high-level actions (like `dig` or `edit`) without needing dangerous kernel capabilities.
+
+### Plugin Capabilities
+
+Plugins can define their own capabilities using the `sys.mint` namespacing feature.
+
+- **Pattern**: `plugin.<name>.<action>`
+- **Example**: An AI plugin might need a capability to generate text.
+  1.  System mints `sys.mint` with `{ "namespace": "plugin.ai" }`.
+  2.  Plugin uses this authority to mint `plugin.ai.generate` for specific users or entities.
