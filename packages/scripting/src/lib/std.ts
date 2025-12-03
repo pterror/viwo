@@ -1,4 +1,4 @@
-import { evaluate, ScriptError, defineOpcode, ScriptValue } from "../index";
+import { evaluate, ScriptError, defineOpcode, ScriptRaw } from "../index";
 import { Entity } from "@viwo/shared/jsonrpc";
 
 // Values
@@ -43,7 +43,7 @@ export const caller = defineOpcode<[], Entity>("caller", {
 /**
  * Executes a sequence of steps and returns the result of the last step.
  */
-export const seq = defineOpcode<ScriptValue<unknown>[], any>("seq", {
+export const seq = defineOpcode<unknown[], any>("seq", {
   metadata: {
     label: "Sequence",
     category: "logic",
@@ -87,7 +87,7 @@ export const seq = defineOpcode<ScriptValue<unknown>[], any>("seq", {
  * Conditional execution.
  */
 const ifOp = defineOpcode<
-  [ScriptValue<boolean>, ScriptValue<unknown>, ScriptValue<unknown>?],
+  [boolean, unknown, unknown?],
   any
 >("if", {
   metadata: {
@@ -131,7 +131,7 @@ export { ifOp as if };
 /**
  * Repeats a body while a condition is true.
  */
-const whileOp = defineOpcode<[ScriptValue<boolean>, ScriptValue<unknown>], any>(
+const whileOp = defineOpcode<[boolean, unknown], any>(
   "while",
   {
     metadata: {
@@ -197,7 +197,7 @@ export { whileOp as while };
  * Iterates over a list.
  */
 const forOp = defineOpcode<
-  [string, ScriptValue<readonly unknown[]>, ScriptValue<unknown>],
+  [string, readonly unknown[], unknown],
   any
 >("for", {
   metadata: {
@@ -259,7 +259,7 @@ export { forOp as for };
 /**
  * Converts a value to a JSON string.
  */
-const jsonStringify = defineOpcode<[ScriptValue<unknown>], string>(
+const jsonStringify = defineOpcode<[unknown], string>(
   "json.stringify",
   {
     metadata: {
@@ -280,7 +280,7 @@ export { jsonStringify as "json.stringify" };
 /**
  * Parses a JSON string into a value.
  */
-const jsonParse = defineOpcode<[ScriptValue<string>], unknown>("json.parse", {
+const jsonParse = defineOpcode<[string], unknown>("json.parse", {
   metadata: {
     label: "JSON Parse",
     category: "data",
@@ -302,7 +302,7 @@ export { jsonParse as "json.parse" };
 /**
  * Returns the type of a value.
  */
-export const typeof_ = defineOpcode<[ScriptValue<unknown>], "string" | "number" | "boolean" | "object"| "null" | "array">("typeof", {
+export const typeof_ = defineOpcode<[unknown], "string" | "number" | "boolean" | "object"| "null" | "array">("typeof", {
   metadata: {
     label: "Type Of",
     category: "logic",
@@ -323,7 +323,7 @@ export { typeof_ as typeof };
 /**
  * Defines a local variable in the current scope.
  */
-const letOp = defineOpcode<[string, ScriptValue<unknown>], any>("let", {
+const letOp = defineOpcode<[string, unknown], any>("let", {
   metadata: {
     label: "Let",
     category: "logic",
@@ -368,7 +368,7 @@ export { var_ as var };
 /**
  * Updates the value of an existing variable.
  */
-const set_ = defineOpcode<[string, ScriptValue<unknown>], any>("set", {
+const set_ = defineOpcode<[string, unknown], any>("set", {
   metadata: {
     label: "Set",
     category: "action",
@@ -397,7 +397,7 @@ export { set_ as set }
  * Logs a message to the console/client.
  */
 export const log = defineOpcode<
-  [ScriptValue<unknown>, ...ScriptValue<unknown>[]],
+  [unknown, ...unknown[]],
   null
 >("log", {
   metadata: {
@@ -420,7 +420,7 @@ export const log = defineOpcode<
 /**
  * Retrieves a specific argument passed to the script.
  */
-export const arg = defineOpcode<[ScriptValue<number>], any>("arg", {
+export const arg = defineOpcode<[number], any>("arg", {
   metadata: {
     label: "Get Arg",
     category: "data",
@@ -456,7 +456,7 @@ export const args = defineOpcode<[], readonly any[]>("args", {
 /**
  * Sends a warning message to the client.
  */
-export const warn = defineOpcode<[ScriptValue<unknown>], void>("warn", {
+export const warn = defineOpcode<[unknown], void>("warn", {
   metadata: {
     label: "Warn",
     category: "action",
@@ -473,7 +473,7 @@ export const warn = defineOpcode<[ScriptValue<unknown>], void>("warn", {
 /**
  * Throws an error, stopping script execution.
  */
-const throwOp = defineOpcode<[ScriptValue<unknown>], never>("throw", {
+const throwOp = defineOpcode<[unknown], never>("throw", {
   metadata: {
     label: "Throw",
     category: "action",
@@ -489,7 +489,7 @@ const throwOp = defineOpcode<[ScriptValue<unknown>], never>("throw", {
 export { throwOp as throw };
 
 const tryOp = defineOpcode<
-  [ScriptValue<unknown>, string, ScriptValue<unknown>],
+  [unknown, string, unknown],
   any
 >("try", {
   metadata: {
@@ -529,7 +529,7 @@ export { tryOp as try };
 /**
  * Creates a lambda (anonymous function).
  */
-export const lambda = defineOpcode<[readonly string[], ScriptValue<unknown>], any>(
+export const lambda = defineOpcode<[ScriptRaw<readonly string[]>, unknown], any>(
   "lambda",
   {
     metadata: {
@@ -562,7 +562,7 @@ export const lambda = defineOpcode<[readonly string[], ScriptValue<unknown>], an
  * Calls a lambda function.
  */
 export const apply = defineOpcode<
-  [ScriptValue<unknown>, ...ScriptValue<unknown>[]],
+  [unknown, ...unknown[]],
   any
 >("apply", {
   metadata: {
@@ -615,7 +615,7 @@ export const apply = defineOpcode<
 /**
  * Sends a message to the client.
  */
-export const send = defineOpcode<[ScriptValue<string>, ScriptValue<unknown>], null>("send", {
+export const send = defineOpcode<[string, unknown], null>("send", {
   metadata: {
     label: "System Send",
     category: "system",

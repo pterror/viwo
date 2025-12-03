@@ -1,5 +1,5 @@
 import { evaluate } from "../interpreter";
-import { defineOpcode, ScriptValue } from "../def";
+import { defineOpcode } from "../def";
 
 // Comparison
 /**
@@ -223,7 +223,7 @@ export { gte as ">=" };
  * Logical AND.
  */
 export const and = defineOpcode<
-  [ScriptValue<boolean>, ScriptValue<boolean>, ...ScriptValue<boolean>[]],
+  [boolean, boolean, ...boolean[]],
   boolean
 >("and", {
   metadata: {
@@ -271,7 +271,7 @@ export const and = defineOpcode<
  * Logical OR.
  */
 export const or = defineOpcode<
-  [ScriptValue<boolean>, ScriptValue<boolean>, ...ScriptValue<boolean>[]],
+  [boolean, boolean, ...boolean[]],
   boolean
 >("or", {
   metadata: {

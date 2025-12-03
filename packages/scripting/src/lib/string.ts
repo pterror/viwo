@@ -1,9 +1,9 @@
-import { defineOpcode, ScriptValue } from "../def";
+import { defineOpcode } from "../def";
 
 /**
  * Returns the length of a string.
  */
-const strLen = defineOpcode<[ScriptValue<string>], number>(
+const strLen = defineOpcode<[string], number>(
   "str.len",
   {
     metadata: {
@@ -24,7 +24,7 @@ export { strLen as "str.len" };
 /**
  * Concatenates multiple strings into one.
  */
-const strConcat = defineOpcode<[...ScriptValue<string | number | boolean | null>[]], string>(
+const strConcat = defineOpcode<(string | number | boolean | null)[], string>(
   "str.concat",
   {
     metadata: {
@@ -49,7 +49,7 @@ export { strConcat as "str.concat" };
 /**
  * Splits a string into an array of substrings using a separator.
  */
-const strSplit = defineOpcode<[ScriptValue<string>, ScriptValue<string>], string[]>(
+const strSplit = defineOpcode<[string, string], string[]>(
   "str.split",
   {
     metadata: {
@@ -76,7 +76,7 @@ export { strSplit as "str.split" };
 /**
  * Extracts a section of a string and returns it as a new string.
  */
-const strSlice = defineOpcode<[ScriptValue<string>, ScriptValue<number>, ScriptValue<number>?], string>(
+const strSlice = defineOpcode<[string, number, number?], string>(
   "str.slice",
   {
     metadata: {
@@ -106,7 +106,7 @@ export { strSlice as "str.slice" };
 /**
  * Converts a string to uppercase.
  */
-const strUpper = defineOpcode<[ScriptValue<string>], string>(
+const strUpper = defineOpcode<[string], string>(
   "str.upper",
   {
     metadata: {
@@ -127,7 +127,7 @@ export { strUpper as "str.upper" };
 /**
  * Converts a string to lowercase.
  */
-const strLower = defineOpcode<[ScriptValue<string>], string>(
+const strLower = defineOpcode<[string], string>(
   "str.lower",
   {
     metadata: {
@@ -148,7 +148,7 @@ export { strLower as "str.lower" };
 /**
  * Removes whitespace from both ends of a string.
  */
-const strTrim = defineOpcode<[ScriptValue<string>], string>(
+const strTrim = defineOpcode<[string], string>(
   "str.trim",
   {
     metadata: {
@@ -169,7 +169,7 @@ export { strTrim as "str.trim" };
 /**
  * Replaces occurrences of a substring with another string.
  */
-const strReplace = defineOpcode<[ScriptValue<string>, ScriptValue<string>, ScriptValue<string>], string>(
+const strReplace = defineOpcode<[string, string, string], string>(
   "str.replace",
   {
     metadata: {
@@ -198,7 +198,7 @@ export { strReplace as "str.replace" };
 /**
  * Checks if a string contains another string.
  */
-const strIncludes = defineOpcode<[ScriptValue<string>, ScriptValue<string>], boolean>(
+const strIncludes = defineOpcode<[string, string], boolean>(
   "str.includes",
   {
     metadata: {
@@ -225,7 +225,7 @@ export { strIncludes as "str.includes" };
 /**
  * Joins elements of a list into a string using a separator.
  */
-const strJoin = defineOpcode<[ScriptValue<any[]>, ScriptValue<string>], string>(
+const strJoin = defineOpcode<[any[], string], string>(
   "str.join",
   {
     metadata: {

@@ -18,6 +18,8 @@ describe("Book Item Scripting", () => {
   registerLibrary(List);
   registerLibrary(String);
   registerLibrary(Object);
+  registerLibrary(CoreLib);
+  registerLibrary(BooleanLib);
 
   let book: Entity;
   let caller: Entity;
@@ -47,7 +49,7 @@ describe("Book Item Scripting", () => {
     addVerb(callerId, "tell", Std["send"]("message", Std["arg"](0)));
   });
 
-  it("should list chapters", () => {
+  it("should list chapters", async () => {
     const script = Std["seq"](
       Std["let"]("chapters", Object["obj.get"](Std["this"](), "chapters")),
       CoreLib["call"](
@@ -63,7 +65,7 @@ describe("Book Item Scripting", () => {
       ),
     );
 
-    evaluate(
+    await evaluate(
       script,
       createScriptContext({
         caller,
@@ -74,7 +76,7 @@ describe("Book Item Scripting", () => {
     expect(messages[0]).toBe("Chapter 1\nChapter 2");
   });
 
-  it("should read a chapter", () => {
+  it("should read a chapter", async () => {
     const script = Std["seq"](
       Std["let"]("index", Std["arg"](0)),
       Std["let"]("chapters", Object["obj.get"](Std["this"](), "chapters")),
@@ -99,7 +101,7 @@ describe("Book Item Scripting", () => {
     );
 
     // Read Chapter 1 (index 0)
-    evaluate(
+    await evaluate(
       script,
       createScriptContext({
         caller,
@@ -113,7 +115,7 @@ describe("Book Item Scripting", () => {
 
     // Read invalid chapter
     messages = [];
-    evaluate(
+    await evaluate(
       script,
       createScriptContext({
         caller,
@@ -125,7 +127,7 @@ describe("Book Item Scripting", () => {
     expect(messages[0]).toBe("Chapter not found.");
   });
 
-  it("should add a chapter", () => {
+  it("should add a chapter", async () => {
     const script = Std["seq"](
       Std["let"]("title", Std["arg"](0)),
       Std["let"]("content", Std["arg"](1)),
@@ -144,7 +146,7 @@ describe("Book Item Scripting", () => {
       CoreLib["call"](Std["caller"](), "tell", "Chapter added."),
     );
 
-    evaluate(
+    await evaluate(
       script,
       createScriptContext({
         caller,
@@ -158,7 +160,7 @@ describe("Book Item Scripting", () => {
     expect((book["chapters"] as any)[2].title).toBe("Chapter 3");
   });
 
-  it("should search chapters", () => {
+  it("should search chapters", async () => {
     const script = Std["seq"](
       Std["let"]("query", Std["arg"](0)),
       Std["let"]("chapters", Object["obj.get"](Std["this"](), "chapters")),
@@ -204,7 +206,7 @@ describe("Book Item Scripting", () => {
     );
 
     // Search for "Content" (should match all)
-    evaluate(
+    await evaluate(
       script,
       createScriptContext({
         caller,
@@ -217,7 +219,7 @@ describe("Book Item Scripting", () => {
 
     // Search for "2" (should match Chapter 2)
     messages = [];
-    evaluate(
+    await evaluate(
       script,
       createScriptContext({
         caller,

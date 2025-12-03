@@ -1,4 +1,4 @@
-import { defineOpcode, ScriptValue } from "../def";
+import { defineOpcode } from "../def";
 
 /**
  * Returns the current time as an ISO 8601 string.
@@ -14,7 +14,7 @@ const timeNow = defineOpcode<[], string>(
       parameters: [],
       returnType: "string",
     },
-    handler: ([], _ctx) => {
+    handler: (_args, _ctx) => {
       return new Date().toISOString();
     },
   }
@@ -24,7 +24,7 @@ export { timeNow as "time.now" };
 /**
  * Formats a timestamp string.
  */
-const timeFormat = defineOpcode<[ScriptValue<string>, ScriptValue<string>?], string>(
+const timeFormat = defineOpcode<[string, string?], string>(
   "time.format",
   {
     metadata: {
@@ -51,7 +51,7 @@ export { timeFormat as "time.format" };
 /**
  * Parses a datetime string and returns it in ISO 8601 format.
  */
-const timeParse = defineOpcode<[ScriptValue<string>], string>(
+const timeParse = defineOpcode<[string], string>(
   "time.parse",
   {
     metadata: {
@@ -72,7 +72,7 @@ export { timeParse as "time.parse" };
 /**
  * Converts a numeric timestamp (ms since epoch) to an ISO 8601 string.
  */
-const timeFromTimestamp = defineOpcode<[ScriptValue<number>], string>(
+const timeFromTimestamp = defineOpcode<[number], string>(
   "time.from_timestamp",
   {
     metadata: {
@@ -93,7 +93,7 @@ export { timeFromTimestamp as "time.from_timestamp" };
 /**
  * Converts an ISO 8601 string to a numeric timestamp (ms since epoch).
  */
-const timeToTimestamp = defineOpcode<[ScriptValue<string>], number>(
+const timeToTimestamp = defineOpcode<[string], number>(
   "time.to_timestamp",
   {
     metadata: {
@@ -114,7 +114,7 @@ export { timeToTimestamp as "time.to_timestamp" };
 /**
  * Adds an offset to a timestamp.
  */
-const timeOffset = defineOpcode<[ScriptValue<number>, ScriptValue<"day" | "days" | "hour" | "hours" | "minute" | "minutes" | "month" | "months" | "second" | "seconds" | "year" | "years">, ScriptValue<string>?], string>(
+const timeOffset = defineOpcode<[number, "day" | "days" | "hour" | "hours" | "minute" | "minutes" | "month" | "months" | "second" | "seconds" | "year" | "years", string?], string>(
   "time.offset",
   {
     metadata: {

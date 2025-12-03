@@ -1,5 +1,10 @@
-import { evaluate, ScriptError, createScriptContext } from "@viwo/scripting";
-
+import {
+  evaluate,
+  ScriptError,
+  createScriptContext,
+  defineOpcode,
+  Capability,
+} from "@viwo/scripting";
 import {
   createEntity,
   deleteEntity,
@@ -13,7 +18,6 @@ import {
   createCapability,
 } from "../../repo";
 import { scheduler } from "../../scheduler";
-import { defineOpcode, Capability } from "@viwo/scripting";
 import { checkCapability, resolveProps } from "../utils";
 import { Entity } from "@viwo/shared/jsonrpc";
 
@@ -243,7 +247,7 @@ export const entity = defineOpcode<[number], Entity>("entity", {
 /**
  * Updates one or more entities' properties transactionally.
  */
-export const set_entity = defineOpcode<[Capability | null, ...Entity[]], void>(
+export const set_entity = defineOpcode<[Capability | null, ...Entity[]], null>(
   "set_entity",
   {
     metadata: {
@@ -285,7 +289,7 @@ export const set_entity = defineOpcode<[Capability | null, ...Entity[]], void>(
       }
 
       updateEntity(...entities);
-      return undefined;
+      return null;
     },
   },
 );

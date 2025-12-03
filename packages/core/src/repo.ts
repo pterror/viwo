@@ -1,5 +1,6 @@
 import { SQLQueryBindings } from "bun:sqlite";
 import { db } from "./db";
+
 import { Entity } from "@viwo/shared/jsonrpc";
 import { ScriptValue } from "@viwo/scripting";
 
@@ -12,22 +13,21 @@ import { ScriptValue } from "@viwo/scripting";
  * @returns The resolved Entity object or null if not found.
  */
 export function getEntity(id: number): Entity | null {
-  const row = db
-    .query("SELECT id, prototype_id, props FROM entities WHERE id = ?")
-    .get(id) as { id: number; prototype_id: number | null; props: string };
-  if (!row) {
+  const entity = db.query("SELECT * FROM entities WHERE id = ?").get(id) as any;
+  if (!entity) {
+    console.log(`getEntity: entity ${id} not found in DB`);
     return null;
   }
-  let props = JSON.parse(row.props);
+  let props = JSON.parse(entity.props);
   // Recursive prototype resolution
-  if (row.prototype_id) {
-    const proto = getEntity(row.prototype_id);
+  if (entity.prototype_id) {
+    const proto = getEntity(entity.prototype_id);
     if (proto) {
       // Merge props: Instance overrides Prototype
       props = { ...proto, ...props };
     }
   }
-  return { ...props, id: row.id };
+  return { ...props, id: entity.id };
 }
 
 /**
@@ -38,15 +38,15 @@ export function getEntity(id: number): Entity | null {
  * @returns The ID of the newly created entity.
  */
 export function createEntity(
-  props: Record<string, unknown>,
-  prototypeId?: number,
+  props: object,
+  prototypeId: number | null = null,
 ): number {
-  const result = db
-    .query<{ id: number }, [prototypeId: number | null, props: string]>(
+  const info = db
+    .query(
       "INSERT INTO entities (prototype_id, props) VALUES (?, ?) RETURNING id",
     )
-    .get(prototypeId ?? null, JSON.stringify(props));
-  return result!.id;
+    .get(prototypeId, JSON.stringify(props)) as { id: number };
+  return info.id;
 }
 
 /**
@@ -57,6 +57,7 @@ export function createEntity(
  * @param props - The properties to update (merged with existing).
  */
 export function updateEntity(...entities: readonly Entity[]) {
+  if (entities.length === 0) return;
   const params: (number | string)[] = [];
   for (const { id, ...props } of entities) {
     params.push(id, JSON.stringify(props));

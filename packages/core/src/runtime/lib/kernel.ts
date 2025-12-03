@@ -1,9 +1,4 @@
-import {
-  defineOpcode,
-  ScriptError,
-  Capability,
-  ScriptValue,
-} from "@viwo/scripting";
+import { defineOpcode, ScriptError, Capability } from "@viwo/scripting";
 import {
   getCapabilities,
   createCapability,
@@ -13,7 +8,7 @@ import {
 import { Entity } from "@viwo/shared/jsonrpc";
 
 export const get_capability = defineOpcode<
-  [ScriptValue<string>, ScriptValue<object>?],
+  [string, object?],
   Capability | null
 >("get_capability", {
   metadata: {
@@ -34,6 +29,10 @@ export const get_capability = defineOpcode<
     const caps = getCapabilities(ctx.this.id);
     const match = caps.find((c) => {
       if (c.type !== type) return false;
+
+      // Check for wildcard
+      if (c.params["*"] === true) return true;
+
       // Check filter params
       for (const [k, v] of Object.entries(filter as Record<string, unknown>)) {
         if (JSON.stringify(c.params[k]) !== JSON.stringify(v)) return false;
@@ -51,7 +50,7 @@ export const get_capability = defineOpcode<
 });
 
 export const mint = defineOpcode<
-  [ScriptValue<Capability | null>, ScriptValue<string>, ScriptValue<object>],
+  [Capability | null, string, object],
   Capability
 >("mint", {
   metadata: {
@@ -103,81 +102,81 @@ export const mint = defineOpcode<
   },
 });
 
-export const delegate = defineOpcode<
-  [ScriptValue<Capability | null>, ScriptValue<object>],
-  Capability
->("delegate", {
-  metadata: {
-    label: "Delegate Capability",
-    category: "kernel",
-    description: "Create a restricted version of a capability",
-    slots: [
-      { name: "Parent", type: "block" },
-      { name: "Restrictions", type: "block" },
-    ],
-    parameters: [
-      { name: "parent", type: "object" },
-      { name: "restrictions", type: "object" },
-    ],
-    returnType: "Capability",
+export const delegate = defineOpcode<[Capability | null, object], Capability>(
+  "delegate",
+  {
+    metadata: {
+      label: "Delegate Capability",
+      category: "kernel",
+      description: "Create a restricted version of a capability",
+      slots: [
+        { name: "Parent", type: "block" },
+        { name: "Restrictions", type: "block" },
+      ],
+      parameters: [
+        { name: "parent", type: "object" },
+        { name: "restrictions", type: "object" },
+      ],
+      returnType: "Capability",
+    },
+    handler: ([parent, restrictions], ctx) => {
+      if (!parent || (parent as any).__brand !== "Capability") {
+        throw new ScriptError("delegate: expected capability");
+      }
+
+      const parentCap = getCapability((parent as Capability).id);
+      if (!parentCap || parentCap.owner_id !== ctx.this.id) {
+        throw new ScriptError("delegate: invalid parent capability");
+      }
+
+      // For now, delegation just creates a new capability with same type but potentially modified params
+      // TODO: In a real system, we'd need to ensure restrictions are actually restrictive (subset)
+      // Here we'll just merge params for simplicity of the prototype
+      const newParams = { ...parentCap.params, ...(restrictions as object) };
+
+      const newId = createCapability(ctx.this.id, parentCap.type, newParams);
+
+      return {
+        __brand: "Capability",
+        id: newId,
+      };
+    },
   },
-  handler: ([parent, restrictions], ctx) => {
-    if (!parent || (parent as any).__brand !== "Capability") {
-      throw new ScriptError("delegate: expected capability");
-    }
+);
 
-    const parentCap = getCapability((parent as Capability).id);
-    if (!parentCap || parentCap.owner_id !== ctx.this.id) {
-      throw new ScriptError("delegate: invalid parent capability");
-    }
+export const give_capability = defineOpcode<[Capability | null, Entity], null>(
+  "give_capability",
+  {
+    metadata: {
+      label: "Give Capability",
+      category: "kernel",
+      description: "Transfer a capability to another entity",
+      slots: [
+        { name: "Cap", type: "block" },
+        { name: "Target", type: "block" },
+      ],
+      parameters: [
+        { name: "cap", type: "object" },
+        { name: "target", type: "object" },
+      ],
+      returnType: "null",
+    },
+    handler: ([cap, target], ctx) => {
+      if (!cap || (cap as any).__brand !== "Capability") {
+        throw new ScriptError("give_capability: expected capability");
+      }
 
-    // For now, delegation just creates a new capability with same type but potentially modified params
-    // TODO: In a real system, we'd need to ensure restrictions are actually restrictive (subset)
-    // Here we'll just merge params for simplicity of the prototype
-    const newParams = { ...parentCap.params, ...(restrictions as object) };
+      if (!target || typeof target.id !== "number") {
+        throw new ScriptError("give_capability: expected target entity");
+      }
 
-    const newId = createCapability(ctx.this.id, parentCap.type, newParams);
+      const dbCap = getCapability((cap as Capability).id);
+      if (!dbCap || dbCap.owner_id !== ctx.this.id) {
+        throw new ScriptError("give_capability: invalid capability");
+      }
 
-    return {
-      __brand: "Capability",
-      id: newId,
-    };
+      updateCapabilityOwner((cap as Capability).id, target.id);
+      return null;
+    },
   },
-});
-
-export const give_capability = defineOpcode<
-  [ScriptValue<Capability | null>, ScriptValue<Entity>],
-  null
->("give_capability", {
-  metadata: {
-    label: "Give Capability",
-    category: "kernel",
-    description: "Transfer a capability to another entity",
-    slots: [
-      { name: "Cap", type: "block" },
-      { name: "Target", type: "block" },
-    ],
-    parameters: [
-      { name: "cap", type: "object" },
-      { name: "target", type: "object" },
-    ],
-    returnType: "null",
-  },
-  handler: ([cap, target], ctx) => {
-    if (!cap || (cap as any).__brand !== "Capability") {
-      throw new ScriptError("give_capability: expected capability");
-    }
-
-    if (!target || typeof target.id !== "number") {
-      throw new ScriptError("give_capability: expected target entity");
-    }
-
-    const dbCap = getCapability((cap as Capability).id);
-    if (!dbCap || dbCap.owner_id !== ctx.this.id) {
-      throw new ScriptError("give_capability: invalid capability");
-    }
-
-    updateCapabilityOwner((cap as Capability).id, target.id);
-    return null;
-  },
-});
+);

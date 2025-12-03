@@ -6,6 +6,7 @@ import {
   MathLib,
   BooleanLib,
   compile,
+  setTypechecking,
 } from "@viwo/scripting";
 
 registerLibrary(StdLib);
@@ -40,6 +41,7 @@ const script = StdLib.seq(
 
 console.log(`Benchmarking loop with ${ITERATIONS} iterations...`);
 
+setTypechecking(false);
 // 1. Interpreter
 const ctx1 = createScriptContext({
   this: null!,
@@ -48,10 +50,11 @@ const ctx1 = createScriptContext({
   gas: ITERATIONS * 100,
 });
 const startInterp = performance.now();
-evaluate(script, ctx1);
+const result = await evaluate(script, ctx1);
 const endInterp = performance.now();
 const timeInterp = endInterp - startInterp;
 console.log(`Interpreter: ${timeInterp.toFixed(2)}ms`);
+console.log(`Result: ${result}`);
 
 // 2. Compiler
 const ctx2 = createScriptContext({
@@ -67,10 +70,11 @@ const compileTime = endCompile - startCompile;
 console.log(`Compilation time: ${compileTime.toFixed(2)}ms`);
 
 const startExec = performance.now();
-compiledFn(ctx2);
+const result2 = compiledFn(ctx2);
 const endExec = performance.now();
 const timeExec = endExec - startExec;
 console.log(`Compiled Execution: ${timeExec.toFixed(2)}ms`);
+console.log(`Result: ${result2}`);
 
 console.log(`Speedup (Exec only): ${(timeInterp / timeExec).toFixed(2)}x`);
 console.log(

@@ -3,14 +3,14 @@ import {
   executeLambda,
   ScriptError,
 } from "../interpreter";
-import { defineOpcode, ScriptValue } from "../def";
+import { defineOpcode, ScriptRaw, ScriptValue } from "../def";
 
 const DISALLOWED_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 
 /**
  * Creates a new object from key-value pairs.
  */
-const objNew = defineOpcode<[...[key: ScriptValue<string>, value: ScriptValue<unknown>][]], any>(
+const objNew = defineOpcode<[...ScriptRaw<[key: ScriptValue<string>, value: ScriptValue<unknown>]>[]], any>(
   "obj.new",
   {
     metadata: {
@@ -58,7 +58,7 @@ export { objNew as "obj.new" };
 /**
  * Returns an array of a given object's own enumerable property names.
  */
-const objKeys = defineOpcode<[ScriptValue<object>], string[]>(
+const objKeys = defineOpcode<[object], string[]>(
   "obj.keys",
   {
     metadata: {
@@ -79,7 +79,7 @@ export { objKeys as "obj.keys" };
 /**
  * Returns an array of a given object's own enumerable property values.
  */
-const objValues = defineOpcode<[ScriptValue<object>], any[]>(
+const objValues = defineOpcode<[object], any[]>(
   "obj.values",
   {
     metadata: {
@@ -100,7 +100,7 @@ export { objValues as "obj.values" };
 /**
  * Returns an array of a given object's own enumerable string-keyed property [key, value] pairs.
  */
-const objEntries = defineOpcode<[ScriptValue<object>], [string, any][]>(
+const objEntries = defineOpcode<[object], [string, any][]>(
   "obj.entries",
   {
     metadata: {
@@ -121,7 +121,7 @@ export { objEntries as "obj.entries" };
 /**
  * Retrieves a property from an object.
  */
-const objGet = defineOpcode<[ScriptValue<object>, ScriptValue<string>, ScriptValue<unknown>?], any>(
+const objGet = defineOpcode<[object, string, unknown?], any>(
   "obj.get",
   {
     metadata: {
@@ -156,7 +156,7 @@ export { objGet as "obj.get" };
 /**
  * Sets a property on an object. Returns the entire object.
  */
-const objSet = defineOpcode<[ScriptValue<object>, ScriptValue<string>, ScriptValue<unknown>], any>(
+const objSet = defineOpcode<[object, string, unknown], any>(
   "obj.set",
   {
     metadata: {
@@ -189,7 +189,7 @@ export { objSet as "obj.set" };
 /**
  * Checks if an object has a specific property.
  */
-const objHas = defineOpcode<[ScriptValue<object>, ScriptValue<string>], boolean>(
+const objHas = defineOpcode<[object, string], boolean>(
   "obj.has",
   {
     metadata: {
@@ -216,7 +216,7 @@ export { objHas as "obj.has" };
 /**
  * Deletes a property from an object.
  */
-const objDel = defineOpcode<[ScriptValue<object>, ScriptValue<string>], boolean>(
+const objDel = defineOpcode<[object, string], boolean>(
   "obj.del",
   {
     metadata: {
@@ -247,7 +247,7 @@ export { objDel as "obj.del" };
 /**
  * Merges multiple objects into a new object.
  */
-const objMerge = defineOpcode<[ScriptValue<object>, ScriptValue<object>, ...ScriptValue<object>[]], any>(
+const objMerge = defineOpcode<[object, object, ...object[]], any>(
   "obj.merge",
   {
     metadata: {
@@ -268,7 +268,7 @@ export { objMerge as "obj.merge" };
 /**
  * Creates a new object with the same keys as the original, but with values transformed by a function.
  */
-const objMap = defineOpcode<[ScriptValue<object>, ScriptValue<unknown>], any>(
+const objMap = defineOpcode<[object, unknown], any>(
   "obj.map",
   {
     metadata: {
@@ -306,7 +306,7 @@ export { objMap as "obj.map" };
 /**
  * Creates a new object with a subset of properties that pass the test implemented by the provided function.
  */
-const objFilter = defineOpcode<[ScriptValue<object>, ScriptValue<unknown>], any>(
+const objFilter = defineOpcode<[object, unknown], any>(
   "obj.filter",
   {
     metadata: {
@@ -344,7 +344,7 @@ export { objFilter as "obj.filter" };
 /**
  * Executes a user-supplied "reducer" callback function on each entry of the object.
  */
-const objReduce = defineOpcode<[ScriptValue<object>, ScriptValue<unknown>, ScriptValue<unknown>], any>(
+const objReduce = defineOpcode<[object, unknown, unknown], any>(
   "obj.reduce",
   {
     metadata: {
@@ -383,7 +383,7 @@ export { objReduce as "obj.reduce" };
 /**
  * Creates a new object by applying a given callback function to each entry of the object, and then flattening the result.
  */
-const objFlatMap = defineOpcode<[ScriptValue<object>, ScriptValue<unknown>], any>(
+const objFlatMap = defineOpcode<[object, unknown], any>(
   "obj.flatMap",
   {
     metadata: {

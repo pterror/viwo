@@ -72,7 +72,7 @@ export class TaskScheduler {
    * Processes all due tasks.
    * Should be called periodically (e.g., every tick).
    */
-  process() {
+  async process() {
     const now = Date.now();
     const tasks = db
       .query("SELECT * FROM scheduled_tasks WHERE execute_at <= ?")
@@ -101,7 +101,7 @@ export class TaskScheduler {
         const send = this.sendFactory(task.entity_id);
 
         if (entity && verb) {
-          evaluate(
+          await evaluate(
             verb.code,
             createScriptContext({
               caller: entity, // System is caller? Or self?

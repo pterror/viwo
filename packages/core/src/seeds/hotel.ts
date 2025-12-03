@@ -1,4 +1,10 @@
-import { createEntity, addVerb, updateVerb, getVerb } from "../repo";
+import {
+  createEntity,
+  addVerb,
+  updateVerb,
+  getVerb,
+  createCapability,
+} from "../repo";
 import {
   StdLib as Std,
   ObjectLib as Object,
@@ -7,19 +13,29 @@ import {
   BooleanLib,
 } from "@viwo/scripting";
 import * as CoreLib from "../runtime/lib/core";
+import * as KernelLib from "../runtime/lib/kernel";
 
-export function seedHotel(lobbyId: number, voidId: number) {
+export function seedHotel(
+  lobbyId: number,
+  voidId: number,
+  entityBaseId: number,
+) {
   // 7. Hotel Implementation
   // 7. Hotel Implementation
   const exitPrototypeId = 1;
 
   // Hotel Lobby
-  const hotelLobbyId = createEntity({
-    name: "Grand Hotel Lobby",
-    location: voidId,
-    description:
-      "The lavish lobby of the Grand Hotel. The elevator is to the side.",
-  });
+  const hotelLobbyId = createEntity(
+    {
+      name: "Grand Hotel Lobby",
+      location: voidId,
+      description:
+        "The lavish lobby of the Grand Hotel. The elevator is to the side.",
+    },
+    entityBaseId,
+  );
+
+  createCapability(hotelLobbyId, "entity.control", { target_id: hotelLobbyId });
 
   // Connect Hotel Lobby to Main Lobby
   createEntity(
@@ -43,11 +59,14 @@ export function seedHotel(lobbyId: number, voidId: number) {
   );
 
   // Hotel Room Prototype (Hidden)
-  const hotelRoomProtoId = createEntity({
-    name: "Hotel Room Prototype",
-    location: voidId,
-    description: "A generic hotel room.",
-  });
+  const hotelRoomProtoId = createEntity(
+    {
+      name: "Hotel Room Prototype",
+      location: voidId,
+      description: "A generic hotel room.",
+    },
+    entityBaseId,
+  );
 
   // Verb: leave (on the prototype)
   // Moves player back to lobby and destroys the room
@@ -112,6 +131,9 @@ export function seedHotel(lobbyId: number, voidId: number) {
     current_floor: 1,
   });
 
+  createCapability(elevatorId, "sys.create", {});
+  createCapability(elevatorId, "entity.control", { "*": true });
+
   // Link Lobby -> Elevator
   createEntity(
     {
@@ -124,18 +146,24 @@ export function seedHotel(lobbyId: number, voidId: number) {
   );
 
   // Floor Lobby Prototype (Ephemeral)
-  const floorLobbyProtoId = createEntity({
-    name: "Floor Lobby Proto",
-    location: voidId,
-    description: "A quiet carpeted lobby.",
-  });
+  const floorLobbyProtoId = createEntity(
+    {
+      name: "Floor Lobby Proto",
+      location: voidId,
+      description: "A quiet carpeted lobby.",
+    },
+    entityBaseId,
+  );
 
   // Wing Prototype (Ephemeral)
-  const wingProtoId = createEntity({
-    name: "Wing Proto",
-    location: voidId,
-    description: "A long hallway lined with doors.",
-  });
+  const wingProtoId = createEntity(
+    {
+      name: "Wing Proto",
+      location: voidId,
+      description: "A long hallway lined with doors.",
+    },
+    entityBaseId,
+  );
 
   // --- Elevator Verbs ---
 
@@ -146,7 +174,10 @@ export function seedHotel(lobbyId: number, voidId: number) {
     Std["seq"](
       Std["let"]("floor", Std["arg"](0)),
       Object["obj.set"](Std["this"](), "current_floor", Std["var"]("floor")),
-      CoreLib["set_entity"](Std["this"]()),
+      CoreLib["set_entity"](
+        KernelLib["get_capability"]("entity.control"),
+        Std["this"](),
+      ),
       CoreLib["call"](
         Std["caller"](),
         "tell",
@@ -179,6 +210,7 @@ export function seedHotel(lobbyId: number, voidId: number) {
         ),
         Std["seq"](
           // Create Ephemeral Floor Lobby
+          Std["let"]("createCap", KernelLib["get_capability"]("sys.create")),
           Std["let"]("lobbyData", {}),
           Object["obj.set"](
             Std["var"]("lobbyData"),
@@ -202,11 +234,41 @@ export function seedHotel(lobbyId: number, voidId: number) {
             Std["var"]("floor"),
           ),
           Object["obj.set"](Std["var"]("lobbyData"), "elevator_id", elevatorId),
-          Std["let"]("lobbyId", CoreLib["create"](Std["var"]("lobbyData"))),
+          Std["let"](
+            "lobbyId",
+            CoreLib["create"](Std["var"]("createCap"), Std["var"]("lobbyData")),
+          ),
+          Std["let"]("filter", Object["obj.new"]()),
+          Object["obj.set"](
+            Std["var"]("filter"),
+            "target_id",
+            Std["var"]("lobbyId"),
+          ),
           CoreLib["set_prototype"](
+            KernelLib["get_capability"]("entity.control", Std["var"]("filter")),
             CoreLib["entity"](Std["var"]("lobbyId")),
             floorLobbyProtoId,
           ),
+          // Give capabilities to Lobby
+          // 1. sys.create
+          Std["let"](
+            "lobbyCreateCap",
+            KernelLib["delegate"](Std["var"]("createCap"), {}),
+          ),
+          KernelLib["give_capability"](
+            Std["var"]("lobbyCreateCap"),
+            CoreLib["entity"](Std["var"]("lobbyId")),
+          ),
+          // 2. entity.control (self)
+          Std["let"](
+            "lobbyControlCap",
+            KernelLib["get_capability"]("entity.control", Std["var"]("filter")),
+          ),
+          KernelLib["give_capability"](
+            Std["var"]("lobbyControlCap"),
+            CoreLib["entity"](Std["var"]("lobbyId")),
+          ),
+
           CoreLib["call"](Std["caller"](), "move", Std["var"]("lobbyId")),
           CoreLib["call"](
             Std["caller"](),
@@ -246,6 +308,7 @@ export function seedHotel(lobbyId: number, voidId: number) {
     "west",
     Std["seq"](
       Std["let"]("floor", Object["obj.get"](Std["this"](), "floor")),
+      Std["let"]("createCap", KernelLib["get_capability"]("sys.create")),
       Std["let"]("wingData", {}),
       Object["obj.set"](
         Std["var"]("wingData"),
@@ -266,11 +329,41 @@ export function seedHotel(lobbyId: number, voidId: number) {
         "return_id",
         Object["obj.get"](Std["this"](), "id"),
       ), // Return to THIS lobby
-      Std["let"]("wingId", CoreLib["create"](Std["var"]("wingData"))),
+      Std["let"](
+        "wingId",
+        CoreLib["create"](Std["var"]("createCap"), Std["var"]("wingData")),
+      ),
+      Std["let"]("filter", Object["obj.new"]()),
+      Object["obj.set"](
+        Std["var"]("filter"),
+        "target_id",
+        Std["var"]("wingId"),
+      ),
       CoreLib["set_prototype"](
+        KernelLib["get_capability"]("entity.control", Std["var"]("filter")),
         CoreLib["entity"](Std["var"]("wingId")),
         wingProtoId,
       ),
+      // Give capabilities to Wing
+      // 1. sys.create
+      Std["let"](
+        "wingCreateCap",
+        KernelLib["delegate"](Std["var"]("createCap"), {}),
+      ),
+      KernelLib["give_capability"](
+        Std["var"]("wingCreateCap"),
+        CoreLib["entity"](Std["var"]("wingId")),
+      ),
+      // 2. entity.control (self)
+      Std["let"](
+        "wingControlCap",
+        KernelLib["get_capability"]("entity.control", Std["var"]("filter")),
+      ),
+      KernelLib["give_capability"](
+        Std["var"]("wingControlCap"),
+        CoreLib["entity"](Std["var"]("wingId")),
+      ),
+
       CoreLib["call"](Std["caller"](), "move", Std["var"]("wingId")),
       CoreLib["call"](Std["caller"](), "tell", "You walk down the West Wing."),
     ),
@@ -282,6 +375,7 @@ export function seedHotel(lobbyId: number, voidId: number) {
     "east",
     Std["seq"](
       Std["let"]("floor", Object["obj.get"](Std["this"](), "floor")),
+      Std["let"]("createCap", KernelLib["get_capability"]("sys.create")),
       Std["let"]("wingData", Object["obj.new"]()),
       Object["obj.set"](
         Std["var"]("wingData"),
@@ -302,11 +396,41 @@ export function seedHotel(lobbyId: number, voidId: number) {
         "return_id",
         Object["obj.get"](Std["this"](), "id"),
       ),
-      Std["let"]("wingId", CoreLib["create"](Std["var"]("wingData"))),
+      Std["let"](
+        "wingId",
+        CoreLib["create"](Std["var"]("createCap"), Std["var"]("wingData")),
+      ),
+      Std["let"]("filter", Object["obj.new"]()),
+      Object["obj.set"](
+        Std["var"]("filter"),
+        "target_id",
+        Std["var"]("wingId"),
+      ),
       CoreLib["set_prototype"](
+        KernelLib["get_capability"]("entity.control", Std["var"]("filter")),
         CoreLib["entity"](Std["var"]("wingId")),
         wingProtoId,
       ),
+      // Give capabilities to Wing
+      // 1. sys.create
+      Std["let"](
+        "wingCreateCap",
+        KernelLib["delegate"](Std["var"]("createCap"), {}),
+      ),
+      KernelLib["give_capability"](
+        Std["var"]("wingCreateCap"),
+        CoreLib["entity"](Std["var"]("wingId")),
+      ),
+      // 2. entity.control (self)
+      Std["let"](
+        "wingControlCap",
+        KernelLib["get_capability"]("entity.control", Std["var"]("filter")),
+      ),
+      KernelLib["give_capability"](
+        Std["var"]("wingControlCap"),
+        CoreLib["entity"](Std["var"]("wingId")),
+      ),
+
       CoreLib["call"](Std["caller"](), "move", Std["var"]("wingId")),
       CoreLib["call"](Std["caller"](), "tell", "You walk down the East Wing."),
     ),
@@ -392,6 +516,7 @@ export function seedHotel(lobbyId: number, voidId: number) {
       Std["if"](
         Std["var"]("valid"),
         Std["seq"](
+          Std["let"]("createCap", KernelLib["get_capability"]("sys.create")),
           Std["let"]("roomData", Object["obj.new"]()),
           Object["obj.set"](
             Std["var"]("roomData"),
@@ -410,8 +535,21 @@ export function seedHotel(lobbyId: number, voidId: number) {
             "lobby_id",
             Object["obj.get"](Std["this"](), "id"),
           ), // Return to THIS wing
-          Std["let"]("roomId", CoreLib["create"](Std["var"]("roomData"))),
+          Std["let"](
+            "roomId",
+            CoreLib["create"](Std["var"]("createCap"), Std["var"]("roomData")),
+          ),
+          Std["let"]("roomFilter", Object["obj.new"]()),
+          Object["obj.set"](
+            Std["var"]("roomFilter"),
+            "target_id",
+            Std["var"]("roomId"),
+          ),
           CoreLib["set_prototype"](
+            KernelLib["get_capability"](
+              "entity.control",
+              Std["var"]("roomFilter"),
+            ),
             CoreLib["entity"](Std["var"]("roomId")),
             hotelRoomProtoId,
           ),
@@ -424,8 +562,21 @@ export function seedHotel(lobbyId: number, voidId: number) {
             "location",
             Std["var"]("roomId"),
           ),
-          Std["let"]("bedId", CoreLib["create"](Std["var"]("bedData"))),
+          Std["let"](
+            "bedId",
+            CoreLib["create"](Std["var"]("createCap"), Std["var"]("bedData")),
+          ),
+          Std["let"]("bedFilter", Object["obj.new"]()),
+          Object["obj.set"](
+            Std["var"]("bedFilter"),
+            "target_id",
+            Std["var"]("bedId"),
+          ),
           CoreLib["set_prototype"](
+            KernelLib["get_capability"](
+              "entity.control",
+              Std["var"]("bedFilter"),
+            ),
             CoreLib["entity"](Std["var"]("bedId")),
             bedProtoId,
           ),
@@ -437,8 +588,21 @@ export function seedHotel(lobbyId: number, voidId: number) {
             "location",
             Std["var"]("roomId"),
           ),
-          Std["let"]("lampId", CoreLib["create"](Std["var"]("lampData"))),
+          Std["let"](
+            "lampId",
+            CoreLib["create"](Std["var"]("createCap"), Std["var"]("lampData")),
+          ),
+          Std["let"]("lampFilter", Object["obj.new"]()),
+          Object["obj.set"](
+            Std["var"]("lampFilter"),
+            "target_id",
+            Std["var"]("lampId"),
+          ),
           CoreLib["set_prototype"](
+            KernelLib["get_capability"](
+              "entity.control",
+              Std["var"]("lampFilter"),
+            ),
             CoreLib["entity"](Std["var"]("lampId")),
             lampProtoId,
           ),
@@ -450,8 +614,21 @@ export function seedHotel(lobbyId: number, voidId: number) {
             "location",
             Std["var"]("roomId"),
           ),
-          Std["let"]("chairId", CoreLib["create"](Std["var"]("chairData"))),
+          Std["let"](
+            "chairId",
+            CoreLib["create"](Std["var"]("createCap"), Std["var"]("chairData")),
+          ),
+          Std["let"]("chairFilter", Object["obj.new"]()),
+          Object["obj.set"](
+            Std["var"]("chairFilter"),
+            "target_id",
+            Std["var"]("chairId"),
+          ),
           CoreLib["set_prototype"](
+            KernelLib["get_capability"](
+              "entity.control",
+              Std["var"]("chairFilter"),
+            ),
             CoreLib["entity"](Std["var"]("chairId")),
             chairProtoId,
           ),
@@ -467,7 +644,13 @@ export function seedHotel(lobbyId: number, voidId: number) {
             "contents",
             Std["var"]("contents"),
           ),
-          CoreLib["set_entity"](Std["var"]("room")),
+          CoreLib["set_entity"](
+            KernelLib["get_capability"](
+              "entity.control",
+              Std["var"]("roomFilter"),
+            ),
+            Std["var"]("room"),
+          ),
 
           CoreLib["call"](Std["caller"](), "move", Std["var"]("roomId")),
           CoreLib["call"](

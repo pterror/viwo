@@ -327,7 +327,7 @@ export function seed() {
 
   addVerb(
     entityBaseId,
-    "enter",
+    "on_enter",
     Std["seq"](
       Std["let"]("mover", Std["arg"](0)),
       Std["let"](
@@ -367,7 +367,7 @@ export function seed() {
 
   addVerb(
     entityBaseId,
-    "leave",
+    "on_leave",
     Std["seq"](
       Std["let"]("mover", Std["arg"](0)),
       Std["let"](
@@ -492,14 +492,14 @@ export function seed() {
                   // Leave old loc
                   Core["call"](
                     Std["var"]("oldLoc"),
-                    "leave",
+                    "on_leave",
                     Std["var"]("mover"),
                   ),
 
                   // Enter new loc
                   Core["call"](
                     Std["var"]("newLoc"),
-                    "enter",
+                    "on_enter",
                     Std["var"]("mover"),
                   ),
 
@@ -514,13 +514,21 @@ export function seed() {
                       ]),
                     ),
                   ),
-                  Core["set_entity"](
+
+                  Std["if"](
                     Std["var"]("selfCap"),
-                    Object["obj.set"](
-                      Std["var"]("mover"),
-                      "location",
-                      Std["var"]("destId"),
+                    Std["seq"](
+                      Object["obj.set"](
+                        Std["var"]("mover"),
+                        "location",
+                        Std["var"]("destId"),
+                      ),
+                      Core["set_entity"](
+                        Std["var"]("selfCap"),
+                        Std["var"]("mover"),
+                      ),
                     ),
+                    Std["send"]("message", "You cannot move yourself."),
                   ),
 
                   Std["send"](
@@ -818,6 +826,12 @@ export function seed() {
                 "exitId",
                 Core["create"](Std["var"]("createCap"), Std["var"]("exitData")),
               ),
+              // Set prototype to Entity Base
+              Core["set_prototype"](
+                Std["var"]("controlCap"),
+                Core["entity"](Std["var"]("newRoomId")),
+                entityBaseId,
+              ),
 
               // Update current room exits
               Std["let"](
@@ -906,6 +920,12 @@ export function seed() {
                 "itemId",
                 Core["create"](Std["var"]("createCap"), Std["var"]("itemData")),
               ),
+              // Set prototype to Entity Base
+              Core["set_prototype"](
+                Std["var"]("controlCap"),
+                Core["entity"](Std["var"]("itemId")),
+                entityBaseId,
+              ),
 
               // Update room contents
               Std["let"](
@@ -978,16 +998,44 @@ export function seed() {
                   "edit",
                 ),
                 Std["seq"](
-                  Core["set_entity"](
-                    Object["obj.merge"](
-                      Core["entity"](Std["var"]("targetId")),
-                      Object["obj.new"]([
-                        Std["var"]("propName"),
-                        Std["var"]("value"),
-                      ]),
+                  // Get Capability
+                  Std["let"](
+                    "controlCap",
+                    Kernel["get_capability"](
+                      "entity.control",
+                      Object["obj.new"](["target_id", Std["var"]("targetId")]),
                     ),
                   ),
-                  Std["send"]("message", "Property set."),
+                  Std["if"](
+                    Boolean["not"](Std["var"]("controlCap")),
+                    Std["set"](
+                      "controlCap",
+                      Kernel["get_capability"](
+                        "entity.control",
+                        Object["obj.new"](["*", true]),
+                      ),
+                    ),
+                  ),
+                  Std["if"](
+                    Std["var"]("controlCap"),
+                    Std["seq"](
+                      Core["set_entity"](
+                        Std["var"]("controlCap"),
+                        Object["obj.merge"](
+                          Core["entity"](Std["var"]("targetId")),
+                          Object["obj.new"]([
+                            Std["var"]("propName"),
+                            Std["var"]("value"),
+                          ]),
+                        ),
+                      ),
+                      Std["send"]("message", "Property set."),
+                    ),
+                    Std["send"](
+                      "message",
+                      "You do not have permission to modify this object.",
+                    ),
+                  ),
                 ),
                 Std["send"](
                   "message",
@@ -1003,11 +1051,14 @@ export function seed() {
   );
 
   // 3. Create a Lobby Room
-  const lobbyId = createEntity({
-    name: "Lobby",
-    location: voidId,
-    description: "A cozy lobby with a crackling fireplace.",
-  });
+  const lobbyId = createEntity(
+    {
+      name: "Lobby",
+      location: voidId,
+      description: "A cozy lobby with a crackling fireplace.",
+    },
+    entityBaseId,
+  );
 
   // 4. Create a Test Player
   const playerId = createEntity(
@@ -1540,7 +1591,7 @@ export function seed() {
   seedItems(voidId);
 
   // 6. Create Hotel
-  seedHotel(voidId, voidId);
+  seedHotel(voidId, voidId, entityBaseId);
 
   console.log("Database seeded successfully.");
 }

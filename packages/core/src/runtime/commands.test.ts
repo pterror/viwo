@@ -1,14 +1,5 @@
-import { describe, it, expect, beforeEach, mock } from "bun:test";
-import { Database } from "bun:sqlite";
-import { initSchema } from "../schema";
-
-// Setup in-memory DB
-const db = new Database(":memory:");
-initSchema(db);
-
-// Mock the db module
-mock.module("../db", () => ({ db }));
-
+import { describe, it, expect, beforeEach } from "bun:test";
+import { db } from "../db";
 import {
   evaluate,
   registerLibrary,
@@ -20,12 +11,14 @@ import {
   StdLib,
 } from "@viwo/scripting";
 import * as Core from "./lib/core";
+import * as Kernel from "./lib/kernel";
 import {
   createEntity,
   getEntity,
   updateEntity,
   getVerb,
   addVerb,
+  createCapability,
 } from "../repo";
 import { Entity } from "@viwo/shared/jsonrpc";
 import { seed } from "../seed";
@@ -37,6 +30,7 @@ describe("Player Commands", () => {
   registerLibrary(String);
   registerLibrary(ObjectLib);
   registerLibrary(BooleanLib);
+  registerLibrary(Kernel);
 
   let player: Entity;
   let room: Entity;
@@ -84,14 +78,18 @@ describe("Player Commands", () => {
     player["admin"] = true;
     updateEntity(player);
 
+    // Grant capabilities
+    createCapability(player.id, "sys.create", {});
+    createCapability(player.id, "entity.control", { "*": true });
+
     room = getEntity(player["location"] as number)!;
   });
 
-  const runCommand = (command: string, args: readonly unknown[]) => {
+  const runCommand = async (command: string, args: readonly unknown[]) => {
     const freshPlayer = getEntity(player.id)!;
     const verb = getVerb(freshPlayer.id, command);
     if (!verb) throw new Error(`Verb ${command} not found on player`);
-    return evaluate(
+    return await evaluate(
       verb.code,
       createScriptContext({
         caller: freshPlayer,
@@ -102,12 +100,12 @@ describe("Player Commands", () => {
     );
   };
 
-  it("should look at room", () => {
-    runCommand("look", []);
+  it("should look at room", async () => {
+    await runCommand("look", []);
     expect(sentMessages[0]?.[0]?.name).toEqual(room["name"]);
   });
 
-  it("should inspect item", () => {
+  it("should inspect item", async () => {
     // Create item in room
     console.log("Creating Box...");
     const boxId = createEntity({ name: "Box", location: room.id });
@@ -120,14 +118,14 @@ describe("Player Commands", () => {
     freshRoom["contents"] = contents;
     updateEntity(freshRoom);
 
-    runCommand("look", ["Box"]);
+    await runCommand("look", ["Box"]);
     expect(sentMessages.length).toBeGreaterThan(0);
     expect(Array.isArray(sentMessages[0])).toBe(true);
     expect(sentMessages[0].length).toBeGreaterThan(0);
     expect(sentMessages[0][0].name).toEqual("Box");
   });
 
-  it("should check inventory", () => {
+  it("should check inventory", async () => {
     const backpackId = createEntity({
       name: "Leather Backpack",
       location: player.id,
@@ -140,31 +138,39 @@ describe("Player Commands", () => {
     freshPlayer["contents"] = contents;
     updateEntity(freshPlayer);
 
-    runCommand("inventory", []);
+    await runCommand("inventory", []);
     expect(sentMessages[0]?.[1]?.name).toEqual("Leather Backpack");
   });
 
-  it("should move", () => {
+  it("should move", async () => {
+    const entityBase = db
+      .query<{ id: number }, []>(
+        "SELECT id FROM entities WHERE json_extract(props, '$.name') = 'Entity Base'",
+      )
+      .get()!;
     // Create start room
-    const startRoomId = createEntity({ name: "Start Room" });
+    const startRoomId = createEntity({ name: "Start Room" }, entityBase.id);
     // Move player to start room
     updateEntity({ ...player, location: startRoomId });
     player["location"] = startRoomId;
     room = getEntity(startRoomId)!;
 
     // Create another room
-    const otherRoomId = createEntity({ name: "Other Room" });
+    const otherRoomId = createEntity({ name: "Other Room" }, entityBase.id);
     // Create exit
-    const exitId = createEntity({
-      name: "north",
-      location: startRoomId,
-      direction: "north",
-      destination: otherRoomId,
-    });
+    const exitId = createEntity(
+      {
+        name: "north",
+        location: startRoomId,
+        direction: "north",
+        destination: otherRoomId,
+      },
+      entityBase.id,
+    );
     // Update start room with exit
     updateEntity({ ...room, exits: [exitId] });
 
-    runCommand("move", ["north"]);
+    await runCommand("move", ["north"]);
 
     const updatedPlayer = getEntity(player.id)!;
     expect(updatedPlayer["location"]).toBe(otherRoomId);
@@ -177,8 +183,8 @@ describe("Player Commands", () => {
     expect(updateMsg![0].name).toBe("Other Room");
   });
 
-  it("should dig", () => {
-    runCommand("dig", ["south", "New Room"]);
+  it("should dig", async () => {
+    await runCommand("dig", ["south", "New Room"]);
 
     // Check if new room exists
     const newRoomId = db
@@ -193,8 +199,8 @@ describe("Player Commands", () => {
     expect(updatedPlayer["location"]).toBe(newRoomId);
   });
 
-  it("should create item", () => {
-    const id = runCommand("create", ["Rock"]);
+  it("should create item", async () => {
+    const id = await runCommand("create", ["Rock"]);
     expect(id, "create should return item id").toBeDefined();
     const createdRock = getEntity(id as number);
     expect(createdRock, "created item should exist").toBeDefined();
@@ -202,7 +208,7 @@ describe("Player Commands", () => {
     expect(roomUpdate, "created item should send room update").toBeDefined();
   });
 
-  it("should set property", () => {
+  it("should set property", async () => {
     const itemId = createEntity({
       name: "Stone",
       location: room.id,
@@ -214,7 +220,7 @@ describe("Player Commands", () => {
     room["contents"] = contents;
     updateEntity(room);
 
-    runCommand("set", ["Stone", "weight", 20]);
+    await runCommand("set", ["Stone", "weight", 20]);
 
     const updatedItem = getEntity(itemId)!;
     expect(updatedItem["weight"]).toBe(20);
@@ -270,7 +276,7 @@ describe("Recursive Move Check", () => {
     caller = getEntity(callerId)!;
   });
 
-  it("should prevent moving an entity into itself", () => {
+  it("should prevent moving an entity into itself", async () => {
     // 1. Create a Box
     const entityBase = db
       .query<{ id: number }, []>(
@@ -307,7 +313,7 @@ describe("Recursive Move Check", () => {
     const moveVerb = getVerb(box.id, "move");
     expect(moveVerb).toBeDefined();
 
-    evaluate(moveVerb!.code, ctx);
+    await evaluate(moveVerb!.code, ctx);
 
     // 4. Assert failure
     const updatedBox = getEntity(box.id)!;

@@ -1,6 +1,12 @@
 import { ScriptValue } from "./def";
 import { Entity } from "@viwo/shared/jsonrpc";
 
+let typecheck = true;
+
+export function setTypechecking(enabled: boolean) {
+  typecheck = enabled;
+}
+
 /**
  * Execution context for a script.
  * Contains the current state, variables, and environment.
@@ -243,7 +249,7 @@ export function evaluate<T>(
       let result: unknown;
       try {
         // Validate arguments
-        if (def.metadata.parameters) {
+        if (typecheck && def.metadata.parameters) {
           const params = def.metadata.parameters;
           const hasRest = params.some((p) => p.name.startsWith("..."));
           const minArgs = params.filter(
@@ -266,12 +272,22 @@ export function evaluate<T>(
           for (let i = 0; i < frame.args.length; i++) {
             const param =
               i < params.length ? params[i] : params[params.length - 1];
+            if (!param) {
+              throw new ScriptError(
+                `${frame.op}: expected at least ${params.length} arguments, got ${frame.args.length}`,
+              );
+            }
             // Handle rest param logic: if we are past the defined params, use the last one (which should be rest)
             // If the current param is rest, use it for all subsequent args
             const currentParam =
               param.name.startsWith("...") || i >= params.length
                 ? params[params.length - 1]
                 : param;
+            if (!currentParam) {
+              throw new ScriptError(
+                `${frame.op}: expected at least ${params.length} arguments, got ${frame.args.length}`,
+              );
+            }
 
             const arg = frame.args[i];
             const type = currentParam.type.replace("[]", ""); // Simple array check handling
@@ -466,7 +482,7 @@ async function handleAsyncResult(
 
       try {
         // Validate arguments
-        if (def.metadata.parameters) {
+        if (typecheck && def.metadata.parameters) {
           const params = def.metadata.parameters;
           const hasRest = params.some((p) => p.name.startsWith("..."));
           const minArgs = params.filter(
@@ -489,12 +505,22 @@ async function handleAsyncResult(
           for (let i = 0; i < frame.args.length; i++) {
             const param =
               i < params.length ? params[i] : params[params.length - 1];
+            if (!param) {
+              throw new ScriptError(
+                `${frame.op}: expected at least ${params.length} arguments, got ${frame.args.length}`,
+              );
+            }
             // Handle rest param logic: if we are past the defined params, use the last one (which should be rest)
             // If the current param is rest, use it for all subsequent args
             const currentParam =
               param.name.startsWith("...") || i >= params.length
                 ? params[params.length - 1]
                 : param;
+            if (!currentParam) {
+              throw new ScriptError(
+                `${frame.op}: expected at least ${params.length} arguments, got ${frame.args.length}`,
+              );
+            }
 
             const arg = frame.args[i];
             const type = currentParam.type.replace("[]", ""); // Simple array check handling
