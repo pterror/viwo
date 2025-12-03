@@ -75,7 +75,7 @@ The system is bootstrapped with several root capabilities:
   - **Params**: None (currently).
 - **`entity.control`**: Grants control over a specific entity (update props, delete, set prototype).
   - **Params**: `{ "target_id": number }` or `{ "*": true }`
-  - **Usage**: `target_id` restricts control to a single entity. `"*": true` grants control over ALL entities (superuser).
+  - **Usage**: `target_id` restricts control to a single entity. `"*": true` grants control over ALL entities (superuser/admin permissions).
 
 ## Subsystems
 
@@ -150,12 +150,35 @@ Currently, `entity.control` is the only capability in the `entity` namespace. Yo
 - **Future-proofing**: We may add other entity-related capabilities in the future, such as `entity.listen` (to eavesdrop on messages) or `entity.transfer` (if we separate ownership transfer from control).
 - **Clarity**: `control` alone is vague. `entity.control` explicitly states _what_ is being controlled.
 
-### What about `sys.admin`?
+### Sharing Access
 
-You may notice there is no `sys.admin` capability. Viwo separates administrative power into two layers:
+Since there is no `can_edit` verb or `permissions` property, sharing access to an entity requires **delegating** a capability.
 
-1.  **Kernel Level (`entity.control` \*)**: The ability to mutate the database state of any entity. This is the "Root" power held by the System entity.
-2.  **User Level (`admin` property)**: The `can_edit` verb checks for an `admin: true` property on the user entity. This allows trusted users to perform high-level actions (like `dig` or `edit`) without needing dangerous kernel capabilities.
+1.  **Owner** holds `entity.control` for their entity.
+2.  **Owner** calls `delegate` to create a restricted capability (e.g., specific to that entity).
+3.  **Owner** calls `give_capability` to transfer the new capability to another user.
+
+### Checking Capabilities
+
+To check if an entity has a specific capability, use the `has_capability` kernel opcode. This is useful for verbs that need to verify permissions before performing an action.
+
+```typescript
+// Check if the caller has control over the target entity
+if (Kernel.has_capability(caller, "entity.control", { target_id: target.id })) {
+  // Allow action
+} else {
+  // Deny action
+}
+```
+
+You can also check for wildcard capabilities:
+
+```typescript
+// Check if the caller has root control
+if (Kernel.has_capability(caller, "entity.control", { "*": true })) {
+  // Allow root action
+}
+```
 
 ### Plugin Capabilities
 

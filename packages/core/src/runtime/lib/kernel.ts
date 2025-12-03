@@ -183,3 +183,50 @@ export const give_capability = defineOpcode<[Capability | null, Entity], null>(
     },
   },
 );
+
+export const has_capability = defineOpcode<[Entity, string, object?], boolean>(
+  "has_capability",
+  {
+    metadata: {
+      label: "Has Capability",
+      category: "kernel",
+      description: "Check if an entity has a capability",
+      slots: [
+        { name: "Target", type: "block" },
+        { name: "Type", type: "string" },
+        { name: "Filter", type: "block" },
+      ],
+      parameters: [
+        { name: "target", type: "object" },
+        { name: "type", type: "string" },
+        { name: "filter", type: "object", optional: true },
+      ],
+      returnType: "boolean",
+    },
+    handler: ([target, type, filter = {}], _ctx) => {
+      if (!target || typeof target.id !== "number") {
+        throw new ScriptError("has_capability: expected target entity");
+      }
+
+      const caps = getCapabilities(target.id);
+      const match = caps.find((c) => {
+        if (c.type !== type) return false;
+
+        // Check for wildcard
+        if (c.params["*"] === true) return true;
+
+        // Check filter params
+        for (const [k, v] of Object.entries(
+          filter as Record<string, unknown>,
+        )) {
+          if (JSON.stringify(c.params[k]) !== JSON.stringify(v)) {
+            return false;
+          }
+        }
+        return true;
+      });
+
+      return !!match;
+    },
+  },
+);

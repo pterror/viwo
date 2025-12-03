@@ -4,18 +4,24 @@ import {
   evaluate,
   createScriptContext,
   registerLibrary,
-  ObjectLib,
+  ObjectLib as Object,
   ListLib as List,
 } from "@viwo/scripting";
 import { Entity } from "@viwo/shared/jsonrpc";
-import { createEntity, getEntity, addVerb, updateEntity } from "./repo";
+import {
+  createEntity,
+  getEntity,
+  addVerb,
+  updateEntity,
+  createCapability,
+} from "./repo";
 import { CoreLib, db } from ".";
 import * as KernelLib from "./runtime/lib/kernel";
 import { seed } from "./seed";
 
 describe("Mailbox Verification", () => {
   registerLibrary(Std);
-  registerLibrary(ObjectLib);
+  registerLibrary(Object);
   registerLibrary(List);
   registerLibrary(CoreLib);
   registerLibrary(KernelLib);
@@ -56,12 +62,10 @@ describe("Mailbox Verification", () => {
     const mailboxId = createEntity({
       name: "Receiver's Mailbox",
       owner: receiverId,
-      permissions: {
-        view: [receiverId], // Only receiver can view
-        enter: [], // No manual entry
-      },
     });
     mailbox = getEntity(mailboxId)!;
+    // Receiver gets control of mailbox
+    createCapability(receiverId, "entity.control", { target_id: mailboxId });
 
     // 3. Create Item to send
     const itemId = createEntity({
@@ -70,15 +74,16 @@ describe("Mailbox Verification", () => {
       location: senderId, // Held by sender
     });
     item = getEntity(itemId)!;
+    // Sender gets control of item
+    createCapability(senderId, "entity.control", { target_id: itemId });
   });
 
-  const check = (actor: Entity, target: Entity, type: string) => {
-    const callScript = CoreLib["call"](
-      CoreLib["entity"](system.id),
-      "can_edit",
+  const checkView = (actor: Entity, target: Entity) => {
+    // Check if actor has entity.control for target
+    const script = KernelLib["has_capability"](
       CoreLib["entity"](actor.id),
-      CoreLib["entity"](target.id),
-      type,
+      "entity.control",
+      Object["obj.new"](["target_id", target.id]),
     );
 
     const ctx = createScriptContext({
@@ -86,53 +91,53 @@ describe("Mailbox Verification", () => {
       this: system,
       args: [],
     });
-    return evaluate(callScript, ctx);
+    return evaluate(script, ctx);
   };
 
-  test("should deny view permission to sender", () => {
-    expect(check(sender, mailbox, "view")).toBe(false);
+  test("should deny view permission to sender", async () => {
+    expect(await checkView(sender, mailbox)).toBe(false);
   });
 
-  test("should allow view permission to receiver", () => {
-    expect(check(receiver, mailbox, "view")).toBe(true);
-  });
-
-  test("should deny manual move (enter) to mailbox", () => {
-    expect(check(sender, mailbox, "enter")).toBe(false);
+  test("should allow view permission to receiver", async () => {
+    expect(await checkView(receiver, mailbox)).toBe(true);
   });
 
   test("should allow deposit via give opcode", async () => {
     // Logic: Check owner, update location, update owner.
+    // NOTE: This logic assumes the 'give' verb handles the transfer logic
+    // which usually requires the GIVER to have control of the ITEM,
+    // and the RECEIVER (or destination) to accept it.
+    // For simplicity here, we'll assume 'give' just moves it if the giver owns the item.
 
     const giveVerb = Std["seq"](
       Std["let"]("item", Std["arg"](0)),
       Std["let"]("dest", Std["arg"](1)),
       Std["if"](
         BooleanLib["=="](
-          ObjectLib["obj.get"](Std["var"]("item"), "owner"),
-          ObjectLib["obj.get"](Std["caller"](), "id"),
+          Object["obj.get"](Std["var"]("item"), "owner"),
+          Object["obj.get"](Std["caller"](), "id"),
         ),
         Std["seq"](
           Std["let"](
             "newOwner",
-            ObjectLib["obj.get"](Std["var"]("dest"), "owner"),
+            Object["obj.get"](Std["var"]("dest"), "owner"),
           ),
           Std["let"](
             "cap",
             KernelLib["get_capability"](
               "entity.control",
-              ObjectLib["obj.new"]([
+              Object["obj.new"]([
                 "target_id",
-                ObjectLib["obj.get"](Std["var"]("item"), "id"),
+                Object["obj.get"](Std["var"]("item"), "id"),
               ]),
             ),
           ),
           CoreLib["set_entity"](
             Std["var"]("cap"),
-            ObjectLib["obj.merge"](
+            Object["obj.merge"](
               Std["var"]("item"),
-              ObjectLib["obj.new"](
-                ["location", ObjectLib["obj.get"](Std["var"]("dest"), "id")],
+              Object["obj.new"](
+                ["location", Object["obj.get"](Std["var"]("dest"), "id")],
                 ["owner", Std["var"]("newOwner")],
               ),
             ),
@@ -166,24 +171,20 @@ describe("Mailbox Verification", () => {
     expect(updatedItem["owner"]).toBe(receiver.id);
   });
 
-  test("should hide contents from sender", () => {
-    // Simulate a 'look' that respects permissions.
-
+  test("should hide contents from sender", async () => {
+    // Simulate a 'look' that respects permissions (needs capability).
     const lookVerb = Std["seq"](
       Std["let"]("target", Std["arg"](0)),
       Std["if"](
-        CoreLib["call"](
-          CoreLib["entity"](system.id),
-          "can_edit",
+        KernelLib["has_capability"](
           Std["caller"](),
-          Std["var"]("target"),
-          "view",
+          "entity.control",
+          Object["obj.new"]([
+            "target_id",
+            Object["obj.get"](Std["var"]("target"), "id"),
+          ]),
         ),
-        ObjectLib["obj.get"](
-          Std["var"]("target"),
-          "contents",
-          List["list.new"](),
-        ),
+        Object["obj.get"](Std["var"]("target"), "contents", List["list.new"]()),
         List["list.new"](),
       ),
     );
@@ -202,26 +203,23 @@ describe("Mailbox Verification", () => {
       args: [],
     });
 
-    const contents = evaluate(callLook, ctx);
+    const contents = await evaluate(callLook, ctx);
     expect(contents).toEqual([]);
   });
 
-  test("should show contents to receiver", () => {
+  test("should show contents to receiver", async () => {
     const lookVerb = Std["seq"](
       Std["let"]("target", Std["arg"](0)),
       Std["if"](
-        CoreLib["call"](
-          CoreLib["entity"](system.id),
-          "can_edit",
+        KernelLib["has_capability"](
           Std["caller"](),
-          Std["var"]("target"),
-          "view",
+          "entity.control",
+          Object["obj.new"]([
+            "target_id",
+            Object["obj.get"](Std["var"]("target"), "id"),
+          ]),
         ),
-        ObjectLib["obj.get"](
-          Std["var"]("target"),
-          "contents",
-          List["list.new"](),
-        ),
+        Object["obj.get"](Std["var"]("target"), "contents", List["list.new"]()),
         List["list.new"](),
       ),
     );
@@ -249,7 +247,7 @@ describe("Mailbox Verification", () => {
       contents: [...currentContents, item.id],
     });
 
-    const contents = evaluate(callLook, ctx);
+    const contents = await evaluate(callLook, ctx);
     expect(contents).toContain(item.id);
   });
 });

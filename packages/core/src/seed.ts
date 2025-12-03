@@ -78,89 +78,6 @@ export function seed() {
 
   addVerb(
     systemId,
-    "can_edit",
-    Std["seq"](
-      Std["let"]("actor", Std["arg"](0)),
-      Std["let"]("target", Std["arg"](1)),
-      Std["let"]("type", Std["arg"](2)),
-      Std["let"]("allowed", false),
-
-      // 1. Admin Check
-      Std["if"](
-        Object["obj.get"](Std["var"]("actor"), "admin", false),
-        Std["set"]("allowed", true),
-      ),
-
-      // 2. Owner Check
-      Std["if"](
-        Boolean["=="](
-          Object["obj.get"](Std["var"]("target"), "owner", null),
-          Object["obj.get"](Std["var"]("actor"), "id", null),
-        ),
-        Std["set"]("allowed", true),
-      ),
-
-      // 3. Explicit Permissions
-      Std["let"](
-        "perms",
-        Object["obj.get"](Std["var"]("target"), "permissions", null),
-      ),
-      Std["if"](
-        Std["var"]("perms"),
-        Std["seq"](
-          Std["let"](
-            "explicit",
-            Object["obj.get"](Std["var"]("perms"), Std["var"]("type"), null),
-          ),
-          // Public check
-          Std["if"](
-            Boolean["=="](Std["var"]("explicit"), true),
-            Std["set"]("allowed", true),
-          ),
-          // List check
-          Std["if"](
-            Boolean["=="](Std["typeof"](Std["var"]("explicit")), "array"),
-            Std["if"](
-              List["list.includes"](
-                Std["var"]("explicit"),
-                Object["obj.get"](Std["var"]("actor"), "id", null),
-              ),
-              Std["set"]("allowed", true),
-            ),
-          ),
-        ),
-      ),
-
-      // 4. Cascading (Location Owner)
-      Std["if"](
-        Boolean["not"](Std["var"]("allowed")),
-        Std["seq"](
-          Std["let"](
-            "locId",
-            Object["obj.get"](Std["var"]("target"), "location", null),
-          ),
-          Std["if"](
-            Std["var"]("locId"),
-            Std["seq"](
-              Std["let"]("loc", Core["entity"](Std["var"]("locId"))),
-              Std["if"](
-                Boolean["=="](
-                  Object["obj.get"](Std["var"]("loc"), "owner", null),
-                  Object["obj.get"](Std["var"]("actor"), "id", null),
-                ),
-                Std["set"]("allowed", true),
-              ),
-            ),
-          ),
-        ),
-      ),
-
-      Std["var"]("allowed"),
-    ),
-  );
-
-  addVerb(
-    systemId,
     "get_available_verbs",
     Std["seq"](
       Std["let"]("player", Std["arg"](0)),
@@ -989,57 +906,44 @@ export function seed() {
           Std["if"](
             Std["var"]("targetId"),
             Std["seq"](
-              Std["if"](
-                Core["call"](
-                  Core["entity"](systemId),
-                  "can_edit",
-                  Std["caller"](),
-                  Core["entity"](Std["var"]("targetId")),
-                  "edit",
+              Std["seq"](
+                // Get Capability
+                Std["let"](
+                  "controlCap",
+                  Kernel["get_capability"](
+                    "entity.control",
+                    Object["obj.new"](["target_id", Std["var"]("targetId")]),
+                  ),
                 ),
-                Std["seq"](
-                  // Get Capability
-                  Std["let"](
+                Std["if"](
+                  Boolean["not"](Std["var"]("controlCap")),
+                  Std["set"](
                     "controlCap",
                     Kernel["get_capability"](
                       "entity.control",
-                      Object["obj.new"](["target_id", Std["var"]("targetId")]),
-                    ),
-                  ),
-                  Std["if"](
-                    Boolean["not"](Std["var"]("controlCap")),
-                    Std["set"](
-                      "controlCap",
-                      Kernel["get_capability"](
-                        "entity.control",
-                        Object["obj.new"](["*", true]),
-                      ),
-                    ),
-                  ),
-                  Std["if"](
-                    Std["var"]("controlCap"),
-                    Std["seq"](
-                      Core["set_entity"](
-                        Std["var"]("controlCap"),
-                        Object["obj.merge"](
-                          Core["entity"](Std["var"]("targetId")),
-                          Object["obj.new"]([
-                            Std["var"]("propName"),
-                            Std["var"]("value"),
-                          ]),
-                        ),
-                      ),
-                      Std["send"]("message", "Property set."),
-                    ),
-                    Std["send"](
-                      "message",
-                      "You do not have permission to modify this object.",
+                      Object["obj.new"](["*", true]),
                     ),
                   ),
                 ),
-                Std["send"](
-                  "message",
-                  "You do not have permission to edit this object.",
+                Std["if"](
+                  Std["var"]("controlCap"),
+                  Std["seq"](
+                    Core["set_entity"](
+                      Std["var"]("controlCap"),
+                      Object["obj.merge"](
+                        Core["entity"](Std["var"]("targetId")),
+                        Object["obj.new"]([
+                          Std["var"]("propName"),
+                          Std["var"]("value"),
+                        ]),
+                      ),
+                    ),
+                    Std["send"]("message", "Property set."),
+                  ),
+                  Std["send"](
+                    "message",
+                    "You do not have permission to modify this object.",
+                  ),
                 ),
               ),
             ),

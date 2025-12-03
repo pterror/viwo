@@ -4,132 +4,147 @@ import {
   createScriptContext,
   registerLibrary,
   StdLib as Std,
-  ObjectLib,
+  ObjectLib as Object,
   ListLib as List,
+  BooleanLib as Boolean,
 } from "@viwo/scripting";
 import { Entity } from "@viwo/shared/jsonrpc";
-import { createEntity, getEntity } from "./repo";
+import { createEntity, getEntity, createCapability } from "./repo";
 import { CoreLib, db } from ".";
 import { seed } from "./seed";
+import * as Kernel from "./runtime/lib/kernel";
 
-describe("Scripted Permissions", () => {
+describe("Capability Permissions", () => {
   registerLibrary(Std);
-  registerLibrary(ObjectLib);
+  registerLibrary(Object);
   registerLibrary(List);
+  registerLibrary(Kernel);
+  registerLibrary(CoreLib);
 
   let owner: Entity;
   let other: Entity;
   let admin: Entity;
   let item: Entity;
-  let unownedItem: Entity;
-  let publicItem: Entity;
-  let sharedItem: Entity;
-  let system: Entity;
-  // let room: Entity;
 
   beforeEach(() => {
     // Reset DB state
     db.query("DELETE FROM entities").run();
     db.query("DELETE FROM verbs").run();
+    db.query("DELETE FROM capabilities").run();
     db.query("DELETE FROM sqlite_sequence").run();
 
     // Seed (creates base entities)
     seed();
 
-    // Get System Entity
-    const systemRes = db
-      .query<Entity, []>(
-        "SELECT * FROM entities WHERE json_extract(props, '$.name') = 'System'",
-      )
-      .get();
-    if (!systemRes) throw new Error("System entity not found");
-    system = getEntity(systemRes.id)!;
-
     // Create Test Entities
     const ownerId = createEntity({ name: "Owner" });
     owner = getEntity(ownerId)!;
+    // Owner gets control of themselves (normally handled by create opcode, but we're using repo directly)
+    createCapability(ownerId, "entity.control", { target_id: ownerId });
 
     const otherId = createEntity({ name: "Other" });
     other = getEntity(otherId)!;
 
-    const adminId = createEntity({ name: "Admin", admin: true });
+    const adminId = createEntity({ name: "Admin" });
     admin = getEntity(adminId)!;
-
-    const roomId = createEntity({ name: "Room", owner: ownerId });
-    // room = getEntity(roomId)!;
+    // Admin gets wildcard control
+    createCapability(adminId, "entity.control", { "*": true });
 
     const itemId = createEntity({
       name: "Item",
       owner: ownerId,
-      location: roomId,
     });
     item = getEntity(itemId)!;
-
-    const unownedItemId = createEntity({
-      name: "Unowned Item",
-      owner: null,
-      location: roomId,
-    });
-    unownedItem = getEntity(unownedItemId)!;
-
-    const publicItemId = createEntity({
-      name: "Public Item",
-      owner: ownerId,
-      permissions: { edit: true },
-    });
-    publicItem = getEntity(publicItemId)!;
-
-    const sharedItemId = createEntity({
-      name: "Shared Item",
-      owner: ownerId,
-      permissions: { edit: [otherId] },
-    });
-    sharedItem = getEntity(sharedItemId)!;
+    // Give owner control of item
+    createCapability(ownerId, "entity.control", { target_id: itemId });
   });
 
-  const check = (actor: Entity, target: Entity, type: string) => {
-    // Construct a script to call sys.can_edit(actor, target, type)
-    const callScript = CoreLib["call"](
-      CoreLib["entity"](system.id),
-      "can_edit",
-      CoreLib["entity"](actor.id),
-      CoreLib["entity"](target.id),
-      type,
+  const tryRename = (actor: Entity, target: Entity, newName: string) => {
+    // Script to rename entity:
+    // set_entity(get_capability("entity.control", { target_id: target.id }), target, { name: newName })
+    const script = Std["seq"](
+      Std["let"](
+        "cap",
+        Kernel["get_capability"](
+          "entity.control",
+          Object["obj.new"](["target_id", target.id]),
+        ),
+      ),
+      // If no specific cap, try wildcard (for admin)
+      Std["if"](
+        Boolean["not"](Std["var"]("cap")),
+        Std["set"](
+          "cap",
+          Kernel["get_capability"](
+            "entity.control",
+            Object["obj.new"](["*", true]),
+          ),
+        ),
+      ),
+      CoreLib["set_entity"](
+        Std["var"]("cap"),
+        Object["obj.set"](CoreLib["entity"](target.id), "name", newName),
+      ),
     );
 
     const ctx = createScriptContext({
       caller: actor,
-      this: system,
+      this: actor,
       args: [],
     });
-    return evaluate(callScript, ctx);
+    return evaluate(script, ctx);
   };
 
-  test("Admin Access", () => {
-    expect(check(admin, item, "edit")).toBe(true);
+  test("Admin Access (Wildcard)", async () => {
+    await tryRename(admin, item, "Admin Renamed");
+    const updated = getEntity(item.id)!;
+    expect(updated["name"]).toBe("Admin Renamed");
   });
 
-  test("Owner Access", () => {
-    expect(check(owner, item, "edit")).toBe(true);
-    expect(check(other, item, "edit")).toBe(false);
+  test("Owner Access", async () => {
+    await tryRename(owner, item, "Owner Renamed");
+    const updated = getEntity(item.id)!;
+    expect(updated["name"]).toBe("Owner Renamed");
   });
 
-  test("Public Access", () => {
-    expect(check(other, publicItem, "edit")).toBe(true);
+  test("Other Access (Denied)", async () => {
+    expect(tryRename(other, item, "Hacked")).rejects.toThrow();
   });
 
-  test("Shared Access", () => {
-    expect(check(other, sharedItem, "edit")).toBe(true);
-    expect(check(admin, sharedItem, "edit")).toBe(true); // Admin still works
-    // Create a third user
-    const thirdId = createEntity({ name: "Third" });
-    const third = getEntity(thirdId)!;
-    expect(check(third, sharedItem, "edit")).toBe(false);
-  });
+  test("Delegation (Sharing Access)", async () => {
+    // 1. Owner delegates control to Other
+    // Script:
+    // let cap = get_capability("entity.control", { target_id: item.id })
+    // let newCap = delegate(cap, {})
+    // give_capability(newCap, other)
+    const delegateScript = Std["seq"](
+      Std["let"](
+        "cap",
+        Kernel["get_capability"](
+          "entity.control",
+          Object["obj.new"](["target_id", item.id]),
+        ),
+      ),
+      Std["let"](
+        "newCap",
+        Kernel["delegate"](Std["var"]("cap"), Object["obj.new"]()),
+      ),
+      Kernel["give_capability"](
+        Std["var"]("newCap"),
+        CoreLib["entity"](other.id),
+      ),
+    );
 
-  test("Cascading Access", () => {
-    // Unowned item in room owned by owner
-    expect(check(owner, unownedItem, "edit")).toBe(true);
-    expect(check(other, unownedItem, "edit")).toBe(false);
+    const ctx = createScriptContext({
+      caller: owner,
+      this: owner,
+      args: [],
+    });
+    await evaluate(delegateScript, ctx);
+
+    // 2. Other tries to rename
+    await tryRename(other, item, "Shared Renamed");
+    const updated = getEntity(item.id)!;
+    expect(updated["name"]).toBe("Shared Renamed");
   });
 });
