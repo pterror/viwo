@@ -13,6 +13,26 @@ export function compile(script: ScriptValue<any>): (ctx: ScriptContext) => any {
   // We also need 'ScriptError' and 'BreakSignal' available for throwing/catching.
   const body = `
     return function(ctx) {
+      function enterScope(ctx) {
+        const snapshot = { vars: ctx.vars, cow: ctx.cow };
+        ctx.cow = true;
+        return snapshot;
+      }
+      function exitScope(ctx, snapshot) {
+        ctx.vars = snapshot.vars;
+        ctx.cow = snapshot.cow;
+      }
+      function setVar(ctx, name, value) {
+        let scope = ctx.vars;
+        while (scope) {
+          if (Object.prototype.hasOwnProperty.call(scope, name)) {
+            scope[name] = value;
+            return;
+          }
+          scope = Object.getPrototypeOf(scope);
+        }
+      }
+
       try {
         ${code.startsWith("return") ? code : "return " + code};
       } catch (e) {
@@ -105,8 +125,13 @@ function compileSeq(args: any[]): string {
   const last = statements.pop();
 
   return `(() => {
-    ${statements.map((s) => s + ";").join("\n")}
-    return ${last};
+    const snapshot = enterScope(ctx);
+    try {
+      ${statements.map((s) => s + ";").join("\n")}
+      return ${last};
+    } finally {
+      exitScope(ctx, snapshot);
+    }
   })()`;
 }
 
@@ -122,6 +147,7 @@ function compileWhile(args: any[]): string {
   return `(() => {
     let result = null;
     while (${compileNode(cond)}) {
+      const snapshot = enterScope(ctx);
       try {
         result = ${compileNode(body)};
       } catch (e) {
@@ -129,6 +155,8 @@ function compileWhile(args: any[]): string {
           return e.value ?? result;
         }
         throw e;
+      } finally {
+        exitScope(ctx, snapshot);
       }
     }
     return result;
@@ -142,7 +170,11 @@ function compileFor(args: any[]): string {
     let result = null;
     if (Array.isArray(list)) {
       for (const item of list) {
-        ctx.vars = ctx.vars || {};
+        const snapshot = enterScope(ctx);
+        if (ctx.cow) {
+          ctx.vars = Object.create(ctx.vars);
+          ctx.cow = false;
+        }
         ctx.vars[${JSON.stringify(varName)}] = item;
         try {
           result = ${compileNode(body)};
@@ -151,6 +183,8 @@ function compileFor(args: any[]): string {
             return e.value ?? result;
           }
           throw e;
+        } finally {
+          exitScope(ctx, snapshot);
         }
       }
     }
@@ -163,6 +197,10 @@ function compileLet(args: any[]): string {
   return `(() => {
     const val = ${compileNode(val)};
     ctx.vars = ctx.vars || {};
+    if (ctx.cow) {
+      ctx.vars = Object.create(ctx.vars);
+      ctx.cow = false;
+    }
     ctx.vars[${JSON.stringify(name)}] = val;
     return val;
   })()`;
@@ -177,8 +215,8 @@ function compileSet(args: any[]): string {
   const [name, val] = args;
   return `(() => {
     const val = ${compileNode(val)};
-    if (ctx.vars && ${JSON.stringify(name)} in ctx.vars) {
-      ctx.vars[${JSON.stringify(name)}] = val;
+    if (ctx.vars) {
+      setVar(ctx, ${JSON.stringify(name)}, val);
     }
     return val;
   })()`;
@@ -250,6 +288,10 @@ function compileTry(args: any[]): string {
     } catch (e) {
       if (${JSON.stringify(errorVar)}) {
         ctx.vars = ctx.vars || {};
+        if (ctx.cow) {
+          ctx.vars = Object.create(ctx.vars);
+          ctx.cow = false;
+        }
         ctx.vars[${JSON.stringify(errorVar)}] = e.message || String(e);
       }
       return ${compileNode(catchBlock)};
@@ -334,13 +376,18 @@ function compileOpcodeCall(op: string, args: any[]): string {
   }
 
   // Generic fallback for other opcodes (including dynamically added ones)
+  const def = OPS[op];
+  if (!def) throw new ScriptError("Unknown opcode: " + op);
+
+  if (def.metadata.lazy) {
+    // For lazy opcodes, pass arguments as raw AST (unevaluated)
+    return `OPS[${JSON.stringify(op)}].handler(${JSON.stringify(args)}, ctx)`;
+  }
+
   // We evaluate arguments, wrap arrays in "quote", and call the handler.
   return `(() => {
     const args = [${args.map(compileNode).join(", ")}];
     const wrappedArgs = args.map(a => Array.isArray(a) ? ["quote", a] : a);
-    if (!OPS[${JSON.stringify(
-      op,
-    )}]) throw new ScriptError("Unknown opcode: " + ${JSON.stringify(op)});
     return OPS[${JSON.stringify(op)}].handler(wrappedArgs, ctx);
   })()`;
 }
