@@ -1,0 +1,25 @@
+{
+  "name": "@viwo/plugin-memory",
+  "version": "0.0.0",
+  "module": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsgo --noEmit",
+    "lint": "oxlint",
+    "format": "oxfmt",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@viwo/core": "workspace:*",
+    "@viwo/plugin-vector": "workspace:*",
+    "@viwo/plugin-ai": "workspace:*"
+  },
+  "devDependencies": {
+    "bun-types": "latest",
+    "@typescript/native-preview": "latest",
+    "@tsconfig/strictest": "^2.0.8"
+  }
+}

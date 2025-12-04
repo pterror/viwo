@@ -1,5 +1,5 @@
 import { Plugin, PluginContext, CommandContext } from "@viwo/core";
-import { generateText, generateObject } from "ai";
+import { generateText, generateObject, embed } from "ai";
 import { z } from "zod";
 
 export interface GenerationTemplate<T = any> {
@@ -398,5 +398,14 @@ Keep your response short and in character.`,
       ),
     };
     return withContents;
+  }
+
+  async getEmbedding(text: string): Promise<number[]> {
+    const model = await getModel("openai:text-embedding-3-small");
+    const { embedding } = await embed({
+      model,
+      value: text,
+    });
+    return embedding;
   }
 }

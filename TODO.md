@@ -22,7 +22,7 @@
 ## 4. Knowledge & Productivity (Notion)
 
 - [x] **Vector Plugin**: Core integration with `sqlite-vec` for semantic search.
-- [ ] **Graph Queries**: Standard library functions for traversing entity relationships (backlinks, children, parents).
+- [ ] **Graph Queries**: Standard library functions for traversing entity relationships (backlinks, children, parents). (Status: Deferred, awaiting further design. We do not want to have a single fixed schema.)
 - [ ] **Wiki Features**: Bi-directional linking, revision history, and transclusion support.
 - [ ] **Custom Views**: Support for defining custom DB views/indexes for performance.
 

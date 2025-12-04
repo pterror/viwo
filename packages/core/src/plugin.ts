@@ -57,11 +57,11 @@ export interface PluginContext {
     method: string,
     handler: (params: any, ctx: CommandContext) => Promise<any>,
   ) => void;
+  /** Gets a currently active plugin by name. */
+  getPlugin: (name: string) => Plugin | undefined;
 }
 
-/**
- * Manages the lifecycle of plugins and delegates commands to them.
- */
+/** Manages the lifecycle of plugins and delegates commands to them. */
 export class PluginManager {
   private plugins: Map<string, Plugin> = new Map();
   private commands: Map<string, (ctx: CommandContext) => void | Promise<void>> = new Map();
@@ -85,6 +85,7 @@ export class PluginManager {
         console.log(`Plugin '${plugin.name}' registered RPC method: ${method}`);
         this.rpcMethods.set(method, handler);
       },
+      getPlugin: (name) => this.plugins.get(name),
     };
 
     await plugin.onLoad(context);
