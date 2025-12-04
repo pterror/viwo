@@ -195,9 +195,9 @@ export const and = defineOpcode<[boolean, boolean, ...boolean[]], boolean>("and"
       { name: "B", type: "block" },
     ],
     parameters: [
-      { name: "a", type: "any" },
-      { name: "b", type: "any" },
-      { name: "...args", type: "any[]" },
+      { name: "a", type: "boolean" },
+      { name: "b", type: "boolean" },
+      { name: "...args", type: "boolean[]" },
     ],
     returnType: "boolean",
     lazy: true,
@@ -226,9 +226,7 @@ export const and = defineOpcode<[boolean, boolean, ...boolean[]], boolean>("and"
   },
 });
 
-/**
- * Logical OR.
- */
+/** Logical OR. */
 export const or = defineOpcode<[boolean, boolean, ...boolean[]], boolean>("or", {
   metadata: {
     label: "Or",
@@ -240,9 +238,9 @@ export const or = defineOpcode<[boolean, boolean, ...boolean[]], boolean>("or", 
       { name: "B", type: "block" },
     ],
     parameters: [
-      { name: "a", type: "any" },
-      { name: "b", type: "any" },
-      { name: "...args", type: "any[]" },
+      { name: "a", type: "boolean" },
+      { name: "b", type: "boolean" },
+      { name: "...args", type: "boolean[]" },
     ],
     returnType: "boolean",
     lazy: true,

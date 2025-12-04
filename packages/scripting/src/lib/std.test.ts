@@ -1,6 +1,10 @@
 import { expect, beforeEach, mock } from "bun:test";
 import { createLibraryTester } from "./test-utils";
-import { createScriptContext, registerLibrary, ScriptContext } from "../interpreter";
+import {
+  createScriptContext,
+  registerLibrary,
+  ScriptContext,
+} from "../interpreter";
 import { evaluate } from "../interpreter";
 import * as Std from "./std";
 import * as List from "./list";
@@ -84,7 +88,10 @@ createLibraryTester(Std, "Core Library", (test) => {
     const localCtx = { ...ctx, locals: {} };
     evaluate(Std.let("i", 0), localCtx);
     evaluate(
-      Std.while(Boolean.lt(Std.var("i"), 3), Std.set("i", Math.add(Std.var("i"), 1))),
+      Std.while(
+        Boolean.lt(Std.var("i"), 3),
+        Std.set("i", Math.add(Std.var("i"), 1)),
+      ),
       localCtx,
     );
     expect(evaluate(Std.var("i"), localCtx)).toBe(3);
@@ -94,7 +101,11 @@ createLibraryTester(Std, "Core Library", (test) => {
     const localCtx = { ...ctx, locals: {} };
     evaluate(Std.let("sum", 0), localCtx);
     evaluate(
-      Std.for("x", List.listNew(1, 2, 3), Std.set("sum", Math.add(Std.var("sum"), Std.var("x")))),
+      Std.for(
+        "x",
+        List.listNew(1, 2, 3),
+        Std.set("sum", Math.add(Std.var("sum"), Std.var("x"))),
+      ),
       localCtx,
     );
     expect(evaluate(Std.var("sum"), localCtx)).toBe(6);
@@ -102,14 +113,14 @@ createLibraryTester(Std, "Core Library", (test) => {
 
   // Data Structures
   test("json.stringify", () => {
-    expect(evaluate(Std["json.stringify"]({ a: 1 }), ctx)).toBe('{"a":1}');
+    expect(evaluate(Std.jsonStringify({ a: 1 }), ctx)).toBe('{"a":1}');
   });
 
   test("json.parse", () => {
-    expect(evaluate(Std["json.parse"]('{"a":1}'), ctx)).toEqual({
+    expect(evaluate(Std.jsonParse('{"a":1}'), ctx)).toEqual({
       a: 1,
     });
-    expect(evaluate(Std["json.parse"]("invalid"), ctx)).toBe(null);
+    expect(evaluate(Std.jsonParse("invalid"), ctx)).toBe(null);
   });
 
   // Variables
@@ -168,7 +179,9 @@ createLibraryTester(Std, "Core Library", (test) => {
   });
 
   test("try", () => {
-    expect(evaluate(Std.try(Std.throw("oops"), "err", Std.var("err")), ctx)).toBe("oops");
+    expect(
+      evaluate(Std.try(Std.throw("oops"), "err", Std.var("err")), ctx),
+    ).toBe("oops");
 
     expect(evaluate(Std.try(123, "err", 456), ctx)).toBe(123);
   });

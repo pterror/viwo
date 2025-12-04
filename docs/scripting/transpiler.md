@@ -9,7 +9,7 @@ import { transpile } from "@viwo/scripting";
 
 const code = `
   let x = 10;
-  log("Value:", x);
+  console.log("Value:", x);
 `;
 
 const script = transpile(code);

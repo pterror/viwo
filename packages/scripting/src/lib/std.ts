@@ -1,4 +1,5 @@
-import { evaluate, ScriptError, defineOpcode, ScriptRaw } from "../index";
+import { evaluate, ScriptError } from "../interpreter";
+import { defineOpcode, ScriptRaw } from "../def";
 import { Entity } from "@viwo/shared/jsonrpc";
 
 // Values
@@ -86,7 +87,7 @@ export const seq = defineOpcode<unknown[], any>("seq", {
 /**
  * Conditional execution.
  */
-const ifOp = defineOpcode<[boolean, unknown, unknown?], any>("if", {
+const if_ = defineOpcode<[boolean, unknown, unknown?], any>("if", {
   metadata: {
     label: "If",
     category: "logic",
@@ -123,12 +124,12 @@ const ifOp = defineOpcode<[boolean, unknown, unknown?], any>("if", {
     return runBranch(condResult as boolean);
   },
 });
-export { ifOp as if };
+export { if_ as if };
 
 /**
  * Repeats a body while a condition is true.
  */
-const whileOp = defineOpcode<[boolean, unknown], any>("while", {
+const while_ = defineOpcode<[boolean, unknown], any>("while", {
   metadata: {
     label: "While",
     category: "logic",
@@ -185,12 +186,12 @@ const whileOp = defineOpcode<[boolean, unknown], any>("while", {
     return loop();
   },
 });
-export { whileOp as while };
+export { while_ as while };
 
 /**
  * Iterates over a list.
  */
-const forOp = defineOpcode<[string, readonly unknown[], unknown], any>("for", {
+const for_ = defineOpcode<[string, readonly unknown[], unknown], any>("for", {
   metadata: {
     label: "For Loop",
     category: "logic",
@@ -244,13 +245,11 @@ const forOp = defineOpcode<[string, readonly unknown[], unknown], any>("for", {
     return runLoop(listResult as any[]);
   },
 });
-export { forOp as for };
+export { for_ as for };
 
 // Data Structures
-/**
- * Converts a value to a JSON string.
- */
-const jsonStringify = defineOpcode<[unknown], string>("json.stringify", {
+/** Converts a value to a JSON string. */
+export const jsonStringify = defineOpcode<[unknown], string>("json.stringify", {
   metadata: {
     label: "JSON Stringify",
     category: "data",
@@ -263,12 +262,9 @@ const jsonStringify = defineOpcode<[unknown], string>("json.stringify", {
     return JSON.stringify(val);
   },
 });
-export { jsonStringify as "json.stringify" };
 
-/**
- * Parses a JSON string into a value.
- */
-const jsonParse = defineOpcode<[string], unknown>("json.parse", {
+/** Parses a JSON string into a value. */
+export const jsonParse = defineOpcode<[string], unknown>("json.parse", {
   metadata: {
     label: "JSON Parse",
     category: "data",
@@ -285,12 +281,9 @@ const jsonParse = defineOpcode<[string], unknown>("json.parse", {
     }
   },
 });
-export { jsonParse as "json.parse" };
 
-/**
- * Returns the type of a value.
- */
-export const typeof_ = defineOpcode<
+/** Returns the type of a value. */
+const typeof_ = defineOpcode<
   [unknown],
   "string" | "number" | "boolean" | "object" | "null" | "array"
 >("typeof", {
@@ -311,10 +304,8 @@ export const typeof_ = defineOpcode<
 export { typeof_ as typeof };
 
 // Variables
-/**
- * Defines a local variable in the current scope.
- */
-const letOp = defineOpcode<[string, unknown], any>("let", {
+/** Defines a local variable in the current scope. */
+const let_ = defineOpcode<[string, unknown], any>("let", {
   metadata: {
     label: "Let",
     category: "logic",
@@ -335,11 +326,9 @@ const letOp = defineOpcode<[string, unknown], any>("let", {
     return value;
   },
 });
-export { letOp as "let" };
+export { let_ as let };
 
-/**
- * Retrieves the value of a variable.
- */
+/** Retrieves the value of a variable. */
 const var_ = defineOpcode<[string], any>("var", {
   metadata: {
     label: "Get Var",

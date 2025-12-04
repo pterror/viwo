@@ -22,7 +22,11 @@
     "lint": "oxlint",
     "format": "oxfmt",
     "build:docs": "bun --filter @viwo/docs build && bun --filter @viwo/playground build && cp -r apps/playground/dist docs/.vitepress/dist/playground",
-    "preview:docs": "bun --filter @viwo/docs preview"
+    "preview:docs": "bun --filter @viwo/docs preview",
+    "prepare": "bun x simple-git-hooks"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "bun --filter @viwo/scripting generate:types && git add packages/scripting/src/types.ts"
   },
   "devDependencies": {
     "@tsconfig/strictest": "^2.0.8",

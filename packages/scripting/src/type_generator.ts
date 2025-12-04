@@ -33,11 +33,27 @@ export const RESERVED_TYPESCRIPT_KEYWORDS = new Set([
   "interface",
   "enum",
   "namespace",
+  "typeof",
 ]);
+
+const OPERATOR_MAP: Record<string, string> = {
+  "+": "add",
+  "-": "sub",
+  "*": "mul",
+  "/": "div",
+  "%": "mod",
+  "^": "pow",
+  "==": "eq",
+  "!=": "neq",
+  ">": "gt",
+  "<": "lt",
+  ">=": "gte",
+  "<=": "lte",
+};
 
 export function generateTypeDefinitions(opcodes: OpcodeMetadata[]): string {
   let definitions = `\
-interface Entity {
+export interface Entity {
   /** Unique ID of the entity */
   id: number;
   /**
@@ -50,7 +66,7 @@ interface Entity {
 /**
  * Represents a scriptable action (verb) attached to an entity.
  */
-interface Verb {
+export interface Verb {
   id: number;
   entity_id: number;
   /** The name of the verb (command) */
@@ -61,11 +77,44 @@ interface Verb {
   permissions: Record<string, unknown>;
 }
 
-// Standard library functions
-interface Capability {
+export interface Capability {
   readonly __brand: "Capability";
   readonly id: string;
 }
+
+type UnknownUnion =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | Capability
+  | (Record<string, unknown> & { readonly length?: never })
+  | (Record<string, unknown> & { readonly slice?: never });
+
+export type ScriptValue_<T> = Exclude<T, readonly unknown[]>;
+
+/**
+ * Represents a value in the scripting language.
+ * Can be a primitive, an object, or a nested S-expression (array).
+ */
+export type ScriptValue<T> =
+  | (unknown extends T
+      ? ScriptValue_<UnknownUnion>
+      : object extends T
+        ? Extract<ScriptValue_<UnknownUnion>, object>
+        : ScriptValue_<T>)
+  | ScriptExpression<any[], T>;
+
+// Phantom type for return type safety
+export type ScriptExpression<Args extends (string | ScriptValue_<unknown>)[], Ret> = [
+  string,
+  ...Args,
+] & {
+  __returnType: Ret;
+};
+
+// Standard library functions
 `;
 
   const rootNamespace: Record<string, any> = {};
@@ -85,7 +134,13 @@ interface Capability {
       const name = parts[parts.length - 1];
       current["_funcs"] ??= [];
 
-      const params = op.parameters?.map((p) => `${p.name}: ${p.type}`).join(", ") ?? "";
+      const params =
+        op.parameters
+          ?.map((p) => {
+            const paramName = RESERVED_TYPESCRIPT_KEYWORDS.has(p.name) ? `${p.name}_` : p.name;
+            return `${paramName}: ${p.type}`;
+          })
+          .join(", ") ?? "";
       const ret = op.returnType ?? "any";
       const sanitizedName = RESERVED_TYPESCRIPT_KEYWORDS.has(name!) ? `${name}_` : name;
       const generics = op.genericParameters?.length ? `<${op.genericParameters.join(", ")}>` : "";
@@ -93,18 +148,28 @@ interface Capability {
       current["_funcs"].push(`function ${sanitizedName}${generics}(${params}): ${ret};`);
     } else {
       // Global function
-      const params = op.parameters?.map((p) => `${p.name}: ${p.type}`).join(", ") ?? "";
+      const params =
+        op.parameters
+          ?.map((p) => {
+            const paramName = RESERVED_TYPESCRIPT_KEYWORDS.has(p.name) ? `${p.name}_` : p.name;
+            return `${paramName}: ${p.type}`;
+          })
+          .join(", ") ?? "";
       const ret = op.returnType ?? "any";
-      const sanitizedOpcode = RESERVED_TYPESCRIPT_KEYWORDS.has(op.opcode)
-        ? `${op.opcode}_`
-        : op.opcode;
+      let sanitizedOpcode = op.opcode;
+      const mapped = OPERATOR_MAP[sanitizedOpcode];
+      if (mapped) {
+        sanitizedOpcode = mapped;
+      } else if (RESERVED_TYPESCRIPT_KEYWORDS.has(op.opcode)) {
+        sanitizedOpcode = `${op.opcode}_`;
+      }
       const generics = op.genericParameters?.length ? `<${op.genericParameters.join(", ")}>` : "";
-      definitions += `declare function ${sanitizedOpcode}${generics}(${params}): ${ret};\n`;
+      definitions += `export declare function ${sanitizedOpcode}${generics}(${params}): ${ret};\n`;
     }
   }
 
   function renderNamespace(name: string, content: any, indent: string): string {
-    let output = `${indent}declare namespace ${name} {\n`;
+    let output = `${indent}export declare namespace ${name} {\n`;
     const innerIndent = indent + "  ";
 
     if (content._funcs) {
@@ -145,6 +210,8 @@ interface Capability {
   for (const key of Object.keys(rootNamespace)) {
     definitions += renderNamespace(key, rootNamespace[key], "");
   }
+
+  definitions += "\n// End of generated types\n";
 
   return definitions;
 }
