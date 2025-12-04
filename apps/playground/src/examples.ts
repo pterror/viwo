@@ -1,4 +1,4 @@
-import { StdLib, MathLib, BooleanLib } from "@viwo/scripting";
+import { StdLib, MathLib, BooleanLib, ScriptExpression } from "@viwo/scripting";
 
 const HelloWorld = StdLib.seq(StdLib.log("Hello World"));
 
@@ -6,7 +6,10 @@ const Counter = StdLib.seq(
   StdLib.let("i", 0),
   StdLib.while(
     BooleanLib.lt(StdLib.var("i"), 5),
-    StdLib.seq(StdLib.log(StdLib.var("i")), StdLib.set("i", MathLib.add(StdLib.var("i"), 1))),
+    StdLib.seq(
+      StdLib.log(StdLib.var("i")),
+      StdLib.set("i", MathLib.add(StdLib.var("i"), 1)),
+    ),
   ),
 );
 
@@ -28,8 +31,8 @@ const Fibonacci = StdLib.seq(
   ),
 );
 
-export const examples = {
-  "Hello World": JSON.stringify(HelloWorld),
-  Counter: JSON.stringify(Counter),
-  Fibonacci: JSON.stringify(Fibonacci),
+export const examples: Record<string, ScriptExpression<unknown[], any>> = {
+  "Hello World": HelloWorld,
+  Counter: Counter,
+  Fibonacci: Fibonacci,
 };

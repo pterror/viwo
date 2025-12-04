@@ -392,9 +392,9 @@ export const log = defineOpcode<[unknown, ...unknown[]], null>("log", {
     label: "Log",
     category: "action",
     description: "Log to server console",
-    slots: [{ name: "Msg", type: "block" }],
+    slots: [{ name: "Message", type: "block" }],
     parameters: [
-      { name: "msg", type: "unknown" },
+      { name: "message", type: "unknown" },
       { name: "...args", type: "unknown[]" },
     ],
     returnType: "null",

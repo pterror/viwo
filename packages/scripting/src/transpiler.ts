@@ -6,8 +6,17 @@ import * as ObjectLib from "./lib/object";
 import * as BooleanLib from "./lib/boolean";
 import { RESERVED_TYPESCRIPT_KEYWORDS } from "./type_generator";
 
+const OPCODE_MAPPINGS: Readonly<Record<string, string>> = {
+  ["console.log"]: "log",
+};
+
 export function transpile(code: string): any {
-  const sourceFile = ts.createSourceFile("script.ts", code, ts.ScriptTarget.Latest, true);
+  const sourceFile = ts.createSourceFile(
+    "script.ts",
+    code,
+    ts.ScriptTarget.Latest,
+    true,
+  );
 
   const scope = new Set<string>();
   const statements: any[] = [];
@@ -40,7 +49,10 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
     ts.isInterfaceDeclaration(node) ||
     ts.isTypeAliasDeclaration(node)
   ) {
-    if (node.modifiers && node.modifiers.some((m) => m.kind === ts.SyntaxKind.DeclareKeyword)) {
+    if (
+      node.modifiers &&
+      node.modifiers.some((m) => m.kind === ts.SyntaxKind.DeclareKeyword)
+    ) {
       return undefined;
     }
   }
@@ -183,7 +195,8 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
       if (ts.isPropertyAssignment(prop)) {
         const key = prop.name.getText();
         // Strip quotes if present
-        const cleanKey = key.startsWith('"') || key.startsWith("'") ? key.slice(1, -1) : key;
+        const cleanKey =
+          key.startsWith('"') || key.startsWith("'") ? key.slice(1, -1) : key;
         const val = transpileNode(prop.initializer, scope);
         props.push([cleanKey, val]);
       }
@@ -234,6 +247,7 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
           opcodeName = potentialOpcode;
         }
       }
+      opcodeName = OPCODE_MAPPINGS[opcodeName] ?? opcodeName;
 
       // Heuristic: If it's not a local variable, assume it's an opcode.
       return [opcodeName, ...args];
@@ -263,7 +277,9 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
   if (ts.isIfStatement(node)) {
     const cond = transpileNode(node.expression, scope);
     const thenStmt = transpileNode(node.thenStatement, scope);
-    const elseStmt = node.elseStatement ? transpileNode(node.elseStatement, scope) : null;
+    const elseStmt = node.elseStatement
+      ? transpileNode(node.elseStatement, scope)
+      : null;
 
     if (elseStmt) {
       return Std.if(cond, thenStmt, elseStmt);
