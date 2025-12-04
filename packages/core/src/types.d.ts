@@ -6,7 +6,7 @@ export interface Entity {
    * Contains arbitrary game data like description, adjectives, custom_css.
    */
   [key: string]: unknown;
-};
+}
 
 /**
  * Represents a scriptable action (verb) attached to an entity.
@@ -60,14 +60,31 @@ export type ScriptExpression<Args extends (string | ScriptValue_<unknown>)[], Re
 };
 
 // Standard library functions
+export declare function call(target: object, verb: string, ...args: any[]): any;
+export declare function create(cap: object, data: object): number;
+export declare function destroy(cap: object, target: object): null;
+export declare function entity(id: number): Entity;
+export declare function get_prototype(target: object): number | null;
+export declare function get_verb(target: object, name: string): Verb | null;
+export declare function resolve_props(target: object): Entity;
+export declare function schedule(verb: string, args: any[], delay: number): null;
+export declare function set_entity(cap: object, ...entities: object[]): void;
+export declare function set_prototype(cap: object, target: object, prototype: any): null;
+export declare function sudo(cap: object, target: object, verb: string, args: any[]): any;
+export declare function verbs(target: object): Verb[];
+export declare function delegate(parent: object, restrictions: object): Capability;
+export declare function get_capability(type_: string, filter: object): Capability | null;
+export declare function give_capability(cap: object, target: object): null;
+export declare function has_capability(target: object, type_: string, filter: object): boolean;
+export declare function mint(authority: object, type_: string, params: object): Capability;
 export declare function add(a: number, b: number, ...args: number[]): number;
 export declare function div(a: number, b: number, ...args: number[]): number;
 export declare function mod(a: number, b: number): number;
 export declare function mul(a: number, b: number, ...args: number[]): number;
 export declare function pow(base: number, exp: number, ...args: number[]): number;
-export declare function random(min?: number, max?: number): number;
+export declare function random(min: number, max: number): number;
 export declare function sub(a: number, b: number, ...args: number[]): number;
-export declare function and(a: unknown, b: unknown, ...args: unknown[]): boolean;
+export declare function and(a: boolean, b: boolean, ...args: boolean[]): boolean;
 export declare function eq(a: unknown, b: unknown, ...args: unknown[]): boolean;
 export declare function gt(a: number, b: number, ...args: number[]): boolean;
 export declare function gte(a: number, b: number, ...args: number[]): boolean;
@@ -75,13 +92,13 @@ export declare function lt(a: number, b: number, ...args: number[]): boolean;
 export declare function lte(a: number, b: number, ...args: number[]): boolean;
 export declare function neq(a: unknown, b: unknown, ...args: unknown[]): boolean;
 export declare function not(val: any): boolean;
-export declare function or(a: unknown, b: unknown, ...args: unknown[]): boolean;
+export declare function or(a: boolean, b: boolean, ...args: boolean[]): boolean;
 export declare function apply(func: unknown, ...args: any[]): any;
-export declare function arg<T>(index: number): T;
+export declare function arg(index: number): any;
 export declare function args(): readonly any[];
 export declare function caller(): Entity;
 export declare function for_(variableName: string, list: any, body: any): any;
-export declare function if_<T>(condition: unknown, then: T, else_?: T): T;
+export declare function if_<T>(condition: any, then: any, else_: any): T;
 export declare function lambda(args: string[], body: any): any;
 export declare function let_(name: string, value: unknown): any;
 export declare function log(message: unknown, ...args: unknown[]): null;
@@ -96,26 +113,42 @@ export declare function typeof_(value: unknown): string;
 export declare function var_(name: string): any;
 export declare function warn(message: unknown): void;
 export declare function while_(condition: any, body: any): any;
+export declare namespace fs {
+  function list(cap: Capability | null, path: string): Promise<readonly string[]>;
+  function read(cap: Capability | null, path: string): Promise<string>;
+  function write(cap: Capability | null, path: string, content: string): Promise<null>;
+}
+export declare namespace net {
+  namespace http {
+    function get(cap: Capability | null, url: string): Promise<string>;
+    function post(cap: Capability | null, url: string, body: string): Promise<string>;
+  }
+}
 export declare namespace list {
-  function concat(list1: readonly unknown[], list2: readonly unknown[]): any[];
+  function concat(list1: readonly unknown[], list2: readonly unknown[]): readonly unknown[];
   function empty(list: readonly unknown[]): boolean;
-  function filter(list: readonly unknown[], lambda: object): any[];
+  function filter(list: readonly unknown[], lambda: object): readonly unknown[];
   function find(list: readonly unknown[], lambda: object): any;
-  function flatMap(list: readonly unknown[], lambda: object): any[];
+  function flatMap(list: readonly unknown[], lambda: object): readonly unknown[];
   function get(list: readonly unknown[], index: number): any;
   function includes(list: readonly unknown[], value: any): boolean;
   function len(list: readonly unknown[]): number;
-  function map(list: readonly unknown[], lambda: object): any[];
+  function map(list: readonly unknown[], lambda: object): readonly unknown[];
   function new_<T>(...args: any[]): T[];
   function pop(list: readonly unknown[]): any;
   function push(list: readonly unknown[], value: any): number;
   function reduce(list: readonly unknown[], lambda: object, init: any): any;
-  function reverse(list: readonly unknown[]): any[];
+  function reverse(list: readonly unknown[]): readonly unknown[];
   function set(list: readonly unknown[], index: number, value: any): any;
   function shift(list: readonly unknown[]): any;
-  function slice(list: readonly unknown[], start: number, end?: number): any[];
-  function sort(list: readonly unknown[]): any[];
-  function splice(list: readonly unknown[], start: number, deleteCount: number, ...items: any[]): any[];
+  function slice(list: readonly unknown[], start: number, end: number): readonly unknown[];
+  function sort(list: readonly unknown[]): readonly unknown[];
+  function splice(
+    list: readonly unknown[],
+    start: number,
+    deleteCount: number,
+    ...items: any[]
+  ): readonly unknown[];
   function unshift(list: readonly unknown[], value: any): number;
 }
 export declare namespace obj {
@@ -123,12 +156,17 @@ export declare namespace obj {
   function entries(object: object): [string, any][];
   function filter(object: object, lambda: object): any;
   function flatMap(object: object, lambda: object): any;
-  function get(object: object, key: string, default_?: any): any;
+  function get(object: object, key: string, default_: any): any;
   function has(object: object, key: string): boolean;
   function keys(object: object): string[];
   function map(object: object, lambda: object): any;
   function merge(...objects: object[]): any;
-  function new_<Kvs extends [] | readonly (readonly [key: '' | (string & {}), value: unknown])[]>(...kvs: any[]): { [K in keyof Kvs & `${number}` as (Kvs[K] & [string, unknown])[0]]: (Kvs[K] & [string, unknown])[1] };
+  function new_<Kvs extends [] | readonly (readonly [key: "" | (string & {}), value: unknown])[]>(
+    ...kvs: any[]
+  ): {
+    [K in keyof Kvs & `${number}` as (Kvs[K] & [string, unknown])[0]]: (Kvs[K] &
+      [string, unknown])[1];
+  };
   function reduce(object: object, lambda: object, init: any): any;
   function set(object: object, key: string, value: any): any;
   function values(object: object): any[];
@@ -140,16 +178,16 @@ export declare namespace str {
   function len(string: string): number;
   function lower(string: string): string;
   function replace(string: string, search: string, replace: string): string;
-  function slice(string: string, start: number, end?: number): string;
+  function slice(string: string, start: number, end: number): string;
   function split(string: string, separator: string): string[];
   function trim(string: string): string;
   function upper(string: string): string;
 }
 export declare namespace time {
-  function format(time: string, format?: string): string;
+  function format(time: string, format: string): string;
   function from_timestamp(timestamp: number): string;
   function now(): string;
-  function offset(amount: number, unit: string, base?: string): string;
+  function offset(amount: number, unit: string, base: string): string;
   function parse(time: string): string;
   function to_timestamp(time: string): number;
 }

@@ -7,9 +7,7 @@ import {
   updateEntity,
   getEntity,
 } from "../repo";
-import { StdLib, ObjectLib, StringLib, ListLib, BooleanLib } from "@viwo/scripting";
-import * as CoreLib from "../runtime/lib/core";
-import * as KernelLib from "../runtime/lib/kernel";
+import { transpile } from "@viwo/scripting";
 
 export function seedHotel(lobbyId: number, voidId: number, entityBaseId: number) {
   // Hotel Implementation
@@ -68,62 +66,33 @@ export function seedHotel(lobbyId: number, voidId: number, entityBaseId: number)
   addVerb(
     hotelRoomProtoId,
     "leave",
-    StdLib.seq(
-      CoreLib.call(StdLib.caller(), "teleport", CoreLib.entity(hotelLobbyId)), // Move player out first
-      CoreLib.call(StdLib.caller(), "tell", "You leave the room and it fades away behind you."),
-      StdLib.let(
-        "cap",
-        KernelLib.getCapability(
-          "entity.control",
-          ObjectLib.objNew(["target_id", ObjectLib.objGet(StdLib.this(), "id")]),
-        ),
-      ),
-      CoreLib.destroy(StdLib.var("cap"), StdLib.this()), // Destroy the room
-    ),
+    transpile(`
+      call(caller(), "teleport", entity(${hotelLobbyId}));
+      call(caller(), "tell", "You leave the room and it fades away behind you.");
+      const cap = get_capability("entity.control", { target_id: this_().id });
+      destroy(cap, this_());
+    `),
   );
 
   // Update 'leave' verb to use prop
   updateVerb(
     getVerb(hotelRoomProtoId, "leave")!.id,
-    StdLib.seq(
-      StdLib.let("lobbyId", ObjectLib.objGet(StdLib.this(), "lobby_id")),
-      CoreLib.call(StdLib.caller(), "teleport", CoreLib.entity(StdLib.var("lobbyId"))),
-      CoreLib.call(StdLib.caller(), "tell", "You leave the room and it fades away behind you."),
-      // Destroy contents (furnishings)
-      StdLib.let("freshThis", CoreLib.entity(ObjectLib.objGet(StdLib.this(), "id"))),
-      StdLib.let(
-        "contents",
-        ObjectLib.objGet(StdLib.var("freshThis"), "contents", ListLib.listNew()),
-      ),
-      StdLib.for(
-        "itemId",
-        StdLib.var("contents"),
-        StdLib.seq(
-          StdLib.let("item", CoreLib.entity(StdLib.var("itemId"))),
-          StdLib.if(
-            StdLib.var("item"),
-            StdLib.seq(
-              StdLib.let(
-                "itemCap",
-                KernelLib.getCapability(
-                  "entity.control",
-                  ObjectLib.objNew(["target_id", ObjectLib.objGet(StdLib.var("item"), "id")]),
-                ),
-              ),
-              CoreLib.destroy(StdLib.var("itemCap"), StdLib.var("item")),
-            ),
-          ),
-        ),
-      ),
-      StdLib.let(
-        "cap",
-        KernelLib.getCapability(
-          "entity.control",
-          ObjectLib.objNew(["target_id", ObjectLib.objGet(StdLib.this(), "id")]),
-        ),
-      ),
-      CoreLib.destroy(StdLib.var("cap"), StdLib.this()),
-    ),
+    transpile(`
+      const lobbyId = obj.get(this_(), "lobby_id");
+      call(caller(), "teleport", entity(lobbyId));
+      call(caller(), "tell", "You leave the room and it fades away behind you.");
+      const freshThis = entity(this_().id);
+      const contents = obj.get(freshThis, "contents", list.new());
+      for (const itemId of contents) {
+        const item = entity(itemId);
+        if (item) {
+          const itemCap = get_capability("entity.control", { target_id: item.id });
+          destroy(itemCap, item);
+        }
+      }
+      const cap = get_capability("entity.control", { target_id: this_().id });
+      destroy(cap, this_());
+    `),
   );
 
   // 8. Hotel Elevator & Floors
@@ -170,16 +139,12 @@ export function seedHotel(lobbyId: number, voidId: number, entityBaseId: number)
   addVerb(
     elevatorId,
     "push",
-    StdLib.seq(
-      StdLib.let("floor", StdLib.arg(0)),
-      ObjectLib.objSet(StdLib.this(), "current_floor", StdLib.var("floor")),
-      CoreLib.setEntity(KernelLib.getCapability("entity.control"), StdLib.this()),
-      CoreLib.call(
-        StdLib.caller(),
-        "tell",
-        StringLib.strConcat("The elevator hums and moves to floor ", StdLib.var("floor"), "."),
-      ),
-    ),
+    transpile(`
+      const floor = arg(0);
+      obj.set(this_(), "current_floor", floor);
+      set_entity(get_capability("entity.control"), this_());
+      call(caller(), "tell", str.concat("The elevator hums and moves to floor ", floor, "."));
+    `),
   );
 
   // Furnishings Prototypes
@@ -207,143 +172,118 @@ export function seedHotel(lobbyId: number, voidId: number, entityBaseId: number)
   addVerb(
     wingProtoId,
     "enter",
-    StdLib.seq(
-      StdLib.let("roomNum", StdLib.arg(0)),
-      StdLib.let("valid", true),
-      // Validate room number matches wing side
-      StdLib.let("side", ObjectLib.objGet(StdLib.this(), "side")),
-      StdLib.if(
-        BooleanLib.eq(StdLib.var("side"), "West"),
-        StdLib.if(
-          BooleanLib.or(
-            BooleanLib.lt(StdLib.var("roomNum"), 1),
-            BooleanLib.gt(StdLib.var("roomNum"), 50),
-          ),
-          StdLib.seq(
-            CoreLib.call(StdLib.caller(), "tell", "Room numbers in the West Wing are 1-50."),
-            StdLib.set("valid", false),
-          ),
-        ),
-      ),
-      StdLib.if(
-        BooleanLib.eq(StdLib.var("side"), "East"),
-        StdLib.if(
-          BooleanLib.or(
-            BooleanLib.lt(StdLib.var("roomNum"), 51),
-            BooleanLib.gt(StdLib.var("roomNum"), 99),
-          ),
-          StdLib.seq(
-            CoreLib.call(StdLib.caller(), "tell", "Room numbers in the East Wing are 51-99."),
-            StdLib.set("valid", false),
-          ),
-        ),
-      ),
-      // Execute if valid
-      StdLib.if(
-        StdLib.var("valid"),
-        StdLib.seq(
-          StdLib.let("createCap", KernelLib.getCapability("sys.create")),
-          StdLib.let("roomData", ObjectLib.objNew()),
-          ObjectLib.objSet(
-            StdLib.var("roomData"),
-            "name",
-            StringLib.strConcat("Room ", StdLib.var("roomNum")),
-          ),
-          ObjectLib.objSet(StdLib.var("roomData"), "kind", "ROOM"),
+    transpile(`
+      const roomNum = arg(0);
+      let valid = true;
+      const side = obj.get(this_(), "side");
+      if (side == "West") {
+        if (roomNum < 1 || roomNum > 50) {
+          call(caller(), "tell", "Room numbers in the West Wing are 1-50.");
+          valid = false;
+        }
+      }
+      if (side == "East") {
+        if (roomNum < 51 || roomNum > 99) {
+          call(caller(), "tell", "Room numbers in the East Wing are 51-99.");
+          valid = false;
+        }
+      }
 
-          ObjectLib.objSet(StdLib.var("roomData"), "description", "A standard hotel room."),
-          ObjectLib.objSet(
-            StdLib.var("roomData"),
-            "lobby_id",
-            ObjectLib.objGet(StdLib.this(), "id"),
-          ), // Return to THIS wing
-          StdLib.let("roomId", CoreLib.create(StdLib.var("createCap"), StdLib.var("roomData"))),
-          StdLib.let("roomFilter", ObjectLib.objNew()),
-          ObjectLib.objSet(StdLib.var("roomFilter"), "target_id", StdLib.var("roomId")),
-          CoreLib.setPrototype(
-            KernelLib.getCapability("entity.control", StdLib.var("roomFilter")),
-            CoreLib.entity(StdLib.var("roomId")),
-            hotelRoomProtoId,
-          ),
-          // Furnish the room
-          StdLib.let("bedData", ObjectLib.objNew()),
-          ObjectLib.objSet(StdLib.var("bedData"), "name", "Bed"),
-          ObjectLib.objSet(StdLib.var("bedData"), "kind", "ITEM"),
-          ObjectLib.objSet(StdLib.var("bedData"), "location", StdLib.var("roomId")),
-          StdLib.let("bedId", CoreLib.create(StdLib.var("createCap"), StdLib.var("bedData"))),
-          StdLib.let("bedFilter", ObjectLib.objNew()),
-          ObjectLib.objSet(StdLib.var("bedFilter"), "target_id", StdLib.var("bedId")),
-          CoreLib.setPrototype(
-            KernelLib.getCapability("entity.control", StdLib.var("bedFilter")),
-            CoreLib.entity(StdLib.var("bedId")),
-            bedProtoId,
-          ),
-          KernelLib.giveCapability(
-            KernelLib.getCapability("entity.control", StdLib.var("bedFilter")),
-            CoreLib.entity(StdLib.var("roomId")),
-          ),
-          StdLib.let("lampData", ObjectLib.objNew()),
-          ObjectLib.objSet(StdLib.var("lampData"), "name", "Lamp"),
-          ObjectLib.objSet(StdLib.var("lampData"), "kind", "ITEM"),
-          ObjectLib.objSet(StdLib.var("lampData"), "location", StdLib.var("roomId")),
-          StdLib.let("lampId", CoreLib.create(StdLib.var("createCap"), StdLib.var("lampData"))),
-          StdLib.let("lampFilter", ObjectLib.objNew()),
-          ObjectLib.objSet(StdLib.var("lampFilter"), "target_id", StdLib.var("lampId")),
-          CoreLib.setPrototype(
-            KernelLib.getCapability("entity.control", StdLib.var("lampFilter")),
-            CoreLib.entity(StdLib.var("lampId")),
-            lampProtoId,
-          ),
-          KernelLib.giveCapability(
-            KernelLib.getCapability("entity.control", StdLib.var("lampFilter")),
-            CoreLib.entity(StdLib.var("roomId")),
-          ),
-          StdLib.let("chairData", ObjectLib.objNew()),
-          ObjectLib.objSet(StdLib.var("chairData"), "name", "Chair"),
-          ObjectLib.objSet(StdLib.var("chairData"), "kind", "ITEM"),
-          ObjectLib.objSet(StdLib.var("chairData"), "location", StdLib.var("roomId")),
-          StdLib.let("chairId", CoreLib.create(StdLib.var("createCap"), StdLib.var("chairData"))),
-          StdLib.let("chairFilter", ObjectLib.objNew()),
-          ObjectLib.objSet(StdLib.var("chairFilter"), "target_id", StdLib.var("chairId")),
-          CoreLib.setPrototype(
-            KernelLib.getCapability("entity.control", StdLib.var("chairFilter")),
-            CoreLib.entity(StdLib.var("chairId")),
-            chairProtoId,
-          ),
-          KernelLib.giveCapability(
-            KernelLib.getCapability("entity.control", StdLib.var("chairFilter")),
-            CoreLib.entity(StdLib.var("roomId")),
-          ),
+      if (valid) {
+        const createCap = get_capability("sys.create");
+        const roomData = obj.new();
+        obj.set(roomData, "name", str.concat("Room ", roomNum));
+        obj.set(roomData, "kind", "ROOM");
+        obj.set(roomData, "description", "A standard hotel room.");
+        obj.set(roomData, "lobby_id", this_().id);
+        const roomId = create(createCap, roomData);
+        
+        const roomFilter = obj.new();
+        obj.set(roomFilter, "target_id", roomId);
+        set_prototype(
+          get_capability("entity.control", roomFilter),
+          entity(roomId),
+          ${hotelRoomProtoId}
+        );
 
-          // Update Room Contents
-          StdLib.let("room", CoreLib.entity(StdLib.var("roomId"))),
-          StdLib.let("contents", ListLib.listNew()),
-          ListLib.listPush(StdLib.var("contents"), StdLib.var("bedId")),
-          ListLib.listPush(StdLib.var("contents"), StdLib.var("lampId")),
-          ListLib.listPush(StdLib.var("contents"), StdLib.var("chairId")),
-          ObjectLib.objSet(StdLib.var("room"), "contents", StdLib.var("contents")),
-          CoreLib.setEntity(
-            KernelLib.getCapability("entity.control", StdLib.var("roomFilter")),
-            StdLib.var("room"),
-          ),
+        // Bed
+        const bedData = obj.new();
+        obj.set(bedData, "name", "Bed");
+        obj.set(bedData, "kind", "ITEM");
+        obj.set(bedData, "location", roomId);
+        const bedId = create(createCap, bedData);
+        const bedFilter = obj.new();
+        obj.set(bedFilter, "target_id", bedId);
+        set_prototype(
+          get_capability("entity.control", bedFilter),
+          entity(bedId),
+          ${bedProtoId}
+        );
+        give_capability(
+          get_capability("entity.control", bedFilter),
+          entity(roomId)
+        );
 
-          KernelLib.giveCapability(
-            KernelLib.delegate(
-              KernelLib.getCapability("entity.control", StdLib.var("roomFilter")),
-              {},
-            ),
-            CoreLib.entity(StdLib.var("roomId")),
-          ),
+        // Lamp
+        const lampData = obj.new();
+        obj.set(lampData, "name", "Lamp");
+        obj.set(lampData, "kind", "ITEM");
+        obj.set(lampData, "location", roomId);
+        const lampId = create(createCap, lampData);
+        const lampFilter = obj.new();
+        obj.set(lampFilter, "target_id", lampId);
+        set_prototype(
+          get_capability("entity.control", lampFilter),
+          entity(lampId),
+          ${lampProtoId}
+        );
+        give_capability(
+          get_capability("entity.control", lampFilter),
+          entity(roomId)
+        );
 
-          CoreLib.call(StdLib.caller(), "teleport", CoreLib.entity(StdLib.var("roomId"))),
-          CoreLib.call(
-            StdLib.caller(),
-            "tell",
-            StringLib.strConcat("You enter Room ", StdLib.var("roomNum"), "."),
+        // Chair
+        const chairData = obj.new();
+        obj.set(chairData, "name", "Chair");
+        obj.set(chairData, "kind", "ITEM");
+        obj.set(chairData, "location", roomId);
+        const chairId = create(createCap, chairData);
+        const chairFilter = obj.new();
+        obj.set(chairFilter, "target_id", chairId);
+        set_prototype(
+          get_capability("entity.control", chairFilter),
+          entity(chairId),
+          ${chairProtoId}
+        );
+        give_capability(
+          get_capability("entity.control", chairFilter),
+          entity(roomId)
+        );
+
+        // Update Room Contents
+        const room = entity(roomId);
+        const contents = list.new();
+        list.push(contents, bedId);
+        list.push(contents, lampId);
+        list.push(contents, chairId);
+        obj.set(room, "contents", contents);
+        set_entity(
+          get_capability("entity.control", roomFilter),
+          room
+        );
+
+        give_capability(
+          delegate(
+            get_capability("entity.control", roomFilter),
+            {}
           ),
-        ),
-      ),
-    ),
+          entity(roomId)
+        );
+
+        call(caller(), "teleport", entity(roomId));
+        call(caller(), "tell", str.concat("You enter Room ", roomNum, "."));
+      }
+    `),
   );
 
   // 9. NPCs
@@ -358,23 +298,16 @@ export function seedHotel(lobbyId: number, voidId: number, entityBaseId: number)
   addVerb(
     receptionistId,
     "on_hear",
-    StdLib.seq(
-      StdLib.let("msg", StdLib.arg(0)),
-      StdLib.let("speakerId", StdLib.arg(1)),
-      // Simple heuristics
-      StdLib.if(
-        StringLib.strIncludes(StringLib.strLower(StdLib.var("msg")), "room"),
-        CoreLib.call(
-          StdLib.caller(),
-          "say",
-          "We have lovely rooms available on floors 1-100. Just use the elevator!",
-        ),
-      ),
-      StdLib.if(
-        StringLib.strIncludes(StringLib.strLower(StdLib.var("msg")), "hello"),
-        CoreLib.call(StdLib.caller(), "say", "Welcome to the Grand Hotel! How may I help you?"),
-      ),
-    ),
+    transpile(`
+      const msg = arg(0);
+      const speakerId = arg(1);
+      if (str.includes(str.lower(msg), "room")) {
+        call(caller(), "say", "We have lovely rooms available on floors 1-100. Just use the elevator!");
+      }
+      if (str.includes(str.lower(msg), "hello")) {
+        call(caller(), "say", "Welcome to the Grand Hotel! How may I help you?");
+      }
+    `),
   );
 
   // Golem (in Void for now, maybe move to lobby?)
@@ -388,17 +321,12 @@ export function seedHotel(lobbyId: number, voidId: number, entityBaseId: number)
   addVerb(
     golemId,
     "on_hear",
-    StdLib.seq(
-      StdLib.let("msg", StdLib.arg(0)),
-      StdLib.let("type", StdLib.arg(2)),
-      StdLib.if(
-        BooleanLib.eq(StdLib.var("type"), "tell"),
-        CoreLib.call(
-          StdLib.caller(),
-          "say",
-          StringLib.strConcat("Golem echoes: ", StdLib.var("msg")),
-        ),
-      ),
-    ),
+    transpile(`
+      const msg = arg(0);
+      const type = arg(2);
+      if (type == "tell") {
+        call(caller(), "say", str.concat("Golem echoes: ", msg));
+      }
+    `),
   );
 }

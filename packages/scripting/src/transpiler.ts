@@ -6,9 +6,13 @@ import * as ObjectLib from "./lib/object";
 import * as BooleanLib from "./lib/boolean";
 import { RESERVED_TYPESCRIPT_KEYWORDS } from "./type_generator";
 
-const OPCODE_MAPPINGS: Readonly<Record<string, string>> = {
+const OPCODE_MAPPINGS: Record<string, string> = {
   ["console.log"]: "log",
 };
+
+export function registerOpcodeMapping(tsName: string, opcode: string) {
+  OPCODE_MAPPINGS[tsName] = opcode;
+}
 
 export function transpile(code: string): any {
   const sourceFile = ts.createSourceFile("script.ts", code, ts.ScriptTarget.Latest, true);
