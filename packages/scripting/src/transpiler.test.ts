@@ -146,6 +146,9 @@ describe("transpiler", () => {
     expect(transpile("for (const x of list) { x; }")).toEqual(
       Std.for("x", Std.var("list"), Std.seq(Std.var("x"))),
     );
+    expect(transpile("for (const k in obj) { k; }")).toEqual(
+      Std.for("k", ObjectLib.objKeys(Std.var("obj")), Std.seq(Std.var("k"))),
+    );
     expect(transpile("for (let i = 0; i < 10; i++) { i; }")).toEqual(
       Std.seq(
         Std.let("i", 0),

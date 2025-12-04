@@ -434,6 +434,21 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
     return StdLib.for(varName, list, body);
   }
 
+  if (ts.isForInStatement(node)) {
+    const initializer = node.initializer;
+    let varName = "";
+    const loopScope = new Set(scope);
+    if (ts.isVariableDeclarationList(initializer)) {
+      varName = initializer.declarations[0]!.name.getText();
+      loopScope.add(varName);
+    }
+    const obj = transpileNode(node.expression, scope);
+    const keys = ObjectLib.objKeys(obj);
+    const body = transpileNode(node.statement, loopScope);
+
+    return StdLib.for(varName, keys, body);
+  }
+
   if (ts.isForStatement(node)) {
     // for (init; cond; incr) body
     // -> seq(init, while(cond, seq(body, incr)))
