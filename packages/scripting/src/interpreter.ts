@@ -251,7 +251,7 @@ function executeLoop(
       try {
         // Validate arguments
         if (typecheck && def.metadata.parameters) {
-          validateArgs(op, args, def.metadata.parameters);
+          validateArgs(op, args, def.metadata);
         }
 
         result = def.handler(args, ctx);
@@ -329,11 +329,11 @@ function createStackTrace(sp: number, stackOp: string[], stackArgs: unknown[][])
   return trace;
 }
 
-function validateArgs(
-  op: string,
-  args: unknown[],
-  params: { name: string; type: string; optional?: boolean }[],
-) {
+function validateArgs(op: string, args: unknown[], metadata: OpcodeMetadata) {
+  const params = metadata.parameters;
+  if (!params) {
+    return;
+  }
   const hasRest = params.some((p) => p.name.startsWith("..."));
   const minArgs = params.filter((p) => !p.optional && !p.name.startsWith("...")).length;
 
@@ -370,11 +370,25 @@ function validateArgs(
     if (currentParam.type.endsWith("[]")) {
       if (currentParam.name.startsWith("...")) {
         // Variadic
-        if (type !== "any" && type !== "unknown" && typeof arg !== type && arg !== null) {
+        if (
+          type !== "any" &&
+          type !== "unknown" &&
+          !metadata.genericParameters?.some(
+            (param) => param.replace(/\bextends\b.+/, "") === type,
+          ) &&
+          typeof arg !== type &&
+          arg !== null
+        ) {
           if (type === "object" && (typeof arg !== "object" || arg === null)) {
             throw new ScriptError(`${op}: expected ${type} for ${currentParam.name} at index ${i}`);
           }
-          if (type !== "object" && typeof arg !== type) {
+          if (
+            type !== "object" &&
+            typeof arg !== type &&
+            !metadata.genericParameters?.some(
+              (param) => param.replace(/\bextends\b.+/, "") === type,
+            )
+          ) {
             throw new ScriptError(`${op}: expected ${type} for ${currentParam.name} at index ${i}`);
           }
         }
@@ -409,10 +423,17 @@ function validateArgs(
           ) {
             continue;
           }
-          if (!types.includes(argType)) {
+          if (
+            !types.includes(argType) &&
+            !metadata.genericParameters?.some(
+              (param) => param.replace(/\bextends\b.+/, "") === type,
+            )
+          ) {
             throw new ScriptError(`${op}: expected ${type} for ${currentParam.name}`);
           }
-        } else {
+        } else if (
+          !metadata.genericParameters?.some((param) => param.replace(/\bextends\b.+/, "") === type)
+        ) {
           throw new ScriptError(`${op}: expected ${type} for ${currentParam.name}`);
         }
       }

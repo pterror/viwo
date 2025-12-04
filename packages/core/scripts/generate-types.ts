@@ -1,3 +1,5 @@
+// Use in-memory DB
+process.env.NODE_ENV = "test";
 import { generateTypeDefinitions } from "@viwo/scripting";
 import * as CoreLib from "../src/runtime/lib/core";
 import * as KernelLib from "../src/runtime/lib/kernel";
@@ -42,7 +44,7 @@ for (const lib of libraries) {
 }
 
 const definitions = generateTypeDefinitions(opcodes);
-const outputPath = join(import.meta.dir, "../src/types.d.ts");
+const outputPath = join(import.meta.dir, "../src/types.ts");
 
 writeFileSync(outputPath, definitions);
 console.log(`Generated type definitions at ${outputPath}`);

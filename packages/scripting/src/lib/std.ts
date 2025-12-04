@@ -84,9 +84,7 @@ export const seq = defineOpcode<unknown[], any>("seq", {
   },
 });
 
-/**
- * Conditional execution.
- */
+/** Conditional execution. */
 const if_ = defineOpcode<[boolean, unknown, unknown?], any>("if", {
   metadata: {
     label: "If",
@@ -100,9 +98,9 @@ const if_ = defineOpcode<[boolean, unknown, unknown?], any>("if", {
       { name: "Else", type: "block" },
     ],
     parameters: [
-      { name: "condition", type: "any" },
-      { name: "then", type: "any" },
-      { name: "else", type: "any", optional: true },
+      { name: "condition", type: "unknown" },
+      { name: "then", type: "T" },
+      { name: "else", type: "T", optional: true },
     ],
     returnType: "T",
     lazy: true,
@@ -404,8 +402,9 @@ export const arg = defineOpcode<[number], any>("arg", {
     description: "Get argument by index",
     layout: "primitive",
     slots: [{ name: "Index", type: "number" }],
+    genericParameters: ["T"],
     parameters: [{ name: "index", type: "number" }],
-    returnType: "any",
+    returnType: "T",
   },
   handler: ([index], ctx) => {
     return ctx.args?.[index] ?? null;

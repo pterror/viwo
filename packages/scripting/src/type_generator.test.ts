@@ -15,7 +15,7 @@ describe("generateTypeDefinitions", () => {
     ];
 
     const defs = generateTypeDefinitions(opcodes);
-    expect(defs).toContain("declare namespace test {");
+    expect(defs).toContain("namespace test {");
     expect(defs).toContain("function op(a: string): number;");
   });
 
@@ -35,7 +35,7 @@ describe("generateTypeDefinitions", () => {
     ];
 
     const defs = generateTypeDefinitions(opcodes);
-    expect(defs).toContain("declare namespace list {");
+    expect(defs).toContain("namespace list {");
     expect(defs).toContain("function map<T, U>(list: T[], fn: (item: T) => U): U[];");
   });
 
@@ -52,7 +52,7 @@ describe("generateTypeDefinitions", () => {
     ];
 
     const defs = generateTypeDefinitions(opcodes);
-    expect(defs).toContain("declare function identity<T>(val: T): T;");
+    expect(defs).toContain("function identity<T>(val: T): T;");
   });
 
   test("generates complex generic definitions", () => {

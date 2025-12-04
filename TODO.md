@@ -14,6 +14,9 @@
 - apps/web/src/components/ItemEditor.tsx: Batch retrieve items.
 - apps/web/src/components/GameLog.tsx: ErrorView
 - packages/core/src/runtime/lib/core.ts: How to update multiple entities transactionally, considering `setEntity` needs a capability now? Do we:
+
   - Accept a list of capabilities, and then keep entities as spread arguments? (This might cause performance issues since we might need to look through all capabilities to find the right one for each entity)
   - Accept a list of [capability, entity]
   - Something else?
+
+- packages/scripting/src/lib/object.ts: Type-safe codegen by adding generic parameters

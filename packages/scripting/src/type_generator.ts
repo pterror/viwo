@@ -138,7 +138,8 @@ export type ScriptExpression<Args extends (string | ScriptValue_<unknown>)[], Re
         op.parameters
           ?.map((p) => {
             const paramName = RESERVED_TYPESCRIPT_KEYWORDS.has(p.name) ? `${p.name}_` : p.name;
-            return `${paramName}: ${p.type}`;
+            const question = p.optional ? "?" : "";
+            return `${paramName}${question}: ${p.type}`;
           })
           .join(", ") ?? "";
       const ret = op.returnType ?? "any";
@@ -152,7 +153,8 @@ export type ScriptExpression<Args extends (string | ScriptValue_<unknown>)[], Re
         op.parameters
           ?.map((p) => {
             const paramName = RESERVED_TYPESCRIPT_KEYWORDS.has(p.name) ? `${p.name}_` : p.name;
-            return `${paramName}: ${p.type}`;
+            const question = p.optional ? "?" : "";
+            return `${paramName}${question}: ${p.type}`;
           })
           .join(", ") ?? "";
       const ret = op.returnType ?? "any";
@@ -164,12 +166,12 @@ export type ScriptExpression<Args extends (string | ScriptValue_<unknown>)[], Re
         sanitizedOpcode = `${op.opcode}_`;
       }
       const generics = op.genericParameters?.length ? `<${op.genericParameters.join(", ")}>` : "";
-      definitions += `export declare function ${sanitizedOpcode}${generics}(${params}): ${ret};\n`;
+      definitions += `function ${sanitizedOpcode}${generics}(${params}): ${ret};\n`;
     }
   }
 
   function renderNamespace(name: string, content: any, indent: string): string {
-    let output = `${indent}export declare namespace ${name} {\n`;
+    let output = `${indent}namespace ${name} {\n`;
     const innerIndent = indent + "  ";
 
     if (content._funcs) {
@@ -211,7 +213,8 @@ export type ScriptExpression<Args extends (string | ScriptValue_<unknown>)[], Re
     definitions += renderNamespace(key, rootNamespace[key], "");
   }
 
-  definitions += "\n// End of generated types\n";
-
-  return definitions;
+  return `\
+declare global {
+${definitions.replace(/^/gm, "  ")}
+}`;
 }

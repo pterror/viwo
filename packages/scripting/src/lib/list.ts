@@ -183,7 +183,7 @@ export const listSlice = defineOpcode<[readonly unknown[], number, number?], any
       { name: "start", type: "number" },
       { name: "end", type: "number", optional: true },
     ],
-    returnType: "readonly unknown[]",
+    returnType: "any[]",
   },
   handler: ([list, start, end], _ctx) => {
     return list.slice(start, end);
@@ -210,7 +210,7 @@ export const listSplice = defineOpcode<[readonly unknown[], number, number, ...u
         { name: "deleteCount", type: "number" },
         { name: "...items", type: "any[]" },
       ],
-      returnType: "readonly unknown[]",
+      returnType: "any[]",
     },
     handler: ([list, start, deleteCount, ...items], _ctx) => {
       return list.splice(start, deleteCount, ...items);
@@ -234,7 +234,7 @@ export const listConcat = defineOpcode<[readonly unknown[], readonly unknown[]],
         { name: "list1", type: "readonly unknown[]" },
         { name: "list2", type: "readonly unknown[]" },
       ],
-      returnType: "readonly unknown[]",
+      returnType: "any[]",
     },
     handler: ([list1, list2], _ctx) => {
       return list1.concat(list2);
@@ -271,7 +271,7 @@ export const listReverse = defineOpcode<[readonly unknown[]], any[]>("list.rever
     description: "Reverse list order",
     slots: [{ name: "List", type: "block" }],
     parameters: [{ name: "list", type: "readonly unknown[]" }],
-    returnType: "readonly unknown[]",
+    returnType: "any[]",
   },
   handler: ([list], _ctx) => {
     return list.reverse();
@@ -286,7 +286,7 @@ export const listSort = defineOpcode<[readonly unknown[]], any[]>("list.sort", {
     description: "Sort list",
     slots: [{ name: "List", type: "block" }],
     parameters: [{ name: "list", type: "readonly unknown[]" }],
-    returnType: "readonly unknown[]",
+    returnType: "any[]",
   },
   handler: ([list], _ctx) => {
     return list.sort();
@@ -337,7 +337,7 @@ export const listMap = defineOpcode<[readonly unknown[], unknown], any[]>("list.
       { name: "list", type: "readonly unknown[]" },
       { name: "lambda", type: "object" },
     ],
-    returnType: "readonly unknown[]",
+    returnType: "any[]",
   },
   handler: async ([list, func], ctx) => {
     if (!func || (func as any).type !== "lambda") {
@@ -366,7 +366,7 @@ export const listFilter = defineOpcode<[readonly unknown[], unknown], any[]>("li
       { name: "list", type: "readonly unknown[]" },
       { name: "lambda", type: "object" },
     ],
-    returnType: "readonly unknown[]",
+    returnType: "any[]",
   },
   handler: async ([list, func], ctx) => {
     if (!func || (func as any).type !== "lambda") {
@@ -428,7 +428,7 @@ export const listFlatMap = defineOpcode<[readonly unknown[], unknown], any[]>("l
       { name: "list", type: "readonly unknown[]" },
       { name: "lambda", type: "object" },
     ],
-    returnType: "readonly unknown[]",
+    returnType: "any[]",
   },
   handler: async ([list, func], ctx) => {
     if (!func || (func as any).type !== "lambda") {

@@ -61,6 +61,23 @@ declare global {
   };
 
   // Standard library functions
+  function call(target: object, verb: string, ...args: any[]): any;
+  function create(cap: object, data: object): number;
+  function destroy(cap: object, target: object): null;
+  function entity(id: number): Entity;
+  function get_prototype(target: object): number | null;
+  function get_verb(target: object, name: string): Verb | null;
+  function resolve_props(target: object): Entity;
+  function schedule(verb: string, args: any[], delay: number): null;
+  function set_entity(cap: object, ...entities: object[]): void;
+  function set_prototype(cap: object, target: object, prototype: any): null;
+  function sudo(cap: object, target: object, verb: string, args: any[]): any;
+  function verbs(target: object): Verb[];
+  function delegate(parent: object, restrictions: object): Capability;
+  function get_capability(type_: string, filter?: object): Capability | null;
+  function give_capability(cap: object, target: object): null;
+  function has_capability(target: object, type_: string, filter?: object): boolean;
+  function mint(authority: object, type_: string, params: object): Capability;
   function add(a: number, b: number, ...args: number[]): number;
   function div(a: number, b: number, ...args: number[]): number;
   function mod(a: number, b: number): number;
@@ -97,6 +114,17 @@ declare global {
   function var_(name: string): any;
   function warn(message: unknown): void;
   function while_(condition: any, body: any): any;
+  namespace fs {
+    function list(cap: Capability | null, path: string): Promise<readonly string[]>;
+    function read(cap: Capability | null, path: string): Promise<string>;
+    function write(cap: Capability | null, path: string, content: string): Promise<null>;
+  }
+  namespace net {
+    namespace http {
+      function get(cap: Capability | null, url: string): Promise<string>;
+      function post(cap: Capability | null, url: string, body: string): Promise<string>;
+    }
+  }
   namespace list {
     function concat(list1: readonly unknown[], list2: readonly unknown[]): any[];
     function empty(list: readonly unknown[]): boolean;

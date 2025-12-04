@@ -68,15 +68,8 @@ describe("Hotel Scripting", () => {
       .get()!;
     const voidId = voidEntity.id;
 
-    const entityBase = db
-      .query<{ id: number }, []>(
-        "SELECT id FROM entities WHERE json_extract(props, '$.name') = 'Entity Base'",
-      )
-      .get()!;
-    const entityBaseId = entityBase.id;
-
     // Seed Hotel
-    seedHotel(lobbyId, voidId, entityBaseId);
+    seedHotel(lobbyId, voidId);
 
     // Find Hotel Lobby
     const hotelLobbyData = db
@@ -291,15 +284,8 @@ describe("Hotel Seed", () => {
       .get()!;
     lobbyId = lobby.id;
 
-    const entityBase = db
-      .query<{ id: number }, []>(
-        "SELECT id FROM entities WHERE json_extract(props, '$.name') = 'Entity Base'",
-      )
-      .get()!;
-    const entityBaseId = entityBase.id;
-
     // Seed Hotel
-    seedHotel(lobbyId, voidId, entityBaseId);
+    seedHotel(lobbyId, voidId);
 
     // Create a player
     const playerBase = db
@@ -326,6 +312,7 @@ describe("Hotel Seed", () => {
         "SELECT id FROM entities WHERE json_extract(props, '$.name') = 'Hotel Elevator'",
       )
       .get()!;
+    console.log("eled", elevatorData);
     const elevator = getEntity(elevatorData.id)!;
 
     // 2. Teleport to Elevator

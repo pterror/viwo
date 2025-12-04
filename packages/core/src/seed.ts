@@ -3,6 +3,10 @@ import { db } from "./db";
 import { createEntity, addVerb, createCapability, updateEntity, getEntity } from "./repo";
 import { seedItems } from "./seeds/items";
 import { seedHotel } from "./seeds/hotel";
+import { extractVerb } from "./verb_loader";
+import { resolve } from "path";
+
+const verbsPath = resolve(__dirname, "seeds/verbs.ts");
 
 export function seed() {
   // Check for any row at all.
@@ -49,209 +53,31 @@ export function seed() {
 
   createCapability(botId, "sys.sudo", {});
 
-  addVerb(
-    botId,
-    "sudo",
-    transpile(`
-      const targetId = arg(0);
-      const verb = arg(1);
-      const args = arg(2);
-      sudo(get_capability("sys.sudo"), entity(targetId), verb, args);
-    `),
-  );
+  createCapability(botId, "sys.sudo", {});
+
+  addVerb(botId, "sudo", transpile(extractVerb(verbsPath, "bot_sudo")));
 
   addVerb(
     systemId,
     "get_available_verbs",
-    transpile(`
-      const player = arg(0);
-      const verbs = list.new();
-      const seen = obj.new();
-
-      const addVerbs = (entityId) => {
-        const entityVerbs = verbs(entity(entityId));
-        for (const v of entityVerbs) {
-          const key = str.concat(v.name, ":", entityId);
-          if (!obj.has(seen, key)) {
-            obj.set(seen, key, true);
-            obj.set(v, "source", entityId);
-            list.push(verbs, v);
-          }
-        }
-      };
-
-      // 1. Player verbs
-      addVerbs(player.id);
-
-      // 2. Room verbs
-      const locationId = player.location;
-      if (locationId) {
-        addVerbs(locationId);
-
-        // 3. Items in Room
-        const room = entity(locationId);
-        const contents = obj.get(room, "contents", list.new());
-        for (const itemId of contents) {
-          addVerbs(itemId);
-        }
-      }
-
-      // 4. Inventory verbs
-      const inventory = obj.get(player, "contents", list.new());
-      for (const itemId of inventory) {
-        addVerbs(itemId);
-      }
-
-      verbs;
-    `),
+    transpile(extractVerb(verbsPath, "system_get_available_verbs")),
   );
 
-  addVerb(
-    entityBaseId,
-    "find",
-    transpile(`
-      const query = arg(0);
-      const locationId = caller().location;
-      const location = entity(locationId);
-      list.find(
-        obj.get(location, "contents", list.new()),
-        (id) => {
-          const props = resolve_props(entity(id));
-          return props.name == query;
-        }
-      );
-    `),
-  );
+  addVerb(entityBaseId, "find", transpile(extractVerb(verbsPath, "entity_base_find")));
 
-  addVerb(
-    entityBaseId,
-    "find_exit",
-    transpile(`
-      const query = arg(0);
-      const locationId = caller().location;
-      const location = entity(locationId);
-      list.find(
-        obj.get(location, "exits", list.new()),
-        (id) => {
-          const props = resolve_props(entity(id));
-          return props.name == query || props.direction == query;
-        }
-      );
-    `),
-  );
+  addVerb(entityBaseId, "find_exit", transpile(extractVerb(verbsPath, "entity_base_find_exit")));
 
-  addVerb(
-    entityBaseId,
-    "on_enter",
-    transpile(`
-      const mover = arg(0);
-      const cap = get_capability("entity.control", { target_id: this_().id });
-      if (cap) {
-        const contents = obj.get(this_(), "contents", list.new());
-        list.push(contents, mover.id);
-        set_entity(cap, obj.set(this_(), "contents", contents));
-      } else {
-        send("message", "The room refuses you.");
-      }
-    `),
-  );
+  addVerb(entityBaseId, "on_enter", transpile(extractVerb(verbsPath, "entity_base_on_enter")));
 
-  addVerb(
-    entityBaseId,
-    "on_leave",
-    transpile(`
-      const mover = arg(0);
-      const cap = get_capability("entity.control", { target_id: this_().id });
-      if (cap) {
-        const contents = obj.get(this_(), "contents", list.new());
-        const newContents = list.filter(contents, (id) => id != mover.id);
-        set_entity(cap, obj.set(this_(), "contents", newContents));
-      } else {
-        send("message", "The room refuses to let you go.");
-      }
-    `),
-  );
+  addVerb(entityBaseId, "on_leave", transpile(extractVerb(verbsPath, "entity_base_on_leave")));
 
-  addVerb(
-    entityBaseId,
-    "teleport",
-    transpile(`
-      const destEntity = arg(0);
-      if (!destEntity) {
-        send("message", "Where do you want to teleport to?");
-      } else {
-        const destId = destEntity.id;
-        if (destId) {
-          const mover = caller();
-          let checkId = destId;
-          let isRecursive = false;
-          while (checkId) {
-            if (checkId == mover.id) {
-              isRecursive = true;
-              checkId = null;
-            } else {
-              const checkEnt = entity(checkId);
-              checkId = obj.get(checkEnt, "location", null);
-            }
-          }
+  addVerb(entityBaseId, "teleport", transpile(extractVerb(verbsPath, "entity_base_teleport")));
 
-          if (isRecursive) {
-            send("message", "You can't put something inside itself.");
-          } else {
-            const oldLocId = mover.location;
-            const oldLoc = entity(oldLocId);
-            const newLoc = entity(destId);
+  addVerb(entityBaseId, "move", transpile(extractVerb(verbsPath, "entity_base_move")));
 
-            call(oldLoc, "on_leave", mover);
-            call(newLoc, "on_enter", mover);
+  addVerb(entityBaseId, "say", transpile(extractVerb(verbsPath, "entity_base_say")));
 
-            const selfCap = get_capability("entity.control", { target_id: mover.id });
-            if (selfCap) {
-              obj.set(mover, "location", destId);
-              set_entity(selfCap, mover);
-            } else {
-              send("message", "You cannot move yourself.");
-            }
-
-            send("room_id", { roomId: destId });
-            call(caller(), "look");
-          }
-        } else {
-          send("message", "Invalid destination.");
-        }
-      }
-    `),
-  );
-
-  addVerb(
-    entityBaseId,
-    "move",
-    transpile(`
-      const direction = arg(0);
-      if (!direction) {
-        send("message", "Where do you want to go?");
-      } else {
-        const exitId = call(this_(), "find_exit", direction);
-        if (exitId) {
-          const destId = resolve_props(entity(exitId)).destination;
-          call(caller(), "teleport", entity(destId));
-        } else {
-          send("message", "That way leads nowhere.");
-        }
-      }
-    `),
-  );
-
-  addVerb(entityBaseId, "say", transpile(`send("message", "Say is not yet implemented.");`));
-
-  addVerb(
-    entityBaseId,
-    "tell",
-    transpile(`
-      const msg = arg(0);
-      send("message", msg);
-    `),
-  );
+  addVerb(entityBaseId, "tell", transpile(extractVerb(verbsPath, "entity_base_tell")));
 
   // 3. Create Humanoid Base
   const humanoidBaseId = createEntity(
@@ -315,163 +141,35 @@ export function seed() {
 
   // Add verbs to Player Base
 
-  addVerb(
-    playerBaseId,
-    "look",
-    transpile(`
-      const argsList = args();
-      if (list.empty(argsList)) {
-        const room = resolve_props(entity(caller().location));
-        const contents = obj.get(room, "contents", list.new());
-        const exits = obj.get(room, "exits", list.new());
-        const resolvedContents = list.map(contents, (id) => resolve_props(entity(id)));
-        const resolvedExits = list.map(exits, (id) => resolve_props(entity(id)));
-        
-        send("update", {
-          entities: list.concat(
-            [room],
-            list.concat(resolvedContents, resolvedExits)
-          )
-        });
-      } else {
-        const targetName = arg(0);
-        const targetId = call(caller(), "find", targetName);
-        if (targetId) {
-          const target = resolve_props(entity(targetId));
-          send("update", { entities: [target] });
-        } else {
-          send("message", "You don't see that here.");
-        }
-      }
-    `),
-  );
+  addVerb(playerBaseId, "look", transpile(extractVerb(verbsPath, "player_look")));
 
-  addVerb(
-    playerBaseId,
-    "inventory",
-    transpile(`
-      const player = resolve_props(caller());
-      const contents = obj.get(player, "contents", list.new());
-      const resolvedItems = list.map(contents, (id) => resolve_props(entity(id)));
-      const finalList = list.concat([player], resolvedItems);
-      send("update", { entities: finalList });
-    `),
-  );
+  addVerb(playerBaseId, "inventory", transpile(extractVerb(verbsPath, "player_inventory")));
 
-  addVerb(
-    playerBaseId,
-    "whoami",
-    transpile(`
-      send("player_id", { playerId: caller().id });
-    `),
-  );
+  addVerb(playerBaseId, "whoami", transpile(extractVerb(verbsPath, "player_whoami")));
 
   addVerb(
     playerBaseId,
     "dig",
-    transpile(`
-      const direction = arg(0);
-      const roomName = str.join(list.slice(args(), 1), " ");
-      if (!direction) {
-        send("message", "Where do you want to dig?");
-      } else {
-        const createCap = get_capability("sys.create");
-        let controlCap = get_capability("entity.control", { target_id: caller().location });
-        if (!controlCap) {
-          controlCap = get_capability("entity.control", { "*": true });
-        }
-
-        if (createCap && controlCap) {
-          const newRoomData = obj.new();
-          obj.set(newRoomData, "name", roomName);
-          const newRoomId = create(createCap, newRoomData);
-
-          const exitData = obj.new();
-          obj.set(exitData, "name", direction);
-          obj.set(exitData, "location", caller().location);
-          obj.set(exitData, "direction", direction);
-          obj.set(exitData, "destination", newRoomId);
-          const exitId = create(createCap, exitData);
-          
-          set_prototype(controlCap, entity(newRoomId), ${entityBaseId});
-
-          const currentRoom = entity(caller().location);
-          const currentExits = obj.get(currentRoom, "exits", list.new());
-          list.push(currentExits, exitId);
-          set_entity(controlCap, obj.set(currentRoom, "exits", currentExits));
-
-          call(caller(), "move", direction);
-        } else {
-          send("message", "You do not have permission to dig here.");
-        }
-      }
-    `),
+    transpile(
+      extractVerb(verbsPath, "player_dig").replace(
+        "ENTITY_BASE_ID_PLACEHOLDER",
+        String(entityBaseId),
+      ),
+    ),
   );
 
   addVerb(
     playerBaseId,
     "create",
-    transpile(`
-      const name = arg(0);
-      if (!name) {
-        send("message", "What do you want to create?");
-      } else {
-        const createCap = get_capability("sys.create");
-        let controlCap = get_capability("entity.control", { target_id: caller().location });
-        if (!controlCap) {
-          controlCap = get_capability("entity.control", { "*": true });
-        }
-
-        if (createCap && controlCap) {
-          const itemData = obj.new();
-          obj.set(itemData, "name", name);
-          obj.set(itemData, "location", caller().location);
-          const itemId = create(createCap, itemData);
-          set_prototype(controlCap, entity(itemId), ${entityBaseId});
-
-          const room = entity(caller().location);
-          const contents = obj.get(room, "contents", list.new());
-          list.push(contents, itemId);
-          set_entity(controlCap, obj.set(room, "contents", contents));
-
-          send("message", str.concat("You create ", name, "."));
-          call(caller(), "look");
-          itemId;
-        } else {
-          send("message", "You do not have permission to create here.");
-        }
-      }
-    `),
+    transpile(
+      extractVerb(verbsPath, "player_create").replace(
+        "ENTITY_BASE_ID_PLACEHOLDER",
+        String(entityBaseId),
+      ),
+    ),
   );
 
-  addVerb(
-    playerBaseId,
-    "set",
-    transpile(`
-      const targetName = arg(0);
-      const propName = arg(1);
-      const value = arg(2);
-      if (!targetName || !propName) {
-        send("message", "Usage: set <target> <prop> <value>");
-      } else {
-        const targetId = call(this_(), "find", targetName);
-        if (targetId) {
-          let controlCap = get_capability("entity.control", { target_id: targetId });
-          if (!controlCap) {
-            controlCap = get_capability("entity.control", { "*": true });
-          }
-          if (controlCap) {
-            set_entity(controlCap, obj.merge(entity(targetId), { [propName]: value }));
-            send("message", "Property set.");
-          } else {
-            send("message", "You do not have permission to modify this object.");
-          }
-        } else {
-          send("message", "I don't see that here.");
-        }
-      }
-    `),
-  );
+  addVerb(playerBaseId, "set", transpile(extractVerb(verbsPath, "player_set")));
 
   // 3. Create a Lobby Room
   const lobbyId = createEntity(
@@ -695,7 +393,7 @@ export function seed() {
     },
   });
 
-  addVerb(watchId, "tell", transpile(`send("message", time.format(time.now(), "time"));`));
+  addVerb(watchId, "tell", transpile(extractVerb(verbsPath, "watch_tell")));
 
   // Teleporter Item
   const teleporterId = createEntity({
@@ -708,19 +406,7 @@ export function seed() {
     },
   });
 
-  addVerb(
-    teleporterId,
-    "teleport",
-    transpile(`
-      const destId = obj.get(this_(), "destination");
-      if (destId) {
-        call(caller(), "teleport", entity(destId));
-        send("message", "Whoosh! You have been teleported.");
-      } else {
-        send("message", "The stone is dormant.");
-      }
-    `),
-  );
+  addVerb(teleporterId, "teleport", transpile(extractVerb(verbsPath, "teleporter_teleport")));
 
   // Status Item
   const statusId = createEntity({
@@ -736,7 +422,7 @@ export function seed() {
     statusId,
     "check",
     // world.entities missing
-    transpile(`send("message", "Status check disabled.");`),
+    transpile(extractVerb(verbsPath, "status_check")),
   );
 
   console.log("Seeding complete!");
@@ -750,14 +436,7 @@ export function seed() {
     },
   });
 
-  addVerb(
-    colorLibId,
-    "random_color",
-    transpile(`
-      const colors = obj.get(this_(), "colors");
-      list.get(colors, random(0, list.len(colors) - 1));
-    `),
-  );
+  addVerb(colorLibId, "random_color", transpile(extractVerb(verbsPath, "color_lib_random_color")));
 
   // Mood Ring
   const moodRingId = createEntity({
@@ -772,30 +451,11 @@ export function seed() {
 
   // Verb to update color
   // It calls random_color on the lib, sets its own color adjective, and schedules itself again.
-  addVerb(
-    moodRingId,
-    "update_color",
-    transpile(`
-      const libId = obj.get(this_(), "color_lib");
-      const newColor = call(entity(libId), "random_color");
-      const cap = get_capability("entity.control", { target_id: this_().id });
-      if (cap) {
-        set_entity(
-          cap,
-          obj.set(
-            this_(),
-            "adjectives",
-            list.new(str.concat("color:", newColor), "material:silver")
-          )
-        );
-      }
-      schedule("update_color", list.new(), 5000);
-    `),
-  );
+  addVerb(moodRingId, "update_color", transpile(extractVerb(verbsPath, "mood_ring_update_color")));
 
   // Kickoff
   // We need a way to start it. Let's add a 'touch' verb to start it.
-  addVerb(moodRingId, "touch", transpile(`schedule("update_color", list.new(), 0);`));
+  addVerb(moodRingId, "touch", transpile(extractVerb(verbsPath, "mood_ring_touch")));
 
   // --- Advanced Items ---
 
@@ -815,18 +475,7 @@ export function seed() {
   addVerb(
     dynamicRingId,
     "get_adjectives",
-    transpile(`
-      list.new(
-        str.concat(
-          "color:hsl(",
-          str.concat(
-            mul(time.to_timestamp(time.now()), 0.1),
-            ", 100%, 50%)"
-          )
-        ),
-        "material:gold"
-      )
-    `),
+    transpile(extractVerb(verbsPath, "dynamic_ring_get_adjectives")),
   );
 
   // 2. Special Watch (Local Broadcast)
@@ -836,15 +485,8 @@ export function seed() {
     props: { description: "A watch that announces the time to you." },
   });
 
-  addVerb(
-    specialWatchId,
-    "tick",
-    transpile(`
-      send("message", str.concat("Tick Tock: ", time.format(time.now(), "time")));
-      schedule("tick", list.new(), 10000);
-    `),
-  );
-  addVerb(specialWatchId, "start", transpile(`schedule("tick", list.new(), 0);`));
+  addVerb(specialWatchId, "tick", transpile(extractVerb(verbsPath, "special_watch_tick")));
+  addVerb(specialWatchId, "start", transpile(extractVerb(verbsPath, "special_watch_start")));
 
   // 3. Clock (Room Broadcast)
   // Watch broadcasts to holder (Player), Clock broadcasts to Room.
@@ -855,15 +497,8 @@ export function seed() {
     props: { description: "A loud clock." },
   });
 
-  addVerb(
-    clockId,
-    "tick",
-    transpile(`
-      send("message", str.concat("BONG! It is ", time.format(time.now(), "time")));
-      schedule("tick", list.new(), 15000);
-    `),
-  );
-  addVerb(clockId, "start", transpile(`schedule("tick", list.new(), 0);`));
+  addVerb(clockId, "tick", transpile(extractVerb(verbsPath, "clock_tick")));
+  addVerb(clockId, "start", transpile(extractVerb(verbsPath, "clock_start")));
 
   // 4. Clock Tower (Global Broadcast)
   const towerId = createEntity({
@@ -872,15 +507,8 @@ export function seed() {
     props: { description: "The source of time." },
   });
 
-  addVerb(
-    towerId,
-    "toll",
-    transpile(`
-      send("message", str.concat("The Clock Tower tolls: ", time.format(time.now(), "time")));
-      schedule("toll", list.new(), 60000);
-    `),
-  );
-  addVerb(towerId, "start", transpile(`schedule("toll", list.new(), 0);`));
+  addVerb(towerId, "toll", transpile(extractVerb(verbsPath, "clock_tower_toll")));
+  addVerb(towerId, "start", transpile(extractVerb(verbsPath, "clock_tower_start")));
 
   // 5. Mailbox
   // A prototype for mailboxes.
@@ -899,7 +527,7 @@ export function seed() {
     mailboxProtoId,
     "deposit",
     // give missing
-    transpile(`send("message", "Deposit disabled.");`),
+    transpile(extractVerb(verbsPath, "mailbox_deposit")),
     { call: "public" },
   ); // Anyone can call deposit
 
@@ -916,7 +544,7 @@ export function seed() {
   seedItems(voidId);
 
   // 6. Create Hotel
-  seedHotel(voidId, voidId, entityBaseId);
+  seedHotel(lobbyId, voidId);
 
   console.log("Database seeded successfully.");
 }

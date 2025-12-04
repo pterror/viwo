@@ -53,6 +53,14 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
     }
   }
 
+  if (ts.isAssertionExpression(node)) {
+    return transpileNode(node.expression, scope);
+  }
+
+  if (ts.isNonNullExpression(node)) {
+    return transpileNode(node.expression, scope);
+  }
+
   if (ts.isExpressionStatement(node)) {
     return transpileNode(node.expression, scope);
   }
@@ -237,9 +245,9 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
     if (opcodeName) {
       // Handle sanitization reversal (remove trailing underscore)
       if (opcodeName.endsWith("_")) {
-        const potentialOpcode = opcodeName.slice(0, -1);
+        const potentialOpcode = opcodeName.slice(0, -1).replace(/^.+[.]/, "");
         if (RESERVED_TYPESCRIPT_KEYWORDS.has(potentialOpcode)) {
-          opcodeName = potentialOpcode;
+          opcodeName = opcodeName.replace(/_$/, "");
         }
       }
       opcodeName = OPCODE_MAPPINGS[opcodeName] ?? opcodeName;
@@ -332,6 +340,7 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
   }
 
   console.warn(`Unsupported node kind: ${node.kind}`);
+  console.warn(node.getText());
   return undefined;
 }
 

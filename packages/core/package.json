@@ -12,7 +12,8 @@
     "test": "bun test",
     "db:wipe": "rm -f world.sqlite",
     "lint": "oxlint",
-    "format": "oxfmt"
+    "format": "oxfmt",
+    "generate:types": "bun scripts/generate-types.ts"
   },
   "dependencies": {
     "ws": "^8.18.0",
