@@ -10,7 +10,6 @@
   - packages/scripting/src/transpiler.ts
   - docs/scripting/transpiler.md
   - Consider `for (... in ...)`
-  - Add tests to make sure type assertions (`as T`), non-null assertions (`foo!`), generic parameters, etc. are ignored as expected
   - (low priority) Add block scoping
 
 - packages/scripting/src/interpreter.ts: Lambdas should be interpreted inside the stack machine, instead of a recursive `evaluate` call

@@ -205,4 +205,33 @@ describe("transpiler", () => {
       ObjectLib.objSet(Std.var("o"), "p", MathLib.add(ObjectLib.objGet(Std.var("o"), "p"), 1)),
     );
   });
+
+  test("typescript features", () => {
+    // Type assertions
+    expect(transpile("x as number")).toEqual(Std.var("x"));
+    expect(transpile("<number>x")).toEqual(Std.var("x"));
+    expect(transpile("x as any as number")).toEqual(Std.var("x"));
+
+    // Non-null assertions
+    expect(transpile("x!")).toEqual(Std.var("x"));
+    expect(transpile("x!!.y")).toEqual(ObjectLib.objGet(Std.var("x"), "y"));
+
+    // Generics in function calls
+    expect(transpile("f<T>(x)")).toEqual(["f", Std.var("x")]);
+    expect(transpile("f<T, U>(x)")).toEqual(["f", Std.var("x")]);
+
+    // Generics in function declarations
+    const funcDecl = `
+      function id<T>(x: T): T { return x; }
+      id<number>(1);
+    `;
+    const funcExpected = Std.seq(
+      Std.let("id", Std.lambda(["x"], Std.seq(Std.var("x")))),
+      Std.apply(Std.var("id"), 1),
+    );
+    expect(transpile(funcDecl)).toEqual(funcExpected);
+
+    // Generics in arrow functions
+    expect(transpile("<T>(x: T) => x")).toEqual(Std.lambda(["x"], Std.var("x")));
+  });
 });
