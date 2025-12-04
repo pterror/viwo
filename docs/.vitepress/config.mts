@@ -60,6 +60,10 @@ export default withMermaid(
           text: "Plugins",
           items: getSidebarItems("plugins"),
         },
+        {
+          text: "Development",
+          items: [{ text: "Building Docs", link: "/development" }],
+        },
       ],
 
       socialLinks: [{ icon: "github", link: "https://github.com/pterror/viwo" }],

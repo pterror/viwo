@@ -6,10 +6,7 @@ const Counter = StdLib.seq(
   StdLib.let("i", 0),
   StdLib.while(
     BooleanLib.lt(StdLib.var("i"), 5),
-    StdLib.seq(
-      StdLib.log(StdLib.var("i")),
-      StdLib.set("i", MathLib.add(StdLib.var("i"), 1)),
-    ),
+    StdLib.seq(StdLib.log(StdLib.var("i")), StdLib.set("i", MathLib.add(StdLib.var("i"), 1))),
   ),
 );
 
