@@ -1285,13 +1285,12 @@ body {
 .script-editor__palette {
   min-height: 0;
   overflow: auto;
-  /* Note: Fixed height required because parent container does not constrain height properly. */
-  height: 400px;
 }
 
 .script-editor__workspace-container {
   min-height: 0;
   overflow: auto;
+  flex: 1;
 }
 
 .script-editor__workspace {
@@ -1300,12 +1299,17 @@ body {
   flex-direction: column;
   background-color: var(--bg-app);
   overflow: hidden; /* Prevent workspace from scrolling */
+  min-height: 100%;
 }
 
 .script-editor__canvas {
   flex: 1;
   padding: 20px;
   overflow: auto; /* Allow canvas to scroll */
+}
+
+.script-editor__code-preview {
+  min-height: 100%;
 }
 
 .script-editor__json-preview {
@@ -1645,4 +1649,45 @@ body {
 }
 .block-node--func .block-node__header {
   background: rgba(139, 92, 246, 0.2);
+}
+
+/* Playground */
+.playground {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.playground__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: var(--bg-panel);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.playground__header h1 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.playground__controls {
+  display: flex;
+  gap: 1rem;
+}
+
+.playground__main {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+}
+
+.playground__output {
+  height: 200px;
+  background-color: var(--bg-input);
+  border-top: 1px solid var(--border-color);
+  padding: 1rem;
+  overflow-y: auto;
+  font-family: monospace;
 }

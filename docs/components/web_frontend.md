@@ -35,7 +35,6 @@ The application is structured as a standard SolidJS project within `apps/web`.
 
 - **`src/App.tsx`**: The main entry point and layout component. It handles global event listeners (like keyboard shortcuts) and renders the main UI sections.
 - **`src/store/game.ts`**: Contains the `gameStore`, which manages the client-side state of the game (entities, connection status, player location) and handles communication with the core server via JSON-RPC.
-- **`src/index.css`**: Global styles and theme definitions.
 
 ## Key Components
 

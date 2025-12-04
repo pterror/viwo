@@ -5,7 +5,8 @@
   "exports": {
     "./constants/adjectives": "./src/constants/adjectives.ts",
     "./commands": "./src/commands.ts",
-    "./jsonrpc": "./src/jsonrpc.ts"
+    "./jsonrpc": "./src/jsonrpc.ts",
+    "./index.css": "./src/index.css"
   },
   "scripts": {
     "typecheck": "tsgo --noEmit",

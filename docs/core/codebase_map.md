@@ -21,13 +21,13 @@ This document lists key files and directories to help navigation.
 ## Shared Library (`packages/shared`)
 
 - **`src/jsonrpc.ts`**: JSON-RPC 2.0 type definitions and notification schemas.
+- **`src/index.css`**: Global styles.
 
 ## Web Client (`apps/web`)
 
 - **`src/App.tsx`**: Main SolidJS component. Handles WebSocket connection and global state.
 - **`src/store/`**: State management.
 - **`src/components/`**: UI components.
-- **`src/index.css`**: Global styles.
 
 ## TUI Client (`apps/tui`)
 
