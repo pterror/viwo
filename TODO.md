@@ -11,9 +11,11 @@
   - packages/scripting/src/compiler.ts
   - docs/scripting/transpiler.md
   - docs/scripting/compiler.md
-  - Add support for `i += 1`; `-=`, `||=`, `**=`, etc.
-  - Add support for `for (a; b; c)`
-  - Add support for `for (... in ...)`
+  - Consider `for (a; b; c)`
+  - Consider `for (... in ...)`
+  - Consider `break`
+  - Consider `?.`, `?.()`, etc.
+  - Add tests to make sure type assertions (`as T`), non-null assertions (`foo!`), generic parameters, etc. are ignored as expected
 
 - packages/scripting/src/interpreter.ts: Lambdas should be interpreted inside the stack machine, instead of a recursive `evaluate` call
 - packages/core/src/runtime/lib/kernel.ts: In a real system, we'd need to ensure restrictions are actually restrictive (subset)

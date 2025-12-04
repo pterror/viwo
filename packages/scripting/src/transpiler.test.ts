@@ -157,4 +157,28 @@ describe("transpiler", () => {
     const transpiled = transpile(code);
     expect(transpiled).toEqual(script);
   });
+  test("compound assignment", () => {
+    expect(transpile("x += 1")).toEqual(Std.set("x", MathLib.add(Std.var("x"), 1)));
+    expect(transpile("x -= 1")).toEqual(Std.set("x", MathLib.sub(Std.var("x"), 1)));
+    expect(transpile("x *= 2")).toEqual(Std.set("x", MathLib.mul(Std.var("x"), 2)));
+    expect(transpile("x /= 2")).toEqual(Std.set("x", MathLib.div(Std.var("x"), 2)));
+    expect(transpile("x %= 2")).toEqual(Std.set("x", MathLib.mod(Std.var("x"), 2)));
+    expect(transpile("x **= 2")).toEqual(Std.set("x", MathLib.pow(Std.var("x"), 2)));
+
+    expect(transpile("x &&= y")).toEqual(
+      Std.if(Std.var("x"), Std.set("x", Std.var("y")), Std.var("x")),
+    );
+    expect(transpile("x ||= y")).toEqual(
+      Std.if(Std.var("x"), Std.var("x"), Std.set("x", Std.var("y"))),
+    );
+    expect(transpile("x ??= y")).toEqual(
+      Std.if(BooleanLib.neq(Std.var("x"), null), Std.var("x"), Std.set("x", Std.var("y"))),
+    );
+  });
+
+  test("compound assignment objects", () => {
+    expect(transpile("o.p += 1")).toEqual(
+      ObjectLib.objSet(Std.var("o"), "p", MathLib.add(ObjectLib.objGet(Std.var("o"), "p"), 1)),
+    );
+  });
 });

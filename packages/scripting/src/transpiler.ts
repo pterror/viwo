@@ -184,6 +184,17 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
           return ObjectLib.objSet(left[1], left[2], right);
         }
         throw new Error("Invalid assignment target");
+      case ts.SyntaxKind.PlusEqualsToken:
+      case ts.SyntaxKind.MinusEqualsToken:
+      case ts.SyntaxKind.AsteriskEqualsToken:
+      case ts.SyntaxKind.SlashEqualsToken:
+      case ts.SyntaxKind.PercentEqualsToken:
+      case ts.SyntaxKind.AsteriskAsteriskEqualsToken:
+        return transpileArithmeticAssignment(op, left, right);
+      case ts.SyntaxKind.AmpersandAmpersandEqualsToken:
+      case ts.SyntaxKind.BarBarEqualsToken:
+      case ts.SyntaxKind.QuestionQuestionEqualsToken:
+        return transpileLogicalAssignment(op, left, right);
     }
   }
 
@@ -384,4 +395,107 @@ function resolveDottedName(node: ts.Expression): string | null {
     if (lhs) return `${lhs}.${node.name.text}`;
   }
   return null;
+}
+
+function transpileArithmeticAssignment(op: ts.BinaryOperator, left: any, right: any): any {
+  let valueOp: (a: any, b: any) => any;
+  switch (op) {
+    case ts.SyntaxKind.PlusEqualsToken:
+      valueOp = MathLib.add;
+      break;
+    case ts.SyntaxKind.MinusEqualsToken:
+      valueOp = MathLib.sub;
+      break;
+    case ts.SyntaxKind.AsteriskEqualsToken:
+      valueOp = MathLib.mul;
+      break;
+    case ts.SyntaxKind.SlashEqualsToken:
+      valueOp = MathLib.div;
+      break;
+    case ts.SyntaxKind.PercentEqualsToken:
+      valueOp = MathLib.mod;
+      break;
+    case ts.SyntaxKind.AsteriskAsteriskEqualsToken:
+      valueOp = MathLib.pow;
+      break;
+    default:
+      throw new Error("Unknown arithmetic assignment op");
+  }
+
+  if (Array.isArray(left) && left[0] === "var") {
+    return StdLib.set(left[1], valueOp(left, right));
+  }
+
+  if (Array.isArray(left) && left[0] === "obj.get") {
+    const obj = left[1];
+    const key = left[2];
+    if (isSimpleNode(obj)) {
+      return ObjectLib.objSet(obj, key, valueOp(left, right));
+    }
+    const tmp = generateTempVar();
+    const tmpVar = StdLib.var(tmp);
+    return StdLib.seq(
+      StdLib.let(tmp, obj),
+      ObjectLib.objSet(tmpVar, key, valueOp(ObjectLib.objGet(tmpVar, key), right)),
+    );
+  }
+
+  throw new Error("Invalid assignment target");
+}
+
+function transpileLogicalAssignment(op: ts.BinaryOperator, left: any, right: any): any {
+  const assign = (target: any, val: any) => {
+    if (Array.isArray(target) && target[0] === "var") {
+      return StdLib.set(target[1], val);
+    }
+    if (Array.isArray(target) && target[0] === "obj.get") {
+      return ObjectLib.objSet(target[1], target[2], val);
+    }
+    throw new Error("Invalid assignment target");
+  };
+
+  const buildLogic = (get: any, set: any) => {
+    switch (op) {
+      case ts.SyntaxKind.AmpersandAmpersandEqualsToken:
+        return StdLib.if(get, set, get);
+      case ts.SyntaxKind.BarBarEqualsToken:
+        return StdLib.if(get, get, set);
+      case ts.SyntaxKind.QuestionQuestionEqualsToken:
+        return StdLib.if(BooleanLib.neq(get, null), get, set);
+      default:
+        throw new Error("Unknown logical assignment op");
+    }
+  };
+
+  if (Array.isArray(left) && left[0] === "var") {
+    return buildLogic(left, assign(left, right));
+  }
+
+  if (Array.isArray(left) && left[0] === "obj.get") {
+    const obj = left[1];
+    const key = left[2];
+    if (isSimpleNode(obj)) {
+      return buildLogic(left, ObjectLib.objSet(obj, key, right));
+    }
+    const tmp = generateTempVar();
+    const tmpVar = StdLib.var(tmp);
+    const get = ObjectLib.objGet(tmpVar, key);
+    const set = ObjectLib.objSet(tmpVar, key, right);
+    return StdLib.seq(StdLib.let(tmp, obj), buildLogic(get, set));
+  }
+
+  throw new Error("Invalid assignment target");
+}
+
+function isSimpleNode(node: any): boolean {
+  if (typeof node !== "object" || node === null) return true;
+  if (Array.isArray(node)) {
+    if (node[0] === "var") return true;
+    if (node[0] === "this") return true;
+  }
+  return false;
+}
+
+function generateTempVar() {
+  return "__tmp_" + Math.random().toString(36).slice(2, 8);
 }
