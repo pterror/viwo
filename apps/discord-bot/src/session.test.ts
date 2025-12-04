@@ -10,7 +10,7 @@ const mockDb = {
   run: mock(() => {}),
 };
 
-mock.module("./db", () => ({ db: mockDb }));
+mock.module("./instances", () => ({ db: mockDb }));
 
 // Import real socketManager
 import { socketManager } from "./socket";
