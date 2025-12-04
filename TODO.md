@@ -11,11 +11,11 @@
   - packages/scripting/src/compiler.ts
   - docs/scripting/transpiler.md
   - docs/scripting/compiler.md
-  - Consider `for (a; b; c)`
   - Consider `for (... in ...)`
   - Consider `break`
   - Consider `?.`, `?.()`, etc.
   - Add tests to make sure type assertions (`as T`), non-null assertions (`foo!`), generic parameters, etc. are ignored as expected
+  - (low priority) Add block scoping
 
 - packages/scripting/src/interpreter.ts: Lambdas should be interpreted inside the stack machine, instead of a recursive `evaluate` call
 - packages/core/src/runtime/lib/kernel.ts: In a real system, we'd need to ensure restrictions are actually restrictive (subset)
@@ -28,5 +28,3 @@
   - Accept a list of capabilities, and then keep entities as spread arguments? (This might cause performance issues since we might need to look through all capabilities to find the right one for each entity)
   - Accept a list of [capability, entity]
   - Something else?
-
-- packages/scripting/src/lib/object.ts: Type-safe codegen by adding generic parameters

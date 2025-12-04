@@ -144,6 +144,24 @@ describe("transpiler", () => {
     expect(transpile("for (const x of list) { x; }")).toEqual(
       Std.for("x", Std.var("list"), Std.seq(Std.var("x"))),
     );
+    expect(transpile("for (let i = 0; i < 10; i++) { i; }")).toEqual(
+      Std.seq(
+        Std.let("i", 0),
+        Std.while(
+          BooleanLib.lt(Std.var("i"), 10),
+          Std.seq(Std.seq(Std.var("i")), Std.set("i", MathLib.add(Std.var("i"), 1))),
+        ),
+      ),
+    );
+    expect(transpile("for (let i = 10; i > 0; i--) { i; }")).toEqual(
+      Std.seq(
+        Std.let("i", 10),
+        Std.while(
+          BooleanLib.gt(Std.var("i"), 0),
+          Std.seq(Std.seq(Std.var("i")), Std.set("i", MathLib.sub(Std.var("i"), 1))),
+        ),
+      ),
+    );
     expect(transpile("try { 1; } catch (e) { 2; }")).toEqual(Std.try(Std.seq(1), "e", Std.seq(2)));
   });
 
