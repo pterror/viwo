@@ -5,12 +5,6 @@
   - TUI (should have the same layout as web frontend)
   - Discord bot
 
-- Flesh out transpiler:
-
-  - packages/scripting/src/transpiler.ts
-  - docs/scripting/transpiler.md
-  - (low priority) Add block scoping
-
 - packages/scripting/src/interpreter.ts: Lambdas should be interpreted inside the stack machine, instead of a recursive `evaluate` call.
   - **Plan**: Refactor `OpcodeHandler` to return a generator (`Iterator<CallRequest | any>`). The interpreter loop would handle `CallRequest` by pushing a new stack frame, thus avoiding recursion in the host JS engine.
   - **Status**: Postponed. The current recursive implementation is simpler and likely performant enough for now. We should revisit this if we hit stack overflow issues or need features like pausing/resuming execution (serialization).

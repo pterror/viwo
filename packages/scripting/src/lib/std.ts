@@ -155,14 +155,27 @@ const if_ = defineOpcode<[boolean, unknown, unknown?], any>("if", {
     const runBranch = (conditionResult: boolean) => {
       const snapshot = enterScope(ctx);
       try {
-        if (conditionResult) {
-          return evaluate(thenBranch, ctx);
-        } else if (elseBranch) {
-          return evaluate(elseBranch, ctx);
+        const branch = conditionResult ? thenBranch : elseBranch;
+        const result = branch ? evaluate(branch, ctx) : null;
+
+        if (result instanceof Promise) {
+          return result.then(
+            (result) => {
+              exitScope(ctx, snapshot);
+              return result;
+            },
+            (error) => {
+              exitScope(ctx, snapshot);
+              throw error;
+            },
+          );
         }
-        return null;
-      } finally {
+
         exitScope(ctx, snapshot);
+        return result;
+      } catch (error) {
+        exitScope(ctx, snapshot);
+        throw error;
       }
     };
 
@@ -175,9 +188,7 @@ const if_ = defineOpcode<[boolean, unknown, unknown?], any>("if", {
 });
 export { if_ as if };
 
-/**
- * Repeats a body while a condition is true.
- */
+/** Repeats a body while a condition is true. */
 const while_ = defineOpcode<[boolean, unknown], any>("while", {
   metadata: {
     label: "While",
@@ -261,12 +272,12 @@ const while_ = defineOpcode<[boolean, unknown], any>("while", {
           exitScope(ctx, snapshot);
           lastResult = bodyResult;
           return loop();
-        } catch (e) {
+        } catch (error) {
           exitScope(ctx, snapshot);
-          if (e instanceof BreakSignal) {
-            return e.value ?? lastResult;
+          if (error instanceof BreakSignal) {
+            return error.value ?? lastResult;
           }
-          throw e;
+          throw error;
         }
       }
       return lastResult;
@@ -460,7 +471,7 @@ const let_ = defineOpcode<[string, unknown], any>("let", {
     returnType: "any",
   },
   handler: ([name, value], ctx) => {
-    ctx.vars = ctx.vars || {};
+    ctx.vars = ctx.vars ?? {};
     if (ctx.cow) {
       ctx.vars = Object.create(ctx.vars);
       ctx.cow = false;
@@ -471,13 +482,12 @@ const let_ = defineOpcode<[string, unknown], any>("let", {
 });
 export { let_ as let };
 
-/** Retrieves the value of a variable. */
+/** Retrieves a local variable from the current scope. */
 const var_ = defineOpcode<[string], any>("var", {
   metadata: {
-    label: "Get Var",
-    category: "data",
-    description: "Get variable value",
-    layout: "primitive",
+    label: "Get Variable",
+    category: "logic",
+    description: "Get local variable",
     slots: [{ name: "Name", type: "string" }],
     parameters: [{ name: "name", type: "string" }],
     returnType: "any",
@@ -516,9 +526,7 @@ const set_ = defineOpcode<[string, unknown], any>("set", {
 export { set_ as set };
 
 // System
-/**
- * Logs a message to the console/client.
- */
+/** Logs a message to the console/client. */
 export const log = defineOpcode<[unknown, ...unknown[]], null>("log", {
   metadata: {
     label: "Log",
@@ -537,9 +545,7 @@ export const log = defineOpcode<[unknown, ...unknown[]], null>("log", {
   },
 });
 
-/**
- * Retrieves a specific argument passed to the script.
- */
+/** Retrieves a specific argument passed to the script. */
 export const arg = defineOpcode<[number], any>("arg", {
   metadata: {
     label: "Get Arg",
@@ -556,9 +562,7 @@ export const arg = defineOpcode<[number], any>("arg", {
   },
 });
 
-/**
- * Retrieves all arguments passed to the script.
- */
+/** Retrieves all arguments passed to the script. */
 export const args = defineOpcode<[], readonly any[]>("args", {
   metadata: {
     label: "Get Args",
@@ -573,9 +577,7 @@ export const args = defineOpcode<[], readonly any[]>("args", {
   },
 });
 
-/**
- * Sends a warning message to the client.
- */
+/** Sends a warning message to the client. */
 export const warn = defineOpcode<[unknown], void>("warn", {
   metadata: {
     label: "Warn",
@@ -590,10 +592,8 @@ export const warn = defineOpcode<[unknown], void>("warn", {
   },
 });
 
-/**
- * Throws an error, stopping script execution.
- */
-const throwOp = defineOpcode<[unknown], never>("throw", {
+/** Throws an error, stopping script execution. */
+const throw_ = defineOpcode<[unknown], never>("throw", {
   metadata: {
     label: "Throw",
     category: "action",
@@ -606,9 +606,9 @@ const throwOp = defineOpcode<[unknown], never>("throw", {
     throw new ScriptError(msg as string);
   },
 });
-export { throwOp as throw };
+export { throw_ as throw };
 
-const tryOp = defineOpcode<[unknown, string, unknown], any>("try", {
+const try_ = defineOpcode<[unknown, string, unknown], any>("try", {
   metadata: {
     label: "Try/Catch",
     category: "logic",
@@ -642,7 +642,7 @@ const tryOp = defineOpcode<[unknown, string, unknown], any>("try", {
             ctx.vars = Object.create(ctx.vars);
             ctx.cow = false;
           }
-          ctx.vars[errorVar] = e.message || String(e);
+          ctx.vars[errorVar] = e.message ?? String(e);
         }
         try {
           const result = evaluate(catchBlock, ctx);
@@ -656,11 +656,9 @@ const tryOp = defineOpcode<[unknown, string, unknown], any>("try", {
     }
   },
 });
-export { tryOp as try };
+export { try_ as try };
 
-/**
- * Creates a lambda (anonymous function).
- */
+/** Creates a lambda (anonymous function). */
 export const lambda = defineOpcode<[ScriptRaw<readonly string[]>, unknown], any>("lambda", {
   metadata: {
     label: "Lambda",
@@ -687,9 +685,7 @@ export const lambda = defineOpcode<[ScriptRaw<readonly string[]>, unknown], any>
   },
 });
 
-/**
- * Calls a lambda function.
- */
+/** Calls a lambda function. */
 export const apply = defineOpcode<[unknown, ...unknown[]], any>("apply", {
   metadata: {
     label: "Apply",
@@ -716,7 +712,7 @@ export const apply = defineOpcode<[unknown, ...unknown[]], any>("apply", {
     const lambdaFunc = func as any;
 
     // Create new context
-    const newVars = Object.create(lambdaFunc.closure || null);
+    const newVars = Object.create(lambdaFunc.closure ?? null);
     // Bind arguments
     for (let i = 0; i < lambdaFunc.args.length; i++) {
       newVars[lambdaFunc.args[i]] = evaluatedArgs[i];
@@ -737,9 +733,7 @@ export const apply = defineOpcode<[unknown, ...unknown[]], any>("apply", {
   },
 });
 
-/**
- * Sends a message to the client.
- */
+/** Sends a message to the client. */
 export const send = defineOpcode<[string, unknown], null>("send", {
   metadata: {
     label: "System Send",
