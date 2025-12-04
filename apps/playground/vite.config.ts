@@ -3,6 +3,7 @@ import solidPlugin from "vite-plugin-solid";
 
 export default defineConfig({
   plugins: [solidPlugin()],
+  base: "/viwo/playground/",
   server: {
     port: 3001,
   },

@@ -4,7 +4,8 @@
   "workspaces": [
     "apps/*",
     "packages/*",
-    "plugins/*"
+    "plugins/*",
+    "docs"
   ],
   "private": true,
   "scripts": {
@@ -19,7 +20,8 @@
     "typecheck": "bun --filter '*' typecheck",
     "test": "bun --filter '*' test",
     "lint": "oxlint",
-    "format": "oxfmt"
+    "format": "oxfmt",
+    "build:docs": "bun --filter @viwo/docs build && bun --filter @viwo/playground build && cp -r apps/playground/dist docs/.vitepress/dist/playground"
   },
   "devDependencies": {
     "@tsconfig/strictest": "^2.0.8",
