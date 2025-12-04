@@ -57,7 +57,7 @@ export function seedHotel(lobbyId: number, voidId: number, entityBaseId: number)
     hotelRoomProtoId,
     "leave",
     StdLib.seq(
-      CoreLib.call(StdLib.caller(), "move", hotelLobbyId), // Move player out first
+      CoreLib.call(StdLib.caller(), "teleport", CoreLib.entity(hotelLobbyId)), // Move player out first
       CoreLib.call(StdLib.caller(), "tell", "You leave the room and it fades away behind you."),
       StdLib.let(
         "cap",
@@ -75,7 +75,7 @@ export function seedHotel(lobbyId: number, voidId: number, entityBaseId: number)
     getVerb(hotelRoomProtoId, "leave")!.id,
     StdLib.seq(
       StdLib.let("lobbyId", ObjectLib.objGet(StdLib.this(), "lobby_id")),
-      CoreLib.call(StdLib.caller(), "move", StdLib.var("lobbyId")),
+      CoreLib.call(StdLib.caller(), "teleport", CoreLib.entity(StdLib.var("lobbyId"))),
       CoreLib.call(StdLib.caller(), "tell", "You leave the room and it fades away behind you."),
       // Destroy contents (furnishings)
       StdLib.let("freshThis", CoreLib.entity(ObjectLib.objGet(StdLib.this(), "id"))),
@@ -191,7 +191,7 @@ export function seedHotel(lobbyId: number, voidId: number, entityBaseId: number)
       StdLib.if(
         BooleanLib.eq(StdLib.var("floor"), 1),
         StdLib.seq(
-          CoreLib.call(StdLib.caller(), "move", hotelLobbyId),
+          CoreLib.call(StdLib.caller(), "teleport", CoreLib.entity(StdLib.var("lobbyId"))),
           CoreLib.call(StdLib.caller(), "tell", "The doors open to the Grand Lobby."),
         ),
         StdLib.seq(
@@ -241,7 +241,7 @@ export function seedHotel(lobbyId: number, voidId: number, entityBaseId: number)
             CoreLib.entity(StdLib.var("lobbyId")),
           ),
 
-          CoreLib.call(StdLib.caller(), "move", StdLib.var("lobbyId")),
+          CoreLib.call(StdLib.caller(), "teleport", CoreLib.entity(StdLib.var("lobbyId"))),
           CoreLib.call(
             StdLib.caller(),
             "tell",
@@ -260,7 +260,7 @@ export function seedHotel(lobbyId: number, voidId: number, entityBaseId: number)
     "elevator",
     StdLib.seq(
       StdLib.let("elevId", ObjectLib.objGet(StdLib.this(), "elevator_id")),
-      CoreLib.call(StdLib.caller(), "move", StdLib.var("elevId")),
+      CoreLib.call(StdLib.caller(), "teleport", CoreLib.entity(StdLib.var("elevId"))),
       CoreLib.call(StdLib.caller(), "tell", "You step back into the elevator."),
       StdLib.let(
         "cap",
@@ -315,7 +315,7 @@ export function seedHotel(lobbyId: number, voidId: number, entityBaseId: number)
       ),
       KernelLib.giveCapability(StdLib.var("wingControlCap"), CoreLib.entity(StdLib.var("wingId"))),
 
-      CoreLib.call(StdLib.caller(), "move", StdLib.var("wingId")),
+      CoreLib.call(StdLib.caller(), "move", CoreLib.entity(StdLib.var("wingId"))),
       CoreLib.call(StdLib.caller(), "tell", "You walk down the West Wing."),
     ),
   );
@@ -362,7 +362,7 @@ export function seedHotel(lobbyId: number, voidId: number, entityBaseId: number)
       ),
       KernelLib.giveCapability(StdLib.var("wingControlCap"), CoreLib.entity(StdLib.var("wingId"))),
 
-      CoreLib.call(StdLib.caller(), "move", StdLib.var("wingId")),
+      CoreLib.call(StdLib.caller(), "teleport", CoreLib.entity(StdLib.var("wingId"))),
       CoreLib.call(StdLib.caller(), "tell", "You walk down the East Wing."),
     ),
   );
@@ -394,7 +394,7 @@ export function seedHotel(lobbyId: number, voidId: number, entityBaseId: number)
     "back",
     StdLib.seq(
       StdLib.let("returnId", ObjectLib.objGet(StdLib.this(), "return_id")),
-      CoreLib.call(StdLib.caller(), "move", StdLib.var("returnId")),
+      CoreLib.call(StdLib.caller(), "teleport", CoreLib.entity(StdLib.var("returnId"))),
       CoreLib.call(StdLib.caller(), "tell", "You head back to the lobby."),
       StdLib.let(
         "cap",
@@ -539,7 +539,7 @@ export function seedHotel(lobbyId: number, voidId: number, entityBaseId: number)
             CoreLib.entity(StdLib.var("roomId")),
           ),
 
-          CoreLib.call(StdLib.caller(), "move", StdLib.var("roomId")),
+          CoreLib.call(StdLib.caller(), "teleport", CoreLib.entity(StdLib.var("roomId"))),
           CoreLib.call(
             StdLib.caller(),
             "tell",

@@ -27,7 +27,9 @@ export const objNew = defineOpcode<
     for (let i = 0; i < args.length; i++) {
       if (!Array.isArray(args[i]) || args[i].length !== 2) {
         throw new ScriptError(
-          `obj.new: expected pair at index ${i}, got ${JSON.stringify(args[i])}`,
+          `obj.new: expected pair at index ${i}, got ${JSON.stringify(
+            args[i],
+          )}`,
         );
       }
       const [keyExpr, valueExpr] = args[i];
@@ -35,7 +37,9 @@ export const objNew = defineOpcode<
       const key = keyRes instanceof Promise ? await keyRes : keyRes;
       if (typeof key !== "string") {
         throw new ScriptError(
-          `obj.new: expected string key at index ${i}, got ${JSON.stringify(key)}`,
+          `obj.new: expected string key at index ${i}, got ${JSON.stringify(
+            key,
+          )}`,
         );
       }
       const valRes = evaluate(valueExpr, ctx);
@@ -77,19 +81,25 @@ export const objValues = defineOpcode<[object], any[]>("obj.values", {
 });
 
 /** Returns an array of a given object's own enumerable string-keyed property [key, value] pairs. */
-export const objEntries = defineOpcode<[object], [string, any][]>("obj.entries", {
-  metadata: {
-    label: "Entries",
-    category: "object",
-    description: "Get object entries",
-    slots: [{ name: "Object", type: "block" }],
-    parameters: [{ name: "object", type: "object" }],
-    returnType: "[string, any][]",
+export const objEntries = defineOpcode<[object], [string, any][]>(
+  "obj.entries",
+  {
+    metadata: {
+      label: "Entries",
+      category: "object",
+      description: "Get object entries",
+      slots: [{ name: "Object", type: "block" }],
+      parameters: [{ name: "object", type: "object" }],
+      returnType: "[string, any][]",
+    },
+    handler: ([obj], _ctx) => {
+      return Object.getOwnPropertyNames(obj).map((key) => [
+        key,
+        (obj as any)[key],
+      ]);
+    },
   },
-  handler: ([obj], _ctx) => {
-    return Object.getOwnPropertyNames(obj).map((key) => [key, (obj as any)[key]]);
-  },
-});
+);
 
 /** Retrieves a property from an object. */
 export const objGet = defineOpcode<[object, string, unknown?], any>("obj.get", {
@@ -194,19 +204,22 @@ export const objDel = defineOpcode<[object, string], boolean>("obj.del", {
 });
 
 /** Merges multiple objects into a new object. */
-export const objMerge = defineOpcode<[object, object, ...object[]], any>("obj.merge", {
-  metadata: {
-    label: "Merge",
-    category: "object",
-    description: "Merge objects",
-    slots: [{ name: "Objects", type: "block" }], // Variadic
-    parameters: [{ name: "...objects", type: "object[]" }],
-    returnType: "any",
+export const objMerge = defineOpcode<[object, object, ...object[]], any>(
+  "obj.merge",
+  {
+    metadata: {
+      label: "Merge",
+      category: "object",
+      description: "Merge objects",
+      slots: [{ name: "Objects", type: "block" }], // Variadic
+      parameters: [{ name: "...objects", type: "object[]" }],
+      returnType: "any",
+    },
+    handler: ([...objs], _ctx) => {
+      return Object.assign({}, ...objs);
+    },
   },
-  handler: ([...objs], _ctx) => {
-    return Object.assign({}, ...objs);
-  },
-});
+);
 
 /** Creates a new object with the same keys as the original, but with values transformed by a function. */
 export const objMap = defineOpcode<[object, unknown], any>("obj.map", {
@@ -226,7 +239,9 @@ export const objMap = defineOpcode<[object, unknown], any>("obj.map", {
   },
   handler: async ([obj, func], ctx) => {
     if (!func || (func as any).type !== "lambda") {
-      throw new ScriptError(`obj.map: expected lambda, got ${JSON.stringify(func)}`);
+      throw new ScriptError(
+        `obj.map: expected lambda, got ${JSON.stringify(func)}`,
+      );
     }
 
     const result: Record<string, any> = {};
@@ -271,37 +286,40 @@ export const objFilter = defineOpcode<[object, unknown], any>("obj.filter", {
 });
 
 /** Executes a user-supplied "reducer" callback function on each entry of the object. */
-export const objReduce = defineOpcode<[object, unknown, unknown], any>("obj.reduce", {
-  metadata: {
-    label: "Reduce Object",
-    category: "object",
-    description: "Reduce object entries",
-    slots: [
-      { name: "Object", type: "block" },
-      { name: "Lambda", type: "block" },
-      { name: "Init", type: "block" },
-    ],
-    parameters: [
-      { name: "object", type: "object" },
-      { name: "lambda", type: "object" },
-      { name: "init", type: "any" },
-    ],
-    returnType: "any",
-  },
-  handler: async ([obj, func, init], ctx) => {
-    let acc = init;
+export const objReduce = defineOpcode<[object, unknown, unknown], any>(
+  "obj.reduce",
+  {
+    metadata: {
+      label: "Reduce Object",
+      category: "object",
+      description: "Reduce object entries",
+      slots: [
+        { name: "Object", type: "block" },
+        { name: "Lambda", type: "block" },
+        { name: "Init", type: "block" },
+      ],
+      parameters: [
+        { name: "object", type: "object" },
+        { name: "lambda", type: "object" },
+        { name: "init", type: "any" },
+      ],
+      returnType: "any",
+    },
+    handler: async ([obj, func, init], ctx) => {
+      let acc = init;
 
-    if (!func || (func as any).type !== "lambda") {
+      if (!func || (func as any).type !== "lambda") {
+        return acc;
+      }
+
+      for (const [key, val] of Object.entries(obj)) {
+        const res = executeLambda(func as any, [acc, val, key], ctx);
+        acc = res instanceof Promise ? await res : res;
+      }
       return acc;
-    }
-
-    for (const [key, val] of Object.entries(obj)) {
-      const res = executeLambda(func as any, [acc, val, key], ctx);
-      acc = res instanceof Promise ? await res : res;
-    }
-    return acc;
+    },
   },
-});
+);
 
 /** Creates a new object by applying a given callback function to each entry of the object, and then flattening the result. */
 export const objFlatMap = defineOpcode<[object, unknown], any>("obj.flatMap", {
@@ -328,7 +346,11 @@ export const objFlatMap = defineOpcode<[object, unknown], any>("obj.flatMap", {
     for (const [key, val] of Object.entries(obj)) {
       const res = executeLambda(func as any, [val, key], ctx);
       const mapped = res instanceof Promise ? await res : res;
-      if (typeof mapped === "object" && mapped !== null && !Array.isArray(mapped)) {
+      if (
+        typeof mapped === "object" &&
+        mapped !== null &&
+        !Array.isArray(mapped)
+      ) {
         Object.assign(result, mapped);
       }
     }

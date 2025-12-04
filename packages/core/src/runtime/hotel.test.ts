@@ -123,9 +123,34 @@ describe("Hotel Scripting", () => {
 
     expect(messages[0]).toBe("You leave the room and it fades away behind you.");
 
-    caller = getEntity(caller.id)!;
     expect(caller["location"]).toBe(hotelLobby.id); // Back in lobby
     expect(getEntity(roomId)).toBeNull(); // Destroyed
+  });
+
+  it("should move via direction string", async () => {
+    // Caller is in Hotel Lobby
+    // There is an exit "out" to Main Lobby
+    const outExit = db
+      .query<{ id: number }, [id: number]>(
+        "SELECT id FROM entities WHERE json_extract(props, '$.name') = 'out' AND json_extract(props, '$.location') = ?",
+      )
+      .get(hotelLobby.id)!;
+    expect(outExit).toBeDefined();
+
+    // Call move "out"
+    await evaluate(
+      CoreLib.call(caller, "move", "out"),
+      createScriptContext({ caller, this: caller, send }),
+    );
+
+    caller = getEntity(caller.id)!;
+    // Should be in Main Lobby (which has id 1 usually, but let's check against what we seeded)
+    const lobby = db
+      .query<{ id: number }, []>(
+        "SELECT id FROM entities WHERE json_extract(props, '$.name') = 'Lobby'",
+      )
+      .get()!;
+    expect(caller["location"]).toBe(lobby.id);
   });
 
   it("should navigate elevator -> floor lobby -> wing -> room and back", async () => {
@@ -318,7 +343,7 @@ describe("Hotel Seed", () => {
 
     let output = "";
     await evaluate(
-      CoreLib.call(player, "move", floorLobbyId),
+      CoreLib.call(player, "teleport", getEntity(floorLobbyId)!),
       createScriptContext({ caller: player, this: player }),
     );
 
@@ -393,7 +418,7 @@ describe("Hotel Seed", () => {
     let output = "";
 
     await evaluate(
-      CoreLib.call(player, "move", floorLobbyId),
+      CoreLib.call(player, "teleport", getEntity(floorLobbyId)!),
       createScriptContext({ caller: player, this: player }),
     );
 
@@ -439,5 +464,14 @@ describe("Hotel Seed", () => {
     const playerInRoom = getEntity(player.id)!;
     const room = getEntity(playerInRoom["location"] as number)!;
     expect(room["name"]).toBe("Room 60");
+  });
+
+  test("objGet with listNew default", async () => {
+    const obj = {};
+    const res = await evaluate(
+      ObjectLib.objGet(obj, "missing", ListLib.listNew()),
+      createScriptContext({ caller: player, this: player }),
+    );
+    expect(res).toEqual([]);
   });
 });
