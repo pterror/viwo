@@ -125,8 +125,10 @@ declare global {
   }
   namespace net {
     namespace http {
-      function get(cap: Capability | null, url: string): Promise<string>;
-      function post(cap: Capability | null, url: string, body: string): Promise<string>;
+      function fetch(cap: Capability | null, url: string, options?: object): Promise<object>;
+      function response_bytes(response: object): number[];
+      function response_json(response: object): any;
+      function response_text(response: object): string;
     }
   }
   namespace list {

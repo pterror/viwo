@@ -49,7 +49,10 @@ describe("System Integration Security", () => {
     admin = getEntity(adminId)!;
     createCapability(adminId, "fs.read", { path: "/tmp" });
     createCapability(adminId, "fs.write", { path: "/tmp" });
-    createCapability(adminId, "net.http.read", { domain: "example.com" });
+    createCapability(adminId, "net.http", {
+      domain: "example.com",
+      methods: ["GET"],
+    });
 
     // Create User (no rights)
     const userId = createEntity({ name: "User" });
@@ -94,18 +97,18 @@ describe("System Integration Security", () => {
   test("Net.http.get with capability", async () => {
     const ctx = createScriptContext({ caller: admin, this: admin, args: [] });
     const response = await evaluate(
-      NetLib.netHttpGet(KernelLib.getCapability("net.http.read"), "https://api.example.com/data"),
+      NetLib.netHttpFetch(KernelLib.getCapability("net.http"), "https://api.example.com/data"),
       ctx,
     );
-    expect(response).toBe("http response");
+    expect(await response.__response.text()).toBe("http response");
   });
 
   test("Net.http.get domain mismatch", async () => {
     const ctx = createScriptContext({ caller: admin, this: admin, args: [] });
     expect(
       evaluate(
-        NetLib.netHttpGet(
-          KernelLib.getCapability("net.http.read"),
+        NetLib.netHttpFetch(
+          KernelLib.getCapability("net.http"),
           "https://google.com", // Not example.com
         ),
         ctx,
