@@ -8,37 +8,30 @@ import { ScriptContext, ScriptError, ScriptValue } from "./types";
  * @returns A function that takes a ScriptContext and returns a Promise resolving to the result.
  */
 export function compile<T>(script: ScriptValue<T>): (ctx: ScriptContext) => T {
+  // Collect ALL variables used in the script (free or bound)
+  const allVars = collectAllVars(script);
+
+  // Declaration: let x = ctx.vars['x'] ?? null;
+  const decls =
+    allVars.length > 0
+      ? `let ${allVars
+          .map((v) => `${toJSName(v)} = ctx.vars[${JSON.stringify(v)}] ?? null`)
+          .join(", ")};`
+      : "";
+
   const code = compileNode(script);
-  // We wrap the code in a function that takes 'ctx' and 'OPS' as arguments.
-  // We also need 'ScriptError' and 'BreakSignal' available for throwing/catching.
+
   const body = `
     return function(ctx) {
-      function enterScope(ctx) {
-        const snapshot = { vars: ctx.vars, cow: ctx.cow };
-        ctx.cow = true;
-        return snapshot;
-      }
-      function exitScope(ctx, snapshot) {
-        ctx.vars = snapshot.vars;
-        ctx.cow = snapshot.cow;
-      }
-      function setVar(ctx, name, value) {
-        let scope = ctx.vars;
-        while (scope) {
-          if (Object.prototype.hasOwnProperty.call(scope, name)) {
-            scope[name] = value;
-            return;
-          }
-          scope = Object.getPrototypeOf(scope);
-        }
-      }
-
+      ${decls}
+      let result;
       try {
-        ${code.startsWith("return") ? code : "return " + code};
+        result = ${code};
       } catch (e) {
         if (e instanceof ScriptError) throw e;
         throw new ScriptError(e.message || String(e));
       }
+      return result;
     }
   `;
 
@@ -47,6 +40,147 @@ export function compile<T>(script: ScriptValue<T>): (ctx: ScriptContext) => T {
 
   // Return the executable function, injecting dependencies
   return factory(OPS, ScriptError, BreakSignal);
+}
+
+const KEYWORDS = new Set([
+  "break",
+  "case",
+  "catch",
+  "class",
+  "const",
+  "continue",
+  "debugger",
+  "default",
+  "delete",
+  "do",
+  "else",
+  "export",
+  "extends",
+  "finally",
+  "for",
+  "function",
+  "if",
+  "import",
+  "in",
+  "instanceof",
+  "new",
+  "return",
+  "super",
+  "switch",
+  "this",
+  "throw",
+  "try",
+  "typeof",
+  "var",
+  "void",
+  "while",
+  "with",
+  "yield",
+  "enum",
+  "implements",
+  "interface",
+  "let",
+  "package",
+  "private",
+  "protected",
+  "public",
+  "static",
+  "await",
+  "null",
+  "true",
+  "false",
+  "NaN",
+  "Infinity",
+  "undefined",
+  "arguments",
+  "eval",
+  // Internal variables
+  "ctx",
+  "OPS",
+  "ScriptError",
+  "BreakSignal",
+]);
+
+function toJSName(name: string): string {
+  // Replace invalid characters with _
+  let safe = name.replace(/[^a-zA-Z0-9_$]/g, "_");
+
+  // Cannot start with digit
+  if (/^[0-9]/.test(safe)) {
+    safe = "_" + safe;
+  }
+
+  // Avoid keywords
+  if (KEYWORDS.has(safe)) {
+    return "_" + safe;
+  }
+
+  return safe;
+}
+
+// Collects variables declared in the IMMEDIATE scope (for let/seq/etc)
+function collectVars(node: any): string[] {
+  const vars = new Set<string>();
+
+  function visit(node: any) {
+    if (!Array.isArray(node) || node.length === 0) return;
+
+    const [op, ...args] = node;
+
+    if (op === "let") {
+      if (typeof args[0] === "string") {
+        vars.add(args[0]);
+      }
+      visit(args[1]); // Recurse into value
+      return;
+    }
+
+    // Stop recursion at scope boundaries
+    if (op === "seq" || op === "while" || op === "for" || op === "lambda") {
+      return;
+    }
+
+    // Recurse into arguments for other nodes
+    for (const arg of args) {
+      visit(arg);
+    }
+  }
+
+  visit(node);
+  return Array.from(vars);
+}
+
+// Collects ALL variable names used anywhere in the script
+function collectAllVars(node: any): string[] {
+  const vars = new Set<string>();
+
+  function visit(node: any) {
+    if (!Array.isArray(node) || node.length === 0) return;
+
+    const [op, ...args] = node;
+
+    if (op === "let" || op === "var" || op === "set") {
+      if (typeof args[0] === "string") {
+        vars.add(args[0]);
+      }
+    } else if (op === "lambda") {
+      // Params are variables too
+      const params = args[0];
+      if (Array.isArray(params)) {
+        params.forEach((p: any) => {
+          if (typeof p === "string") vars.add(p);
+        });
+      }
+    }
+
+    // Recurse into all arguments
+    for (const arg of args) {
+      visit(arg);
+    }
+  }
+
+  visit(node);
+  return Array.from(vars);
 }
 
 function compileNode(node: any): string {
@@ -67,7 +201,6 @@ function compileNode(node: any): string {
 
     const [op, ...args] = node;
 
-    // Handle special forms (control flow, variables, etc.)
     switch (op) {
       case "seq":
         return compileSeq(args);
@@ -99,7 +232,6 @@ function compileNode(node: any): string {
         return compileObjNew(args);
     }
 
-    // Handle standard opcode calls
     if (typeof op === "string" && OPS[op]) {
       return compileOpcodeCall(op, args);
     }
@@ -112,26 +244,28 @@ function compileNode(node: any): string {
 
 function compileSeq(args: any[]): string {
   if (args.length === 0) return "null";
-  // We need to execute statements in order and return the last one.
-  // Since we are generating an expression or a return statement, we might need an IIFE
-  // if this is nested. But for the top level, we can just use statements.
-  // However, compileNode is expected to return an *expression* that evaluates to the result,
-  // OR we need to change the architecture to return statements.
 
-  // Let's use IIFE for sequences to ensure they are expressions.
-  // (async () => { s1; s2; return s3; })()
+  const vars = new Set<string>();
+  for (const arg of args) {
+    const argVars = collectVars(arg);
+    argVars.forEach((v) => vars.add(v));
+  }
+
+  // Initialize locals to null to match ViwoScript behavior (undefined vars are null)
+  const decls =
+    vars.size > 0
+      ? `let ${Array.from(vars)
+          .map((v) => `${toJSName(v)} = null`)
+          .join(", ")};`
+      : "";
 
   const statements = args.map(compileNode);
   const last = statements.pop();
 
   return `(() => {
-    const snapshot = enterScope(ctx);
-    try {
-      ${statements.map((s) => s + ";").join("\n")}
-      return ${last};
-    } finally {
-      exitScope(ctx, snapshot);
-    }
+    ${decls}
+    ${statements.map((s) => s + ";").join("\n")}
+    return ${last};
   })()`;
 }
 
@@ -144,19 +278,24 @@ function compileIf(args: any[]): string {
 
 function compileWhile(args: any[]): string {
   const [cond, body] = args;
+
+  const vars = collectVars(body);
+  const decls =
+    vars.length > 0 ? `let ${vars.map((v) => `${toJSName(v)} = null`).join(", ")};` : "";
+
   return `(() => {
     let result = null;
     while (${compileNode(cond)}) {
-      const snapshot = enterScope(ctx);
       try {
-        result = ${compileNode(body)};
+        (() => {
+          ${decls}
+          result = ${compileNode(body)};
+        })();
       } catch (e) {
         if (e instanceof BreakSignal) {
           return e.value ?? result;
         }
         throw e;
-      } finally {
-        exitScope(ctx, snapshot);
       }
     }
     return result;
@@ -165,26 +304,28 @@ function compileWhile(args: any[]): string {
 
 function compileFor(args: any[]): string {
   const [varName, listExpr, body] = args;
+
+  const vars = collectVars(body);
+  const loopVar = toJSName(varName);
+  const bodyDecls = vars.filter((v) => toJSName(v) !== loopVar).map((v) => `${toJSName(v)} = null`);
+
+  const declsStr = bodyDecls.length > 0 ? `let ${bodyDecls.join(", ")};` : "";
+
   return `(() => {
     const list = ${compileNode(listExpr)};
     let result = null;
     if (Array.isArray(list)) {
-      for (const item of list) {
-        const snapshot = enterScope(ctx);
-        if (ctx.cow) {
-          ctx.vars = Object.create(ctx.vars);
-          ctx.cow = false;
-        }
-        ctx.vars[${JSON.stringify(varName)}] = item;
+      for (const ${loopVar} of list) {
         try {
-          result = ${compileNode(body)};
+          (() => {
+            ${declsStr}
+            result = ${compileNode(body)};
+          })();
         } catch (e) {
           if (e instanceof BreakSignal) {
             return e.value ?? result;
           }
           throw e;
-        } finally {
-          exitScope(ctx, snapshot);
         }
       }
     }
@@ -194,54 +335,38 @@ function compileFor(args: any[]): string {
 
 function compileLet(args: any[]): string {
   const [name, val] = args;
-  return `(() => {
-    const val = ${compileNode(val)};
-    ctx.vars = ctx.vars || {};
-    if (ctx.cow) {
-      ctx.vars = Object.create(ctx.vars);
-      ctx.cow = false;
-    }
-    ctx.vars[${JSON.stringify(name)}] = val;
-    return val;
-  })()`;
+  const jsName = toJSName(name);
+  return `(${jsName} = ${compileNode(val)})`;
 }
 
 function compileVar(args: any[]): string {
   const [name] = args;
-  return `(ctx.vars?.[${JSON.stringify(name)}] ?? null)`;
+  return toJSName(name);
 }
 
 function compileSet(args: any[]): string {
   const [name, val] = args;
-  return `(() => {
-    const val = ${compileNode(val)};
-    if (ctx.vars) {
-      setVar(ctx, ${JSON.stringify(name)}, val);
-    }
-    return val;
-  })()`;
+  const jsName = toJSName(name);
+  return `(${jsName} = ${compileNode(val)})`;
 }
 
 function compileLambda(args: any[]): string {
   const [params, body] = args;
-  // We return a lambda object structure compatible with the interpreter,
-  // BUT we add an 'execute' method which is the compiled body.
-  // The 'execute' method needs to handle closure.
+  const paramNames = (params as string[]).map(toJSName);
 
-  // When 'apply' is called, it will check for 'execute'.
-  // If present, it calls 'execute(args, ctx)'.
-  // 'ctx' passed to execute should have the new variables bound.
+  const vars = collectVars(body);
+  const bodyDecls = vars.filter((v) => !params.includes(v)).map((v) => `${toJSName(v)} = null`);
 
-  // We need to compile the body *now*.
-  // The compiled body expects 'ctx' to contain the variables.
-
-  // We need to capture the current closure at creation time.
+  const declsStr = bodyDecls.length > 0 ? `let ${bodyDecls.join(", ")};` : "";
 
   return `({
     type: "lambda",
     args: ${JSON.stringify(params)},
-    closure: { ...ctx.vars },
-    execute: ${compile(body).toString()}
+    execute: (ctx, ...args) => {
+      ${paramNames.map((p, i) => `let ${p} = args[${i}];`).join("\n")}
+      ${declsStr}
+      return ${compileNode(body)};
+    }
   })`;
 }
 
@@ -253,28 +378,9 @@ function compileApply(args: any[]): string {
     
     const args = [${argExprs.map(compileNode).join(", ")}];
     
-    const newVars = { ...func.closure };
-    for (let i = 0; i < func.args.length; i++) {
-      newVars[func.args[i]] = args[i];
-    }
-    
-    const newCtx = { ...ctx, vars: newVars, stack: [...ctx.stack, { name: "<lambda>", args }] };
-    
     if (func.execute) {
-      return func.execute(newCtx);
+      return func.execute(ctx, ...args);
     } else {
-      // Fallback to interpreter if lambda was not compiled (e.g. created by interpreter)
-      // We need to import evaluate? Or we can just throw for now as we want to move to compiler.
-      // Or better, we can assume OPS.apply will handle it if we delegate?
-      // But we are compiling 'apply' inline here.
-      
-      // Actually, if we want to support mixed mode, we should probably just call OPS.apply.handler?
-      // But OPS.apply.handler expects unevaluated args and calls evaluate().
-      // That won't work because we are in compiled land.
-      
-      // So we must support interpreting the body if 'execute' is missing.
-      // This requires 'evaluate' to be available.
-      // For now, let's assume all lambdas are compiled or we throw.
       throw new ScriptError("apply: lambda has no compiled code");
     }
   })()`;
@@ -282,18 +388,14 @@ function compileApply(args: any[]): string {
 
 function compileTry(args: any[]): string {
   const [tryBlock, errorVar, catchBlock] = args;
+
+  const errDecl = errorVar ? `let ${toJSName(errorVar)} = e.message || String(e);` : "";
+
   return `(() => {
     try {
       return ${compileNode(tryBlock)};
     } catch (e) {
-      if (${JSON.stringify(errorVar)}) {
-        ctx.vars = ctx.vars || {};
-        if (ctx.cow) {
-          ctx.vars = Object.create(ctx.vars);
-          ctx.cow = false;
-        }
-        ctx.vars[${JSON.stringify(errorVar)}] = e.message || String(e);
-      }
+      ${errDecl}
       return ${compileNode(catchBlock)};
     }
   })()`;
@@ -318,7 +420,6 @@ function compileObjNew(args: any[]): string {
 }
 
 function compileOpcodeCall(op: string, args: any[]): string {
-  // Optimization for common opcodes
   switch (op) {
     case "+":
       return `(${compileNode(args[0])} + ${compileNode(args[1])})`;
@@ -349,9 +450,8 @@ function compileOpcodeCall(op: string, args: any[]): string {
     case "or":
       return `(${compileNode(args[0])} || ${compileNode(args[1])})`;
     case "not":
-      return `(!${compileNode(args[0])})`;
+      return `!(${compileNode(args[0])})`;
 
-    // Object
     case "obj.get":
       return `(${compileNode(args[0])})[${compileNode(args[1])}] ?? ${
         args[2] ? compileNode(args[2]) : "null"
@@ -363,10 +463,6 @@ function compileOpcodeCall(op: string, args: any[]): string {
     case "obj.del":
       return `(delete (${compileNode(args[0])})[${compileNode(args[1])}])`;
 
-    // List
-    // list.new is handled above
-
-    // Std
     case "log":
       return `console.log(${args.map((a) => compileNode(a)).join(", ")})`;
     case "str.concat":
@@ -375,16 +471,13 @@ function compileOpcodeCall(op: string, args: any[]): string {
       return "ctx.this";
   }
 
-  // Generic fallback for other opcodes (including dynamically added ones)
   const def = OPS[op];
   if (!def) throw new ScriptError("Unknown opcode: " + op);
 
   if (def.metadata.lazy) {
-    // For lazy opcodes, pass arguments as raw AST (unevaluated)
     return `OPS[${JSON.stringify(op)}].handler(${JSON.stringify(args)}, ctx)`;
   }
 
-  // We evaluate arguments, wrap arrays in "quote", and call the handler.
   return `(() => {
     const args = [${args.map(compileNode).join(", ")}];
     const wrappedArgs = args.map(a => Array.isArray(a) ? ["quote", a] : a);

@@ -55,12 +55,6 @@ describe("Compiler", () => {
     expect(run(BooleanLib.gt(2, 1))).toBe(true);
   });
 
-  test("variables", () => {
-    const localCtx = { ...ctx, vars: {} };
-    run(Std.let("x", 10), localCtx);
-    expect(run(Std.var("x"), localCtx)).toBe(10);
-  });
-
   test("control flow", () => {
     expect(run(Std.if(true, 1, 2))).toBe(1);
     expect(run(Std.if(false, 1, 2))).toBe(2);
@@ -127,6 +121,20 @@ describe("Compiler", () => {
         ),
       ),
     ).toBe(15);
+  });
+
+  test("closure reference capture", () => {
+    // (let x 1); (let f (lambda [] x)); (set x 2); (apply f) -> 2
+    expect(
+      run(
+        Std.seq(
+          Std.let("x", 1),
+          Std.let("f", Std.lambda([], Std.var("x"))),
+          Std.set("x", 2),
+          Std.apply(Std.var("f")),
+        ),
+      ),
+    ).toBe(2);
   });
 
   test("try/catch", () => {

@@ -44,4 +44,4 @@
 - [ ] **Core**: Add capability-based permissions for verbs
 - [ ] **Core**: Consider splitting permissions for net.http into multiple capabilities
 - [ ] **Plugins**: Add capability-based permissions to opcodes defined by plugins
-- [ ] **Compiler**: Optimize flow control; remove block scoping (carefully)
+- [ ] **Compiler**: Investigate whether `BreakSignal` can be removed by removing IIFEs
