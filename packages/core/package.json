@@ -16,14 +16,12 @@
     "generate:types": "bun scripts/generate-types.ts"
   },
   "dependencies": {
-    "ws": "^8.18.0",
     "@viwo/shared": "workspace:*",
     "@viwo/scripting": "workspace:*"
   },
   "devDependencies": {
     "@tsconfig/strictest": "^2.0.8",
-    "@types/ws": "^8.5.12",
-    "bun-types": "latest",
-    "@typescript/native-preview": "latest"
+    "@typescript/native-preview": "latest",
+    "bun-types": "latest"
   }
 }

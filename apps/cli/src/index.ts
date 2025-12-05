@@ -9,7 +9,7 @@ const args = minimist(process.argv.slice(2));
 // Determine color mode
 let useColor = true; // Default to on
 
-if (args.color === "off" || args.color === false) {
+if (args["color"] === "off" || args["color"] === false) {
   useColor = false;
 }
 

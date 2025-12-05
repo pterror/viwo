@@ -11,9 +11,9 @@
     "format": "oxfmt"
   },
   "dependencies": {
-    "@viwo/web-editor": "workspace:*",
     "@viwo/scripting": "workspace:*",
     "@viwo/shared": "workspace:*",
+    "@viwo/web-editor": "workspace:*",
     "solid-js": "^1.8.15"
   },
   "devDependencies": {

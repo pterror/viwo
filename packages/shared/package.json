@@ -4,7 +4,6 @@
   "type": "module",
   "exports": {
     "./constants/adjectives": "./src/constants/adjectives.ts",
-    "./commands": "./src/commands.ts",
     "./jsonrpc": "./src/jsonrpc.ts",
     "./index.css": "./src/index.css"
   },
@@ -16,8 +15,5 @@
   },
   "devDependencies": {
     "@typescript/native-preview": "latest"
-  },
-  "dependencies": {
-    "zod": "4.1.13"
   }
 }

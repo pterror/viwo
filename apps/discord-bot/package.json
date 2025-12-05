@@ -12,12 +12,10 @@
   "dependencies": {
     "discord.js": "^14.16.3",
     "dotenv": "^16.4.5",
-    "ws": "^8.18.0",
     "@viwo/client": "workspace:*"
   },
   "devDependencies": {
-    "@types/ws": "^8.5.13",
-    "bun-types": "latest",
-    "@typescript/native-preview": "latest"
+    "@typescript/native-preview": "latest",
+    "bun-types": "latest"
   }
 }

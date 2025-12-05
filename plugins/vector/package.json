@@ -13,8 +13,7 @@
     "test": "bun test"
   },
   "dependencies": {
-    "sqlite-vec": "^0.1.7-alpha.2",
-    "@viwo/core": "workspace:*"
+    "sqlite-vec": "^0.1.7-alpha.2"
   },
   "devDependencies": {
     "bun-types": "latest",

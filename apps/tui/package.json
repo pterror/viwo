@@ -14,15 +14,13 @@
     "ink": "^5.0.0",
     "ink-text-input": "^6.0.0",
     "react": "^18.2.0",
-    "ws": "^8.18.0",
     "@viwo/shared": "workspace:*",
     "@viwo/client": "workspace:*"
   },
   "devDependencies": {
     "@tsconfig/strictest": "^2.0.8",
     "@types/react": "^18.2.0",
-    "@types/ws": "^8.5.13",
-    "bun-types": "latest",
-    "@typescript/native-preview": "latest"
+    "@typescript/native-preview": "latest",
+    "bun-types": "latest"
   }
 }

@@ -10,11 +10,9 @@
     "lint": "oxlint",
     "format": "oxfmt"
   },
-  "dependencies": {
-    "@viwo/core": "workspace:*"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "bun-types": "latest",
-    "@typescript/native-preview": "latest"
+    "bun-types": "latest"
   }
 }
+

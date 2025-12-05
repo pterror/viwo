@@ -12,12 +12,9 @@
     "format": "oxfmt"
   },
   "dependencies": {
-    "@monaco-editor/loader": "^1.7.0",
     "@viwo/client": "workspace:*",
-    "@viwo/web-editor": "workspace:*",
-    "@viwo/scripting": "workspace:*",
     "@viwo/shared": "workspace:*",
-    "monaco-editor": "^0.55.1",
+    "@viwo/web-editor": "workspace:*",
     "solid-js": "^1.8.15"
   },
   "devDependencies": {
