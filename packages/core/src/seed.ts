@@ -79,6 +79,18 @@ export function seed() {
 
   addVerb(entityBaseId, "tell", transpile(extractVerb(verbsPath, "entity_base_tell")));
 
+  addVerb(
+    entityBaseId,
+    "get_llm_prompt",
+    transpile(extractVerb(verbsPath, "entity_base_get_llm_prompt")),
+  );
+
+  addVerb(
+    entityBaseId,
+    "get_image_gen_prompt",
+    transpile(extractVerb(verbsPath, "entity_base_get_image_gen_prompt")),
+  );
+
   // 3. Create Humanoid Base
   const humanoidBaseId = createEntity(
     {

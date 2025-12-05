@@ -2,29 +2,28 @@ import { readFileSync } from "fs";
 
 export function extractVerb(filePath: string, verbName: string): string {
   const content = readFileSync(filePath, "utf-8");
-  const startMarker = `// @verb ${verbName}`;
-  const endMarker = `// @endverb`;
 
-  const startIndex = content.indexOf(startMarker);
-  const endIndex = content.indexOf(endMarker, startIndex + startMarker.length);
+  // Find start of function: export function verbName(...) {
+  const startRegex = new RegExp(`^export function ${verbName}\\s*\\(.*\\)\\s*\\{`, "m");
+  const startMatch = content.match(startRegex);
 
-  if (startIndex === -1 || endIndex === -1) {
+  if (!startMatch) {
     throw new Error(`Verb ${verbName} not found in ${filePath}`);
   }
 
-  const body = content.substring(startIndex + startMarker.length, endIndex).trim();
+  const startIndex = startMatch.index! + startMatch[0].length;
 
-  // Extract the function body (content between the first { and last })
-  const openBrace = body.indexOf("{");
-  const closeBrace = body.lastIndexOf("}");
+  // Find end of function: } on its own line
+  // We search starting from the end of the start match
+  const endRegex = new RegExp(`^\\}$`, "m");
+  // We need to slice the content to search from startIndex
+  const remainingContent = content.slice(startIndex);
+  const endMatch = remainingContent.match(endRegex);
 
-  if (openBrace === -1) {
-    throw new Error(`Could not find start of function body for verb ${verbName}`);
-  }
-
-  if (closeBrace === -1) {
+  if (!endMatch) {
     throw new Error(`Could not find end of function body for verb ${verbName}`);
   }
 
-  return body.substring(openBrace + 1, closeBrace).trim();
+  // The body is between startIndex and (startIndex + endMatch.index)
+  return remainingContent.slice(0, endMatch.index).trim();
 }

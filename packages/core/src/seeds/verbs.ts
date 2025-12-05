@@ -1,15 +1,12 @@
 import "../types";
 
-// @verb bot_sudo
 export function bot_sudo() {
   const targetId = arg<number>(0);
   const verb = arg<string>(1);
   const argsList = arg<any[]>(2);
   sudo(get_capability("sys.sudo", {})!, entity(targetId), verb, argsList);
 }
-// @endverb
 
-// @verb system_get_available_verbs
 export function system_get_available_verbs() {
   const player = arg<Entity>(0);
   const verbsList: any[] = [];
@@ -51,9 +48,7 @@ export function system_get_available_verbs() {
 
   return verbsList;
 }
-// @endverb
 
-// @verb entity_base_find
 export function entity_base_find() {
   const query = arg<string>(0);
   const locationId = caller()["location"] as number;
@@ -63,9 +58,7 @@ export function entity_base_find() {
     return props["name"] === query;
   });
 }
-// @endverb
 
-// @verb entity_base_find_exit
 export function entity_base_find_exit() {
   const query = arg<string>(0);
   const locationId = caller()["location"] as number;
@@ -75,9 +68,7 @@ export function entity_base_find_exit() {
     return props["name"] === query || props["direction"] === query;
   });
 }
-// @endverb
 
-// @verb entity_base_on_enter
 export function entity_base_on_enter(this: Entity) {
   const mover = arg<Entity>(0);
   const cap = get_capability("entity.control", { target_id: this.id });
@@ -90,9 +81,7 @@ export function entity_base_on_enter(this: Entity) {
     send("message", "The room refuses you.");
   }
 }
-// @endverb
 
-// @verb entity_base_on_leave
 export function entity_base_on_leave(this: Entity) {
   const mover = arg<Entity>(0);
   const cap = get_capability("entity.control", { target_id: this.id });
@@ -105,9 +94,7 @@ export function entity_base_on_leave(this: Entity) {
     send("message", "The room refuses to let you go.");
   }
 }
-// @endverb
 
-// @verb entity_base_teleport
 export function entity_base_teleport() {
   const destEntity = arg<Entity>(0);
   if (!destEntity) {
@@ -156,9 +143,7 @@ export function entity_base_teleport() {
     }
   }
 }
-// @endverb
 
-// @verb entity_base_go
 export function entity_base_go(this: Entity) {
   const direction = arg<string>(0);
   if (!direction) {
@@ -173,22 +158,16 @@ export function entity_base_go(this: Entity) {
     }
   }
 }
-// @endverb
 
-// @verb entity_base_say
 export function entity_base_say() {
   send("message", "Say is not yet implemented.");
 }
-// @endverb
 
-// @verb entity_base_tell
 export function entity_base_tell() {
   const msg = arg<string>(0);
   send("message", msg);
 }
-// @endverb
 
-// @verb player_look
 export function player_look() {
   const argsList = args();
   if (list.empty(argsList)) {
@@ -212,9 +191,7 @@ export function player_look() {
     }
   }
 }
-// @endverb
 
-// @verb player_inventory
 export function player_inventory() {
   const player = resolve_props(caller());
   const contents = (player["contents"] as number[]) ?? [];
@@ -222,17 +199,13 @@ export function player_inventory() {
   const finalList = list.concat([player], resolvedItems);
   send("update", { entities: finalList });
 }
-// @endverb
 
-// @verb player_whoami
 export function player_whoami() {
   send("player_id", { playerId: caller().id });
 }
-// @endverb
 
 declare const ENTITY_BASE_ID_PLACEHOLDER: number;
 
-// @verb player_dig
 export function player_dig() {
   const direction = arg(0);
   const roomName = str.join(list.slice(args(), 1), " ");
@@ -309,9 +282,7 @@ export function player_dig() {
     }
   }
 }
-// @endverb
 
-// @verb player_create
 export function player_create() {
   const name = arg<string>(0);
   if (!name) {
@@ -347,9 +318,7 @@ export function player_create() {
   }
   return;
 }
-// @endverb
 
-// @verb player_set
 export function player_set(this: Entity) {
   const targetName = arg<string>(0);
   const propName = arg<string>(1);
@@ -378,15 +347,11 @@ export function player_set(this: Entity) {
     }
   }
 }
-// @endverb
 
-// @verb watch_tell
 export function watch_tell() {
   send("message", time.format(time.now(), "time"));
 }
-// @endverb
 
-// @verb teleporter_teleport
 export function teleporter_teleport(this: Entity) {
   const destId = this["destination"];
   if (destId) {
@@ -396,22 +361,16 @@ export function teleporter_teleport(this: Entity) {
     send("message", "The stone is dormant.");
   }
 }
-// @endverb
 
-// @verb status_check
 export function status_check() {
   send("message", "Status check disabled.");
 }
-// @endverb
 
-// @verb color_lib_random_color
 export function color_lib_random_color(this: Entity) {
   const colors = (this["colors"] as any[]) ?? [];
   list.get(colors, random(0, list.len(colors) - 1));
 }
-// @endverb
 
-// @verb mood_ring_update_color
 export function mood_ring_update_color(this: Entity) {
   const libId = this["color_lib"] as number;
   const newColor = call(entity(libId), "random_color");
@@ -422,66 +381,46 @@ export function mood_ring_update_color(this: Entity) {
   }
   schedule("update_color", [], 5000);
 }
-// @endverb
 
-// @verb mood_ring_touch
 export function mood_ring_touch() {
   schedule("update_color", [], 0);
 }
-// @endverb
 
-// @verb dynamic_ring_get_adjectives
 export function dynamic_ring_get_adjectives() {
   return [`color:hsl(${mul(time.to_timestamp(time.now()), 0.1)}, 100%, 50%)`, "material:gold"];
 }
-// @endverb
 
-// @verb special_watch_tick
 export function special_watch_tick() {
   send("message", `Tick Tock: ${time.format(time.now(), "time")}`);
   schedule("tick", [], 10000);
 }
-// @endverb
 
-// @verb special_watch_start
 export function special_watch_start() {
   schedule("tick", [], 0);
 }
-// @endverb
 
-// @verb clock_tick
 export function clock_tick() {
   send("message", `BONG! It is ${time.format(time.now(), "time")}`);
   schedule("tick", [], 15000);
 }
-// @endverb
 
-// @verb clock_start
 export function clock_start() {
   schedule("tick", [], 0);
 }
-// @endverb
 
-// @verb clock_tower_toll
 export function clock_tower_toll() {
   send("message", `The Clock Tower tolls: ${time.format(time.now(), "time")}`);
   schedule("toll", [], 60000);
 }
-// @endverb
 
-// @verb clock_tower_start
 export function clock_tower_start() {
   schedule("toll", [], 0);
 }
-// @endverb
 
-// @verb mailbox_deposit
 export function mailbox_deposit() {
   send("message", "Deposit disabled.");
 }
-// @endverb
 
-// @verb book_read
 export function book_read(this: Entity) {
   const index = arg<number>(0);
   if (index === null) throw "Please specify a chapter index (0-based).";
@@ -490,9 +429,7 @@ export function book_read(this: Entity) {
   if (!chapter) throw "Chapter not found.";
   call(caller(), "tell", `Reading: ${chapter["title"]}\n\n${chapter["content"]}`);
 }
-// @endverb
 
-// @verb book_list_chapters
 export function book_list_chapters(this: Entity) {
   const chapters = this["chapters"] as any[];
   call(
@@ -504,9 +441,7 @@ export function book_list_chapters(this: Entity) {
     )}`,
   );
 }
-// @endverb
 
-// @verb book_add_chapter
 export function book_add_chapter(this: Entity) {
   const title = arg(0);
   const content = arg(1);
@@ -519,9 +454,7 @@ export function book_add_chapter(this: Entity) {
   this["chapters"] = chapters;
   call(caller(), "tell", "Chapter added.");
 }
-// @endverb
 
-// @verb book_search_chapters
 export function book_search_chapters(this: Entity) {
   const query = str.lower(arg(0));
   const chapters = this["chapters"] as any[];
@@ -539,13 +472,11 @@ export function book_search_chapters(this: Entity) {
     )}`,
   );
 }
-// @endverb
 
 declare const HOTEL_LOBBY_ID_PLACEHOLDER: number;
 declare const HOTEL_ROOM_PROTO_ID_PLACEHOLDER: number;
 declare const WING_PROTO_ID_PLACEHOLDER: number;
 
-// @verb hotel_room_on_leave
 export function hotel_room_on_leave(this: Entity) {
   const mover = arg<Entity>(0);
   const cap = get_capability("entity.control", { target_id: this.id });
@@ -565,16 +496,12 @@ export function hotel_room_on_leave(this: Entity) {
     send("message", "The room refuses to let you go.");
   }
 }
-// @endverb
 
-// @verb hotel_lobby_room_vacated
 export function hotel_lobby_room_vacated() {
   const roomNumber = arg<number>(0);
   send("message", `Room ${roomNumber} is now available.`);
 }
-// @endverb
 
-// @verb hotel_room_leave_updated
 export function hotel_room_leave_updated(this: Entity) {
   const mover = arg<Entity>(0);
   const cap = get_capability("entity.control", { target_id: this.id });
@@ -604,18 +531,14 @@ export function hotel_room_leave_updated(this: Entity) {
     send("message", "The room refuses to let you go.");
   }
 }
-// @endverb
 
-// @verb elevator_push
 export function elevator_push(this: Entity) {
   const floor = arg(0);
   this["current_floor"] = floor;
   set_entity(get_capability("entity.control", { target_id: this.id })!, this);
   call(caller(), "tell", `The elevator hums and moves to floor ${floor}.`);
 }
-// @endverb
 
-// @verb elevator_go
 export function elevator_go(this: Entity) {
   const direction = arg<string>(0);
   if (direction === "out") {
@@ -737,9 +660,7 @@ export function elevator_go(this: Entity) {
     send("message", "You can only move 'out' of the elevator.");
   }
 }
-// @endverb
 
-// @verb elevator_on_enter
 export function elevator_on_enter(this: Entity) {
   const floors = (this["floors"] as Record<string, number>) || {};
   const controlCap = get_capability("entity.control", { target_id: this.id });
@@ -786,9 +707,7 @@ export function elevator_on_enter(this: Entity) {
     set_entity(controlCap, this);
   }
 }
-// @endverb
 
-// @verb wing_on_enter
 export function wing_on_enter(this: Entity) {
   const mover = arg<Entity>(0);
   const cap = get_capability("entity.control", { target_id: this.id });
@@ -802,9 +721,7 @@ export function wing_on_enter(this: Entity) {
     send("message", "The wing is closed for cleaning.");
   }
 }
-// @endverb
 
-// @verb wing_enter_room
 export function wing_enter_room(this: Entity) {
   const roomNumber = arg<number>(0);
   if (!roomNumber) {
@@ -890,9 +807,7 @@ export function wing_enter_room(this: Entity) {
     send("message", "Room not found.");
   }
 }
-// @endverb
 
-// @verb receptionist_on_hear
 export function receptionist_on_hear() {
   const speaker = arg<Entity>(0);
   const message = arg<string>(1);
@@ -900,9 +815,7 @@ export function receptionist_on_hear() {
     call(speaker, "tell", "We have lovely rooms available on all floors.");
   }
 }
-// @endverb
 
-// @verb golem_on_hear
 export function golem_on_hear() {
   const speaker = arg<Entity>(0);
   const message = arg<string>(1);
@@ -910,4 +823,29 @@ export function golem_on_hear() {
     call(speaker, "tell", "GREETINGS. I AM GOLEM.");
   }
 }
-// @endverb
+
+export function entity_base_get_llm_prompt(this: Entity) {
+  let prompt = `You are ${this["name"]}.`;
+  if (this["description"]) prompt += `\n${this["description"]}`;
+
+  if (this["prose_mood"]) {
+    prompt += `\n${this["prose_mood"]}`;
+  } else if (this["mood"]) {
+    prompt += `\nYou are feeling: ${this["mood"]}`;
+  }
+
+  if (this["prose_personality"]) {
+    prompt += `\n${this["prose_personality"]}`;
+  } else if (this["personality"]) {
+    prompt += `\nYou behave like: ${this["personality"]}`;
+  }
+  return prompt;
+}
+
+export function entity_base_get_image_gen_prompt(this: Entity) {
+  let parts: string[] = [];
+  if (this["image_gen_prefix"]) parts.push(this["image_gen_prefix"] as string);
+  if (this["description"]) parts.push(this["description"] as string);
+  if (this["adjectives"]) parts.push(str.join(this["adjectives"] as string[], ", "));
+  return str.join(parts, ", ");
+}

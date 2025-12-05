@@ -320,6 +320,14 @@ export class AiPlugin implements Plugin {
   }
 
   private async buildSystemPrompt(target: any, message: string): Promise<string> {
+    // Target is already resolved by getResolvedRoom, but let's be sure we have the latest props if we re-fetched
+    // Actually getResolvedRoom calls resolveProps.
+
+    // Check for dynamic prompt
+    if (target["llm_prompt"]) {
+      return target["llm_prompt"] as string;
+    }
+
     let systemPrompt = `You are roleplaying as ${target["name"]}.\
 ${target["description"] ? `\nDescription: ${target["description"]}` : ""}
 ${target["adjectives"] ? `\nAdjectives: ${(target["adjectives"] as string[]).join(", ")}` : ""}
@@ -426,11 +434,46 @@ Keep your response short and in character.`;
     ctx.send("message", "Generating image...");
 
     try {
+      // Resolve target to check for image_gen_prompt
+      let imagePrompt = instruction;
+
+      // If the instruction is just "image <target>", we might want to use the target's prompt
+      // But handleImage logic parses args weirdly.
+      // "image <description>" -> instruction = description.
+      // "image <target> <prompt>" -> targetName = args[0], prompt = args[1..]
+
+      // Let's check if the instruction matches a target in the room
+      const currentPlayer = ctx.core.getEntity(ctx.player.id);
+      if (currentPlayer && currentPlayer["location"]) {
+        const roomItems = this.getResolvedRoom(ctx, currentPlayer["location"] as number)?.contents;
+        // Check if instruction starts with a target name
+        // This is a bit fuzzy. The command is `image <args>`.
+        // If args[0] is a target, we might want to use its prompt.
+
+        const possibleTargetName = ctx.args[0];
+        const target = roomItems?.find(
+          (e: any) => e.name.toLowerCase() === possibleTargetName?.toLowerCase(),
+        );
+
+        if (target) {
+          // If the user provided more args, append them? Or replace?
+          // User said: "It should have a configurable prefix"
+          // If target has image_gen_prompt, use it.
+          if (target["image_gen_prompt"]) {
+            imagePrompt = target["image_gen_prompt"] as string;
+            // If user provided extra details, append them
+            if (ctx.args.length > 1) {
+              imagePrompt += `, ${ctx.args.slice(1).join(" ")}`;
+            }
+          }
+        }
+      }
+
       const model = await getModel("openai:dall-e-3");
       const { image } = await import("ai").then((m) =>
         m.experimental_generateImage({
           model,
-          prompt: instruction,
+          prompt: imagePrompt,
           n: 1,
         }),
       );

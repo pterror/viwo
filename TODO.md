@@ -10,7 +10,7 @@
 
 - [x] **Memory Systems**: Integrate `sqlite-vec` for RAG-based long-term memory.
 - [x] **Streaming**: Implement `streamText` support in `plugins/ai` for real-time typing effects.
-- [ ] **Dynamic State Context**: Implement system for mutable personality traits and ephemeral emotions that feed into LLM context.
+- [x] **Dynamic State Context**: Implement system for mutable personality traits and ephemeral emotions that feed into LLM context.
 - [ ] **Director AI**: Meta-AI agent for pacing and environment control.
 
 ## 3. Ubiquitous Access (Chatbot)
