@@ -151,9 +151,9 @@ export const pow = defineOpcode<[number, number, ...number[]], number>("^", {
   },
   handler: (args, _ctx) => {
     // Power tower
-    let pow = args[args.length - 1];
+    let pow = args[args.length - 1]!;
     for (let i = args.length - 2; i >= 0; i--) {
-      const next = args[i];
+      const next = args[i]!;
       pow = next ** pow;
     }
     return pow;

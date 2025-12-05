@@ -131,7 +131,7 @@ declare global {
     }
   }
   namespace list {
-    function concat(list1: readonly unknown[], list2: readonly unknown[]): any[];
+    function concat(...lists: readonly unknown[][]): any[];
     function empty(list: readonly unknown[]): boolean;
     function filter(list: readonly unknown[], lambda: object): any[];
     function find(list: readonly unknown[], lambda: object): any;
@@ -141,21 +141,16 @@ declare global {
     function len(list: readonly unknown[]): number;
     function map(list: readonly unknown[], lambda: object): any[];
     function new_<T>(...args: any[]): T[];
-    function pop(list: readonly unknown[]): any;
-    function push(list: readonly unknown[], value: any): number;
+    function pop(list: unknown[]): any;
+    function push(list: unknown[], value: any): number;
     function reduce(list: readonly unknown[], lambda: object, init: any): any;
-    function reverse(list: readonly unknown[]): any[];
-    function set(list: readonly unknown[], index: number, value: any): any;
-    function shift(list: readonly unknown[]): any;
+    function reverse(list: unknown[]): any[];
+    function set(list: unknown[], index: number, value: any): any;
+    function shift(list: unknown[]): any;
     function slice(list: readonly unknown[], start: number, end?: number): any[];
-    function sort(list: readonly unknown[]): any[];
-    function splice(
-      list: readonly unknown[],
-      start: number,
-      deleteCount: number,
-      ...items: any[]
-    ): any[];
-    function unshift(list: readonly unknown[], value: any): number;
+    function sort(list: unknown[]): any[];
+    function splice(list: unknown[], start: number, deleteCount: number, ...items: any[]): any[];
+    function unshift(list: unknown[], value: any): number;
   }
   namespace obj {
     function del<T, K extends keyof T = keyof T>(object: T, key: K): boolean;

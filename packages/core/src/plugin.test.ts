@@ -3,7 +3,7 @@ import { PluginManager, Plugin, CommandContext } from "./plugin";
 
 describe("PluginManager", () => {
   test("Load Plugin and Register Command", async () => {
-    const manager = new PluginManager();
+    const manager = new PluginManager({} as never);
     const handler = mock(() => {});
 
     const testPlugin: Plugin = {
@@ -21,7 +21,6 @@ describe("PluginManager", () => {
       args: [],
       player: { id: 1, ws: {} as any },
       send: () => {},
-      core: {} as any,
     };
 
     const handled = await manager.handleCommand(cmdCtx);
@@ -30,13 +29,12 @@ describe("PluginManager", () => {
   });
 
   test("Handle Unknown Command", async () => {
-    const manager = new PluginManager();
+    const manager = new PluginManager({} as never);
     const cmdCtx: CommandContext = {
       command: "unknown",
       args: [],
       player: { id: 1, ws: {} as any },
       send: () => {},
-      core: {} as any,
     };
 
     const handled = await manager.handleCommand(cmdCtx);
@@ -44,7 +42,7 @@ describe("PluginManager", () => {
   });
 
   test("Register and Handle RPC Method", async () => {
-    const manager = new PluginManager();
+    const manager = new PluginManager({} as never);
     const handler = mock(async (params: any) => {
       return { result: params.value * 2 };
     });
@@ -64,7 +62,6 @@ describe("PluginManager", () => {
       args: [],
       player: { id: 1, ws: {} as any },
       send: () => {},
-      core: {} as any,
     };
 
     const result = await manager.handleRpcMethod("double", { value: 21 }, cmdCtx);

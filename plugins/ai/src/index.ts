@@ -1,139 +1,24 @@
 import { Plugin, PluginContext, CommandContext } from "@viwo/core";
 import { generateText, generateObject, embed, streamText } from "ai";
 import { z } from "zod";
-import { AiLib } from "./lib/ai";
-
-import * as amazonBedrock from "@ai-sdk/amazon-bedrock";
-import * as anthropic from "@ai-sdk/anthropic";
-import * as assemblyai from "@ai-sdk/assemblyai";
-import * as azure from "@ai-sdk/azure";
-import * as baseten from "@ai-sdk/baseten";
-import * as blackForestLabs from "@ai-sdk/black-forest-labs";
-import * as cerebras from "@ai-sdk/cerebras";
-import * as cohere from "@ai-sdk/cohere";
-import * as deepgram from "@ai-sdk/deepgram";
-import * as deepinfra from "@ai-sdk/deepinfra";
-import * as deepseek from "@ai-sdk/deepseek";
-import * as elevenlabs from "@ai-sdk/elevenlabs";
-import * as fal from "@ai-sdk/fal";
-import * as fireworks from "@ai-sdk/fireworks";
-import * as gateway from "@ai-sdk/gateway";
-import * as gladia from "@ai-sdk/gladia";
-import * as google from "@ai-sdk/google";
-import * as googleVertex from "@ai-sdk/google-vertex";
-import * as groq from "@ai-sdk/groq";
-import * as huggingface from "@ai-sdk/huggingface";
-import * as hume from "@ai-sdk/hume";
-import * as langchain from "@ai-sdk/langchain";
-import * as llamaindex from "@ai-sdk/llamaindex";
-import * as lmnt from "@ai-sdk/lmnt";
-import * as luma from "@ai-sdk/luma";
-import * as mistral from "@ai-sdk/mistral";
-import * as openai from "@ai-sdk/openai";
-import * as openaiCompatible from "@ai-sdk/openai-compatible";
-import * as perplexity from "@ai-sdk/perplexity";
-import * as replicate from "@ai-sdk/replicate";
-import * as revai from "@ai-sdk/revai";
-import * as togetherai from "@ai-sdk/togetherai";
-import * as vercel from "@ai-sdk/vercel";
-import * as xai from "@ai-sdk/xai";
+import * as AiLib from "./lib/ai";
+import { getImageModel, getLanguageModel, getTextEmbeddingModel } from "./models";
 
 export interface GenerationTemplate<T = any> {
   name: string;
   description: string;
+  // TODO: Remove dependency on zod. We don't need it if all schemas are defined at runtime.
   schema: z.ZodType<T>;
   prompt: (context: CommandContext, instruction?: string) => string;
-}
-
-const providerMap: Record<string, any> = {
-  "amazon-bedrock": amazonBedrock,
-  anthropic: anthropic,
-  assemblyai: assemblyai,
-  azure: azure,
-  baseten: baseten,
-  "black-forest-labs": blackForestLabs,
-  cerebras: cerebras,
-  cohere: cohere,
-  deepgram: deepgram,
-  deepinfra: deepinfra,
-  deepseek: deepseek,
-  elevenlabs: elevenlabs,
-  fal: fal,
-  fireworks: fireworks,
-  gateway: gateway,
-  gladia: gladia,
-  google: google,
-  "google-vertex": googleVertex,
-  groq: groq,
-  huggingface: huggingface,
-  hume: hume,
-  langchain: langchain,
-  llamaindex: llamaindex,
-  lmnt: lmnt,
-  luma: luma,
-  mistral: mistral,
-  openai: openai,
-  "openai-compatible": openaiCompatible,
-  perplexity: perplexity,
-  replicate: replicate,
-  revai: revai,
-  togetherai: togetherai,
-  vercel: vercel,
-  xai: xai,
-};
-
-async function getModel(modelSpec?: string) {
-  const defaultProvider = process.env["AI_PROVIDER"] ?? "openai";
-  const defaultModel = process.env["AI_MODEL"] ?? "gpt-4o";
-
-  let providerName = defaultProvider;
-  let modelName = defaultModel;
-
-  if (modelSpec) {
-    const matches = modelSpec.match(/^([^:]+):(.+)$/);
-    if (matches) {
-      [providerName = "", modelName = ""] = matches.slice(1);
-    } else {
-      modelName = modelSpec;
-    }
-  }
-
-  const mod = providerMap[providerName];
-  if (!mod) {
-    throw new Error(`Unknown provider: ${providerName}`);
-  }
-
-  try {
-    // Try to find the provider function (default, named export, or camelCase fallback).
-
-    // Special cases mapping
-    let exportName = providerName;
-    if (providerName === "amazon-bedrock") exportName = "bedrock";
-    if (providerName === "google-vertex") exportName = "vertex";
-    if (providerName === "openai-compatible") exportName = "openaiCompatible";
-    if (providerName === "black-forest-labs") exportName = "bfl";
-
-    let providerFn = mod[exportName] || mod[providerName] || mod.default;
-
-    if (!providerFn) {
-      // Try camelCase for hyphenated names
-      const camel = providerName.replace(/-([a-z])/g, (g) => g[1]?.toUpperCase() ?? "");
-      providerFn = mod[camel];
-    }
-
-    if (!providerFn) {
-      throw new Error(`Could not find export for provider '${providerName}'`);
-    }
-
-    return providerFn(modelName);
-  } catch (e: any) {
-    throw new Error(`Failed to load provider '${providerName}': ${e.message}`);
-  }
 }
 
 export class AiPlugin implements Plugin {
   name = "ai";
   version = "0.1.0";
+  // TODO: Make this configurable
+  private modelSpec = "openai:gpt-4o";
+  private imageModelSpec = "openai:dall-e-3";
+  private textEmbeddingModelSpec = "openai:text-embedding-3-small";
   private templates: Map<string, GenerationTemplate<any>> = new Map();
   private context!: PluginContext;
 
@@ -195,7 +80,7 @@ export class AiPlugin implements Plugin {
       .join("\n");
 
     try {
-      const model = await getModel();
+      const model = getLanguageModel(this.modelSpec);
 
       // Construct a prompt that asks for completion
       const prompt = `
@@ -258,7 +143,7 @@ export class AiPlugin implements Plugin {
     try {
       const systemPrompt = await this.buildSystemPrompt(target, message);
 
-      const model = await getModel();
+      const model = getLanguageModel(this.modelSpec);
       const { text } = await generateText({
         model,
         system: systemPrompt,
@@ -294,7 +179,7 @@ export class AiPlugin implements Plugin {
     try {
       const systemPrompt = await this.buildSystemPrompt(target, message);
 
-      const model = await getModel();
+      const model = getLanguageModel(this.modelSpec);
       const { textStream } = await streamText({
         model,
         system: systemPrompt,
@@ -379,7 +264,7 @@ Keep your response short and in character.`;
 
     try {
       const prompt = template.prompt(ctx, instruction);
-      const model = await getModel();
+      const model = getLanguageModel(this.modelSpec);
 
       const { object: data } = await generateObject({
         model,
@@ -470,7 +355,7 @@ Keep your response short and in character.`;
         }
       }
 
-      const model = await getModel("openai:dall-e-3");
+      const model = getImageModel(this.imageModelSpec);
       const { image } = await import("ai").then((m) =>
         m.experimental_generateImage({
           model,
@@ -555,11 +440,8 @@ Keep your response short and in character.`;
   }
 
   async getEmbedding(text: string): Promise<number[]> {
-    const model = await getModel("openai:text-embedding-3-small");
-    const { embedding } = await embed({
-      model,
-      value: text,
-    });
+    const model = getTextEmbeddingModel(this.textEmbeddingModelSpec);
+    const { embedding } = await embed({ model, value: text });
     return embedding;
   }
 }

@@ -70,7 +70,7 @@ export const listGet = defineOpcode<[readonly unknown[], number], any>("list.get
 });
 
 /** Sets an item in a list at a specific index. */
-export const listSet = defineOpcode<[readonly unknown[], number, unknown], any>("list.set", {
+export const listSet = defineOpcode<[unknown[], number, unknown], any>("list.set", {
   metadata: {
     label: "Set Item",
     category: "list",
@@ -81,20 +81,20 @@ export const listSet = defineOpcode<[readonly unknown[], number, unknown], any>(
       { name: "Value", type: "block" },
     ],
     parameters: [
-      { name: "list", type: "readonly unknown[]" },
+      { name: "list", type: "unknown[]" },
       { name: "index", type: "number" },
       { name: "value", type: "any" },
     ],
     returnType: "any",
   },
   handler: ([list, index, val], _ctx) => {
-    list[index as number] = val;
+    list[index] = val;
     return val;
   },
 });
 
 /** Adds an item to the end of a list. */
-export const listPush = defineOpcode<[readonly unknown[], unknown], number>("list.push", {
+export const listPush = defineOpcode<[unknown[], unknown], number>("list.push", {
   metadata: {
     label: "Push",
     category: "list",
@@ -104,7 +104,7 @@ export const listPush = defineOpcode<[readonly unknown[], unknown], number>("lis
       { name: "Value", type: "block" },
     ],
     parameters: [
-      { name: "list", type: "readonly unknown[]" },
+      { name: "list", type: "unknown[]" },
       { name: "value", type: "any" },
     ],
     returnType: "number",
@@ -116,13 +116,13 @@ export const listPush = defineOpcode<[readonly unknown[], unknown], number>("lis
 });
 
 /** Removes and returns the last item of a list. */
-export const listPop = defineOpcode<[readonly unknown[]], any>("list.pop", {
+export const listPop = defineOpcode<[unknown[]], any>("list.pop", {
   metadata: {
     label: "Pop",
     category: "list",
     description: "Remove item from end",
     slots: [{ name: "List", type: "block" }],
-    parameters: [{ name: "list", type: "readonly unknown[]" }],
+    parameters: [{ name: "list", type: "unknown[]" }],
     returnType: "any",
   },
   handler: ([list], _ctx) => {
@@ -131,7 +131,7 @@ export const listPop = defineOpcode<[readonly unknown[]], any>("list.pop", {
 });
 
 /** Adds an item to the beginning of a list. */
-export const listUnshift = defineOpcode<[readonly unknown[], unknown], number>("list.unshift", {
+export const listUnshift = defineOpcode<[unknown[], unknown], number>("list.unshift", {
   metadata: {
     label: "Unshift",
     category: "list",
@@ -141,7 +141,7 @@ export const listUnshift = defineOpcode<[readonly unknown[], unknown], number>("
       { name: "Value", type: "block" },
     ],
     parameters: [
-      { name: "list", type: "readonly unknown[]" },
+      { name: "list", type: "unknown[]" },
       { name: "value", type: "any" },
     ],
     returnType: "number",
@@ -153,13 +153,13 @@ export const listUnshift = defineOpcode<[readonly unknown[], unknown], number>("
 });
 
 /** Removes and returns the first item of a list. */
-export const listShift = defineOpcode<[readonly unknown[]], any>("list.shift", {
+export const listShift = defineOpcode<[unknown[]], any>("list.shift", {
   metadata: {
     label: "Shift",
     category: "list",
     description: "Remove item from start",
     slots: [{ name: "List", type: "block" }],
-    parameters: [{ name: "list", type: "readonly unknown[]" }],
+    parameters: [{ name: "list", type: "unknown[]" }],
     returnType: "any",
   },
   handler: ([list], _ctx) => {
@@ -191,7 +191,7 @@ export const listSlice = defineOpcode<[readonly unknown[], number, number?], any
 });
 
 /** Changes the contents of a list by removing or replacing existing elements and/or adding new elements. */
-export const listSplice = defineOpcode<[readonly unknown[], number, number, ...unknown[]], any[]>(
+export const listSplice = defineOpcode<[unknown[], number, number, ...unknown[]], any[]>(
   "list.splice",
   {
     metadata: {
@@ -205,7 +205,7 @@ export const listSplice = defineOpcode<[readonly unknown[], number, number, ...u
         { name: "Items", type: "block" }, // Variadic
       ],
       parameters: [
-        { name: "list", type: "readonly unknown[]" },
+        { name: "list", type: "unknown[]" },
         { name: "start", type: "number" },
         { name: "deleteCount", type: "number" },
         { name: "...items", type: "any[]" },
@@ -219,28 +219,19 @@ export const listSplice = defineOpcode<[readonly unknown[], number, number, ...u
 );
 
 /** Merges two or more lists. */
-export const listConcat = defineOpcode<[readonly unknown[], readonly unknown[]], any[]>(
-  "list.concat",
-  {
-    metadata: {
-      label: "Concat Lists",
-      category: "list",
-      description: "Concatenate lists",
-      slots: [
-        { name: "List 1", type: "block" },
-        { name: "List 2", type: "block" },
-      ],
-      parameters: [
-        { name: "list1", type: "readonly unknown[]" },
-        { name: "list2", type: "readonly unknown[]" },
-      ],
-      returnType: "any[]",
-    },
-    handler: ([list1, list2], _ctx) => {
-      return list1.concat(list2);
-    },
+export const listConcat = defineOpcode<(readonly unknown[])[], any[]>("list.concat", {
+  metadata: {
+    label: "Concat Lists",
+    category: "list",
+    description: "Concatenate lists",
+    slots: [{ name: "Lists", type: "block" }],
+    parameters: [{ name: "...lists", type: "readonly unknown[][]" }],
+    returnType: "any[]",
   },
-);
+  handler: (lists, _ctx) => {
+    return lists.flat();
+  },
+});
 
 /** Determines whether a list includes a certain value. */
 export const listIncludes = defineOpcode<[readonly unknown[], unknown], boolean>("list.includes", {
@@ -263,14 +254,16 @@ export const listIncludes = defineOpcode<[readonly unknown[], unknown], boolean>
   },
 });
 
+// TODO: toReversed, toSorted?
+
 /** Reverses a list in place. */
-export const listReverse = defineOpcode<[readonly unknown[]], any[]>("list.reverse", {
+export const listReverse = defineOpcode<[unknown[]], any[]>("list.reverse", {
   metadata: {
     label: "Reverse List",
     category: "list",
     description: "Reverse list order",
     slots: [{ name: "List", type: "block" }],
-    parameters: [{ name: "list", type: "readonly unknown[]" }],
+    parameters: [{ name: "list", type: "unknown[]" }],
     returnType: "any[]",
   },
   handler: ([list], _ctx) => {
@@ -279,13 +272,13 @@ export const listReverse = defineOpcode<[readonly unknown[]], any[]>("list.rever
 });
 
 /** Sorts the elements of a list in place. */
-export const listSort = defineOpcode<[readonly unknown[]], any[]>("list.sort", {
+export const listSort = defineOpcode<[unknown[]], any[]>("list.sort", {
   metadata: {
     label: "Sort List",
     category: "list",
     description: "Sort list",
     slots: [{ name: "List", type: "block" }],
-    parameters: [{ name: "list", type: "readonly unknown[]" }],
+    parameters: [{ name: "list", type: "unknown[]" }],
     returnType: "any[]",
   },
   handler: ([list], _ctx) => {

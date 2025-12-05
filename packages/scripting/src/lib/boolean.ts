@@ -184,7 +184,7 @@ export const gte = defineOpcode<[number, number, ...number[]], boolean>(">=", {
 
 // Logic
 /** Logical AND. */
-export const and = defineOpcode<[boolean, boolean, ...boolean[]], boolean>("and", {
+export const and = defineOpcode<[boolean, boolean, ...boolean[]], boolean, true>("and", {
   metadata: {
     label: "And",
     category: "logic",
@@ -208,7 +208,7 @@ export const and = defineOpcode<[boolean, boolean, ...boolean[]], boolean>("and"
     const next = (): any => {
       if (i >= args.length) return true;
 
-      const arg = args[i++];
+      const arg = args[i++]!;
       const result = evaluate(arg, ctx);
 
       if (result instanceof Promise) {
@@ -227,7 +227,7 @@ export const and = defineOpcode<[boolean, boolean, ...boolean[]], boolean>("and"
 });
 
 /** Logical OR. */
-export const or = defineOpcode<[boolean, boolean, ...boolean[]], boolean>("or", {
+export const or = defineOpcode<[boolean, boolean, ...boolean[]], boolean, true>("or", {
   metadata: {
     label: "Or",
     category: "logic",
@@ -251,7 +251,7 @@ export const or = defineOpcode<[boolean, boolean, ...boolean[]], boolean>("or", 
     const next = (): any => {
       if (i >= args.length) return false;
 
-      const arg = args[i++];
+      const arg = args[i++]!;
       const result = evaluate(arg, ctx);
 
       if (result instanceof Promise) {

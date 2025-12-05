@@ -40,15 +40,19 @@ export type ScriptExpression<Args extends (string | ScriptValue_<unknown>)[], Re
   __returnType: Ret;
 };
 
-export interface OpcodeBuilder<Args extends (string | ScriptValue_<unknown>)[], Ret> {
+export interface OpcodeBuilder<
+  Args extends (string | ScriptValue_<unknown>)[],
+  Ret,
+  Lazy = boolean,
+> {
   (
     ...args: {
       [K in keyof Args]: Args[K] extends ScriptRaw<infer T> ? T : ScriptValue<Args[K]>;
     }
   ): ScriptExpression<Args, Ret>;
   opcode: string;
-  handler: OpcodeHandler<Ret>;
-  metadata: OpcodeMetadata;
+  handler: OpcodeHandler<Args, Ret, Lazy>;
+  metadata: OpcodeMetadata<Lazy>;
 }
 
 /**
@@ -58,17 +62,21 @@ export interface OpcodeBuilder<Args extends (string | ScriptValue_<unknown>)[], 
  * @param def - The opcode definition (metadata and handler).
  * @returns A builder function that can be used to construct S-expressions for this opcode in TypeScript.
  */
-export function defineOpcode<Args extends (string | ScriptValue_<unknown>)[] = never, Ret = never>(
+export function defineOpcode<
+  Args extends (string | ScriptValue_<unknown>)[] = never,
+  Ret = never,
+  Lazy = false,
+>(
   opcode: string,
   def: {
-    metadata: Omit<OpcodeMetadata, "opcode">;
-    handler: OpcodeHandler<Ret>;
+    metadata: Omit<OpcodeMetadata<Lazy>, "opcode">;
+    handler: OpcodeHandler<Args, Ret, Lazy>;
   },
-): OpcodeBuilder<Args, Ret> {
+): OpcodeBuilder<Args, Ret, Lazy> {
   const builder = ((...args: Args) => {
     const expr = [opcode, ...args] as unknown as ScriptExpression<Args, Ret>;
     return expr;
-  }) as OpcodeBuilder<Args, Ret>;
+  }) as OpcodeBuilder<Args, Ret, Lazy>;
 
   builder.opcode = opcode;
   builder.handler = def.handler;

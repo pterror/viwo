@@ -6,7 +6,8 @@ const DISALLOWED_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 /** Creates a new object from key-value pairs. */
 export const objNew = defineOpcode<
   [...ScriptRaw<[key: ScriptValue<string>, value: ScriptValue<unknown>]>[]],
-  any
+  any,
+  true
 >("obj.new", {
   metadata: {
     label: "New Object",
@@ -25,12 +26,12 @@ export const objNew = defineOpcode<
     // args: [[key1, val1], [key2, val2], ...] (variadic)
     const obj: Record<string, any> = {};
     for (let i = 0; i < args.length; i++) {
-      if (!Array.isArray(args[i]) || args[i].length !== 2) {
+      if (!Array.isArray(args[i]) || args[i]!.length !== 2) {
         throw new ScriptError(
           `obj.new: expected pair at index ${i}, got ${JSON.stringify(args[i])}`,
         );
       }
-      const [keyExpr, valueExpr] = args[i];
+      const [keyExpr, valueExpr] = args[i]!;
       const keyRes = evaluate(keyExpr, ctx);
       const key = keyRes instanceof Promise ? await keyRes : keyRes;
       if (typeof key !== "string") {

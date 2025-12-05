@@ -849,3 +849,88 @@ export function entity_base_get_image_gen_prompt(this: Entity) {
   if (this["adjectives"]) parts.push(str.join(this["adjectives"] as string[], ", "));
   return str.join(parts, ", ");
 }
+
+import "../plugin_types";
+
+export function director_tick(this: Entity) {
+  // 1. Pick a target room (Lobby for now)
+  // We can't easily find players without get_online_players or iterating everything.
+  // So we'll just target the Lobby.
+  // const lobbyId = call(this, "find", "Lobby"); // Director is in Void, Lobby is in Void.
+  // Wait, Director is in Void. Lobby is in Void.
+  // But 'find' searches 'contents' of location.
+  // Director location is Void. Void contents includes Lobby.
+  // So 'find' should work if Director has 'find' verb?
+  // Director has 'entity.control' {*} so it can do anything?
+  // No, 'find' is a verb on Entity Base. Director doesn't inherit from Entity Base?
+  // Director was created with no prototype?
+  // In seed.ts: createEntity({ name: "Director", ... }) -> no prototype specified?
+  // createEntity defaults to null prototype if not specified?
+  // Actually createEntity takes prototypeId as 2nd arg.
+  // In seed.ts: const directorId = createEntity({...}); // No 2nd arg.
+  // So Director has no verbs.
+  // We added 'tick' and 'start' manually.
+
+  // We need to find the Lobby ID.
+  // We can hardcode it if we knew it, but we don't.
+  // However, we can use 'entity(1)' if we assume Lobby is 1? No, Void is 1.
+  // Let's assume we can't find it easily.
+  // But wait, we are writing a script.
+  // We can use `get_verb` to check if we have `find`.
+
+  // Let's just try to find "Lobby" assuming we are in Void.
+  // But Director is in Void.
+  // We need 'find' verb.
+  // Let's just iterate Void contents manually.
+  const voidId = this["location"] as number;
+  const voidEnt = entity(voidId);
+  const contents = (voidEnt["contents"] as number[]) ?? [];
+
+  let lobbyId: number | null = null;
+  for (const id of contents) {
+    const ent = resolve_props(entity(id));
+    if (ent["name"] === "Lobby") {
+      lobbyId = id;
+      break;
+    }
+  }
+
+  if (!lobbyId) {
+    schedule("tick", [], 60000);
+    return;
+  }
+
+  const room = resolve_props(entity(lobbyId));
+
+  // 4. Generate ambient event
+  const prompt = `You are a Director AI for a text-based RPG.
+The player is in a room: "${room["name"]}".
+Description: "${room["description"]}".
+
+Generate a short, atmospheric event or flavor text that happens in this room.
+It should be subtle and immersive.
+Do not mention "Director AI" or "Game Master".
+Just describe the event.
+Max 1 sentence.`;
+
+  const eventText = ai.text(prompt);
+
+  // 5. Send to all players in the room
+  const roomContents = (room["contents"] as number[]) ?? [];
+  for (const id of roomContents) {
+    try {
+      const ent = entity(id);
+      call(ent, "tell", `[Director] ${eventText}`);
+    } catch {
+      // Ignore
+    }
+  }
+
+  // Schedule next tick
+  const delay = random(20000, 60000);
+  schedule("tick", [], delay);
+}
+
+export function director_start() {
+  schedule("tick", [], 1000);
+}

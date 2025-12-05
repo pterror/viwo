@@ -1,4 +1,5 @@
 import { Entity } from "@viwo/shared/jsonrpc";
+import { ScriptRaw, ScriptValue } from "./def";
 
 /**
  * Execution context for a script.
@@ -66,7 +67,7 @@ export class ScriptError extends Error {
 }
 
 /** Metadata describing an opcode for documentation and UI generation. */
-export interface OpcodeMetadata {
+export interface OpcodeMetadata<Lazy = boolean> {
   /** Human-readable label. */
   label: string;
   /** The opcode name. */
@@ -87,12 +88,21 @@ export interface OpcodeMetadata {
   genericParameters?: string[];
   returnType?: string;
   /** If true, arguments are NOT evaluated before being passed to the handler. Default: false (Strict). */
-  lazy?: boolean;
+  lazy?: Lazy;
 }
 
-export type OpcodeHandler<Ret> = (args: any[], ctx: ScriptContext) => Ret | Promise<Ret>;
+export type OpcodeHandler<Args extends readonly unknown[], Ret, Lazy = boolean> = (
+  args: {
+    [K in keyof Args]: Args[K] extends ScriptRaw<infer T>
+      ? T
+      : Lazy extends true
+        ? ScriptValue<Args[K]>
+        : Args[K];
+  },
+  ctx: ScriptContext,
+) => Ret | Promise<Ret>;
 
-export interface OpcodeDefinition {
-  handler: OpcodeHandler<unknown>;
-  metadata: OpcodeMetadata;
+export interface OpcodeDefinition<Lazy = boolean> {
+  handler: OpcodeHandler<any, unknown, Lazy>;
+  metadata: OpcodeMetadata<Lazy>;
 }

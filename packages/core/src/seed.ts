@@ -552,5 +552,19 @@ export function seed() {
   // 6. Create Hotel
   seedHotel(lobbyId, voidId, entityBaseId);
 
+  // 7. Director AI
+  const directorId = createEntity({
+    name: "Director",
+    location: voidId,
+    description: "The AI Director.",
+  });
+
+  // Grant Director capabilities
+  createCapability(directorId, "sys.sudo", {});
+  createCapability(directorId, "entity.control", { "*": true });
+
+  addVerb(directorId, "tick", transpile(extractVerb(verbsPath, "director_tick")));
+  addVerb(directorId, "start", transpile(extractVerb(verbsPath, "director_start")));
+
   console.log("Database seeded successfully.");
 }

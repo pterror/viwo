@@ -77,7 +77,7 @@ export const caller = defineOpcode<[], Entity>("caller", {
 /**
  * Executes a sequence of steps and returns the result of the last step.
  */
-export const seq = defineOpcode<unknown[], any>("seq", {
+export const seq = defineOpcode<unknown[], any, true>("seq", {
   metadata: {
     label: "Sequence",
     category: "logic",
@@ -131,7 +131,7 @@ export const seq = defineOpcode<unknown[], any>("seq", {
 });
 
 /** Conditional execution. */
-const if_ = defineOpcode<[boolean, unknown, unknown?], any>("if", {
+const if_ = defineOpcode<[boolean, unknown, unknown?], any, true>("if", {
   metadata: {
     label: "If",
     category: "logic",
@@ -189,7 +189,7 @@ const if_ = defineOpcode<[boolean, unknown, unknown?], any>("if", {
 export { if_ as if };
 
 /** Repeats a body while a condition is true. */
-const while_ = defineOpcode<[boolean, unknown], any>("while", {
+const while_ = defineOpcode<[boolean, unknown], any, true>("while", {
   metadata: {
     label: "While",
     category: "logic",
@@ -304,7 +304,7 @@ export { while_ as while };
 /**
  * Iterates over a list.
  */
-const for_ = defineOpcode<[string, readonly unknown[], unknown], any>("for", {
+const for_ = defineOpcode<[ScriptRaw<string>, readonly unknown[], unknown], any, true>("for", {
   metadata: {
     label: "For Loop",
     category: "logic",
@@ -616,7 +616,7 @@ const throw_ = defineOpcode<[unknown], never>("throw", {
 });
 export { throw_ as throw };
 
-const try_ = defineOpcode<[unknown, string, unknown], any>("try", {
+const try_ = defineOpcode<[unknown, string, unknown], any, true>("try", {
   metadata: {
     label: "Try/Catch",
     category: "logic",
@@ -641,7 +641,7 @@ const try_ = defineOpcode<[unknown, string, unknown], any>("try", {
       const result = evaluate(tryBlock, ctx);
       exitScope(ctx, snapshot);
       return result;
-    } catch (e: any) {
+    } catch (error: any) {
       exitScope(ctx, snapshot); // Unwind try scope
       if (catchBlock) {
         const catchSnapshot = enterScope(ctx);
@@ -650,24 +650,25 @@ const try_ = defineOpcode<[unknown, string, unknown], any>("try", {
             ctx.vars = Object.create(ctx.vars);
             ctx.cow = false;
           }
-          ctx.vars[errorVar] = e.message ?? String(e);
+          ctx.vars[errorVar] = error.message ?? String(error);
         }
         try {
           const result = evaluate(catchBlock, ctx);
           exitScope(ctx, catchSnapshot);
           return result;
-        } catch (err) {
+        } catch (error) {
           exitScope(ctx, catchSnapshot);
-          throw err;
+          throw error;
         }
       }
+      throw error;
     }
   },
 });
 export { try_ as try };
 
 /** Creates a lambda (anonymous function). */
-export const lambda = defineOpcode<[ScriptRaw<readonly string[]>, unknown], any>("lambda", {
+export const lambda = defineOpcode<[ScriptRaw<readonly string[]>, unknown], any, true>("lambda", {
   metadata: {
     label: "Lambda",
     category: "func",
@@ -767,7 +768,7 @@ export const send = defineOpcode<[string, unknown], null>("send", {
  * Returns the argument as is, without evaluation.
  * Used for passing arrays as values to opcodes.
  */
-export const quote = defineOpcode<[any], any>("quote", {
+export const quote = defineOpcode<[ScriptRaw<unknown>], any, true>("quote", {
   metadata: {
     label: "Quote",
     category: "data",

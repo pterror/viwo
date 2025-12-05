@@ -29,8 +29,17 @@ export interface HttpResponse {
   __response: Response;
 }
 
+// TODO: Support JSON body
 export const netHttpFetch = defineOpcode<
-  [Capability | null, string, Record<string, any>?],
+  [
+    Capability | null,
+    string,
+    {
+      readonly method?: string;
+      readonly headers?: Record<string, string>;
+      readonly body?: string;
+    }?,
+  ],
   Promise<HttpResponse>
 >("net.http.fetch", {
   metadata: {

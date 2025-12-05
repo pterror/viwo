@@ -1,76 +1,137 @@
-import { generateText, generateObject } from "ai";
-import { z } from "zod";
-import { OpcodeDefinition } from "@viwo/scripting";
-import { getModel } from "../index";
+import { defineOpcode } from "@viwo/scripting";
+import {
+  generateText,
+  generateObject,
+  jsonSchema,
+  experimental_generateImage,
+  embed,
+  experimental_generateSpeech,
+  experimental_transcribe,
+} from "ai";
+import {
+  getImageModel,
+  getLanguageModel,
+  getSpeechModel,
+  getTextEmbeddingModel,
+  getTranscriptionModel,
+} from "../models";
 
-export const AiLib: Record<string, OpcodeDefinition> = {
-  "ai.text": {
-    metadata: {
-      opcode: "ai.text",
-      description: "Generate text using an LLM.",
-      parameters: [
-        { name: "prompt", type: "string" },
-        { name: "system", type: "string", optional: true },
-      ],
-      returnType: "string",
-    },
-    handler: async (args: unknown[]) => {
-      const [prompt, system] = args as [string, string | undefined];
-      const model = await getModel();
-      const { text } = await generateText({
-        model,
-        system,
-        prompt,
-      });
-      return text;
-    },
+export const aiText = defineOpcode<[string, string, string?], string>("ai.text", {
+  metadata: {
+    label: "Generate Text Response",
+    category: "AI",
+    parameters: [
+      { name: "model", type: "string" },
+      { name: "prompt", type: "string" },
+      { name: "system", type: "string", optional: true },
+    ],
+    returnType: "string",
+    description: "Generates text.",
   },
-  "ai.json": {
-    metadata: {
-      opcode: "ai.json",
-      description: "Generate a JSON object using an LLM.",
-      parameters: [
-        { name: "prompt", type: "string" },
-        { name: "schema", type: "object" }, // Schema definition is tricky to pass from script, we might need a simplified way or just accept a description and infer?
-        // For now, let's assume the schema is passed as a JSON schema object or similar.
-        // Actually, passing a Zod schema from script is hard.
-        // Let's defer ai.json or make it return any and take a schema description string?
-        // Or maybe just take a sample object?
-        // Let's stick to ai.text for now as per plan, but I'll add a placeholder or simple version if needed.
-        // User asked for ai.json in plan, but let's implement a simple version that takes a schema description string.
-        { name: "schemaDescription", type: "string" },
-      ],
-      returnType: "object",
-    },
-    handler: async (args: unknown[]) => {
-      // This is a bit hacky without a real schema parser from script.
-      // We'll ask for a JSON string and parse it.
-      const [prompt, schemaDesc] = args as [string, string];
-      const model = await getModel();
-
-      // We can't easily construct a Zod schema from a script object yet.
-      // So we'll use generateText with json mode if available, or just prompt engineering.
-      // ai sdk generateObject requires a schema.
-      // We can use z.any() but that defeats the purpose.
-      // Let's try to use z.object({}) and rely on the prompt to define structure? No.
-
-      // Alternative: ai.extract(text, templateName) where templates are defined in plugin?
-      // But we want script control.
-
-      // Let's implement a dynamic schema generator if possible, or just use text and JSON.parse.
-      const { text } = await generateText({
-        model,
-        system: `You are a JSON generator. Generate a valid JSON object matching this description: ${schemaDesc}. Return ONLY the JSON.`,
-        prompt,
-      });
-
-      try {
-        // Clean up markdown code blocks if present
-        const cleanText = text.replace(/```json\n?|\n?```/g, "");
-        return JSON.parse(cleanText);
-      } catch (e) {
-        throw new Error("Failed to parse generated JSON");
-      }
-    },
+  handler: async ([modelName, prompt, systemPrompt]) => {
+    const model = getLanguageModel(modelName);
+    const { text } = await generateText({
+      model,
+      prompt,
+      ...(systemPrompt ? { system: systemPrompt } : {}),
+    });
+    return text;
   },
-};
+});
+
+export const aiJson = defineOpcode<[string, string, object?], any>("ai.json", {
+  metadata: {
+    label: "Generate JSON Response",
+    category: "AI",
+    parameters: [
+      { name: "model", type: "string" },
+      { name: "prompt", type: "string" },
+      // TODO: Opcodes to construct JSON schemas.
+      { name: "schema", type: "object", optional: true },
+    ],
+    returnType: "object",
+    description: "Generates a JSON object.",
+  },
+  handler: async ([modelName, prompt, schema]) => {
+    const model = getLanguageModel(modelName);
+    const { object } = schema
+      ? await generateObject({ model, schema: jsonSchema(schema), prompt })
+      : await generateObject<never, "no-schema">({ model, prompt });
+    return object;
+  },
+});
+
+export const aiEmbeddingText = defineOpcode<[string, string], number[]>("ai.embedding.text", {
+  metadata: {
+    label: "Generate Text Embedding",
+    category: "AI",
+    parameters: [
+      { name: "model", type: "string" },
+      { name: "text", type: "string" },
+    ],
+    returnType: "number[]",
+    description: "Generates an embedding for the given text.",
+  },
+  handler: async ([modelName, text]) => {
+    const model = getTextEmbeddingModel(modelName);
+    const { embedding } = await embed({ model, value: text });
+    return embedding;
+  },
+});
+
+export const aiImage = defineOpcode<[string, string], object>("ai.image", {
+  metadata: {
+    label: "Generate Image",
+    category: "AI",
+    parameters: [
+      { name: "model", type: "string" },
+      { name: "prompt", type: "string" },
+    ],
+    returnType: "object",
+    description: "Generates an image.",
+  },
+  handler: async ([modelName, prompt]) => {
+    const model = getImageModel(modelName);
+    const { image } = await experimental_generateImage({ model, prompt });
+    // TODO: Support specifying width and height
+    // TODO: Return in an actually usable format
+    return image;
+  },
+});
+
+export const aiGenerateSpeech = defineOpcode<[string, string], object>("ai.generate_speech", {
+  metadata: {
+    label: "Generate Speech",
+    category: "AI",
+    parameters: [
+      { name: "model", type: "string" },
+      { name: "text", type: "string" },
+    ],
+    returnType: "object",
+    description: "Generates speech from text.",
+  },
+  handler: async ([modelName, text]) => {
+    const model = getSpeechModel(modelName);
+    const { audio } = await experimental_generateSpeech({ model, text });
+    // TODO: Return in an actually usable format
+    return audio;
+  },
+});
+
+export const aiTranscribe = defineOpcode<[string, string], object>("ai.transcribe", {
+  metadata: {
+    label: "Transcribe Audio",
+    category: "AI",
+    parameters: [
+      { name: "model", type: "string" },
+      { name: "audio", type: "object" },
+    ],
+    returnType: "string",
+    description: "Transcribes audio to text.",
+  },
+  handler: async ([modelName, audio]) => {
+    const model = getTranscriptionModel(modelName);
+    const { text } = await experimental_transcribe({ model, audio });
+    return text;
+  },
+});

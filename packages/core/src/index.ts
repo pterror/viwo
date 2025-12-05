@@ -14,11 +14,10 @@ import {
   StdLib,
   compile,
 } from "@viwo/scripting";
-import * as Core from "./runtime/lib/core";
-import * as Kernel from "./runtime/lib/kernel";
-import * as FS from "./runtime/lib/fs";
-import * as Net from "./runtime/lib/net";
-
+import * as CoreLib from "./runtime/lib/core";
+import * as KernelLib from "./runtime/lib/kernel";
+import * as FsLib from "./runtime/lib/fs";
+import * as NetLib from "./runtime/lib/net";
 import { PluginManager, CommandContext } from "./plugin";
 import { scheduler } from "./scheduler";
 import { JsonRpcRequest, JsonRpcResponse, JsonRpcNotification, Entity } from "@viwo/shared/jsonrpc";
@@ -27,7 +26,7 @@ import { resolveProps } from "./runtime/utils";
 export { PluginManager };
 export type { CommandContext };
 export type { Plugin, PluginContext } from "./plugin";
-export { Core as CoreLib };
+export { CoreLib };
 export { db } from "./db";
 export { createEntity, getEntity, addVerb, updateEntity } from "./repo";
 
@@ -65,10 +64,10 @@ export const pluginManager = new PluginManager(coreImpl);
 const clients = new Map<number, Bun.ServerWebSocket<{ userId: number }>>();
 
 registerLibrary(StdLib);
-registerLibrary(Core);
-registerLibrary(Kernel);
-registerLibrary(FS);
-registerLibrary(Net);
+registerLibrary(CoreLib);
+registerLibrary(KernelLib);
+registerLibrary(FsLib);
+registerLibrary(NetLib);
 registerLibrary(ListLib);
 registerLibrary(ObjectLib);
 registerLibrary(StringLib);
@@ -363,8 +362,6 @@ export async function handleJsonRpcRequest(
           error: { code: -32602, message: "Invalid params: method required" },
         };
       }
-
-      const player = getEntity(playerId)!;
 
       const commandCtx: CommandContext = {
         player: { id: playerId, ws },
