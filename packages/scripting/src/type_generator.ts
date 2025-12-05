@@ -119,6 +119,26 @@ type ScriptExpression<Args extends (string | ScriptValue_<unknown>)[], Ret> = [
 // Standard library functions
 `;
 
+  function generateJSDoc(op: OpcodeMetadata): string {
+    if (!op.description && (!op.parameters || op.parameters.every((p) => !p.description))) {
+      return "";
+    }
+    let jsdoc = "/**\n";
+    if (op.description) {
+      jsdoc += ` * ${op.description}\n`;
+    }
+    if (op.parameters && op.parameters.some((p) => p.description)) {
+      if (op.description) jsdoc += " *\n";
+      for (const param of op.parameters) {
+        if (param.description) {
+          jsdoc += ` * @param ${param.name} - ${param.description}\n`;
+        }
+      }
+    }
+    jsdoc += " */\n";
+    return jsdoc;
+  }
+
   const rootNamespace: Record<string, any> = {};
 
   for (const op of opcodes) {
@@ -148,7 +168,8 @@ type ScriptExpression<Args extends (string | ScriptValue_<unknown>)[], Ret> = [
       const sanitizedName = RESERVED_TYPESCRIPT_KEYWORDS.has(name!) ? `${name}_` : name;
       const generics = op.genericParameters?.length ? `<${op.genericParameters.join(", ")}>` : "";
 
-      current["_funcs"].push(`function ${sanitizedName}${generics}(${params}): ${ret};`);
+      const jsdoc = generateJSDoc(op);
+      current["_funcs"].push(`${jsdoc}function ${sanitizedName}${generics}(${params}): ${ret};`);
     } else {
       // Global function
       const params =
@@ -168,7 +189,8 @@ type ScriptExpression<Args extends (string | ScriptValue_<unknown>)[], Ret> = [
         sanitizedOpcode = `${op.opcode}_`;
       }
       const generics = op.genericParameters?.length ? `<${op.genericParameters.join(", ")}>` : "";
-      definitions += `function ${sanitizedOpcode}${generics}(${params}): ${ret};\n`;
+      const jsdoc = generateJSDoc(op);
+      definitions += `${jsdoc}function ${sanitizedOpcode}${generics}(${params}): ${ret};\n`;
     }
   }
 

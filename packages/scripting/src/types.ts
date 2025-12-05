@@ -84,7 +84,7 @@ export interface OpcodeMetadata<Lazy = boolean> {
     default?: any;
   }[];
   // For Monaco/TS
-  parameters?: { name: string; type: string; optional?: boolean }[];
+  parameters?: { name: string; type: string; optional?: boolean; description?: string }[];
   genericParameters?: string[];
   returnType?: string;
   /** If true, arguments are NOT evaluated before being passed to the handler. Default: false (Strict). */

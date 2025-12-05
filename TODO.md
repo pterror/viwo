@@ -44,4 +44,3 @@
 - [ ] **Core**: Add capability-based permissions for verbs
 - [ ] **Core**: Consider splitting permissions for net.http into multiple capabilities
 - [ ] **Plugins**: Add capability-based permissions to opcodes defined by plugins
-- [ ] **Codegen**: Require and generate JSDocs for opcodes

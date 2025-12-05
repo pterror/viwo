@@ -36,8 +36,8 @@ export const create = defineOpcode<[Capability | null, object], number>("create"
       { name: "Data", type: "block" },
     ],
     parameters: [
-      { name: "cap", type: "Capability | null" },
-      { name: "data", type: "object" },
+      { name: "cap", type: "Capability | null", description: "Capability to use for creation" },
+      { name: "data", type: "object", description: "Initial data for the entity" },
     ],
     returnType: "number",
   },
