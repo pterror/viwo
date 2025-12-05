@@ -38,8 +38,36 @@ describe("MemoryManager", () => {
     await memoryManager.add("Banana");
     await memoryManager.add("Cherry");
 
-    const results = await memoryManager.search("Apple", 1);
+    const results = await memoryManager.search("Apple", { limit: 1 });
     expect(results.length).toBe(1);
     expect(results[0].content).toBe("Apple");
+  });
+
+  it("should search memories with metadata filter", async () => {
+    await memoryManager.add("Apple", { type: "fruit" });
+    await memoryManager.add("Banana", { type: "fruit" });
+    await memoryManager.add("Carrot", { type: "vegetable" });
+
+    // Search for fruit
+    const results = await memoryManager.search("Apple", {
+      filter: { type: "fruit" },
+    });
+    expect(results.length).toBe(2);
+    expect(results.map((r) => r.content).sort()).toEqual(["Apple", "Banana"]);
+
+    // Search for vegetable
+    const results2 = await memoryManager.search("Carrot", {
+      filter: { type: "vegetable" },
+    });
+    expect(results2.length).toBe(1);
+    expect(results2[0].content).toBe("Carrot");
+  });
+
+  it("should search memories without filter (include all)", async () => {
+    await memoryManager.add("Apple", { type: "fruit" });
+    await memoryManager.add("Carrot", { type: "vegetable" });
+
+    const results = await memoryManager.search("Apple", { limit: 10 });
+    expect(results.length).toBe(2);
   });
 });

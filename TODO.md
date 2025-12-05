@@ -8,7 +8,7 @@
 
 ## 2. AI-Native Roleplay (SillyTavern)
 
-- [ ] **Memory Systems**: Integrate `sqlite-vec` for RAG-based long-term memory.
+- [x] **Memory Systems**: Integrate `sqlite-vec` for RAG-based long-term memory.
 - [ ] **Streaming**: Implement `streamText` support in `plugins/ai` for real-time typing effects.
 - [ ] **Dynamic State Context**: Implement system for mutable personality traits and ephemeral emotions that feed into LLM context.
 - [ ] **Director AI**: Meta-AI agent for pacing and environment control.

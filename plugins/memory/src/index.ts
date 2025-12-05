@@ -41,24 +41,44 @@ export class MemoryManager {
     return rowId;
   }
 
-  async search(query: string, limit: number = 5) {
+  async search(query: string, options: { limit?: number; filter?: Record<string, any> } = {}) {
+    const limit = options.limit || 5;
+    const filter = options.filter || {};
+
     // 1. Generate embedding for query
     const embedding = await this.aiPlugin.getEmbedding(query);
 
     // 2. Search vector db
-    const results = this.vectorDb.search("memories_vec", embedding, limit);
+    // We fetch more candidates to allow for filtering
+    const candidateLimit = limit * 10;
+    const results = this.vectorDb.search("memories_vec", embedding, candidateLimit);
 
-    // 3. Retrieve content
-    const memories = results.map((res) => {
+    // 3. Retrieve content and filter
+    const memories = [];
+    for (const res of results) {
+      if (memories.length >= limit) break;
+
       const row = this.db
         .query("SELECT * FROM memories_content WHERE id = ?")
         .get(res.rowid) as any;
-      return {
-        ...row,
-        metadata: JSON.parse(row.metadata || "{}"),
-        distance: res.distance,
-      };
-    });
+
+      if (!row) continue;
+
+      const metadata = JSON.parse(row.metadata ?? "{}");
+
+      // Check filter
+      let match = true;
+      for (const [key, value] of Object.entries(filter)) {
+        if (metadata[key] !== value) {
+          match = false;
+          break;
+        }
+      }
+
+      if (match) {
+        memories.push({ ...row, metadata, distance: res.distance });
+      }
+    }
 
     return memories;
   }
@@ -68,7 +88,7 @@ export class MemoryPlugin implements Plugin {
   name = "memory";
   version = "0.1.0";
   private db: Database;
-  private memoryManager?: MemoryManager;
+  public memoryManager?: MemoryManager;
 
   constructor() {
     this.db = new Database("memory.sqlite");
@@ -88,7 +108,24 @@ export class MemoryPlugin implements Plugin {
 
   async handleMemoryCommand(ctx: CommandContext) {
     const subcommand = ctx.args[0];
-    const content = ctx.args.slice(1).join(" ");
+    let content = "";
+    let metadata: Record<string, any> = {};
+
+    // Parse args:
+    // memory add "content" { metadata }
+    // memory search "query" { filter }
+
+    // Check if last arg is an object (metadata/filter)
+    const lastArg = ctx.args[ctx.args.length - 1];
+    const hasMetadata = typeof lastArg === "object" && lastArg !== null && !Array.isArray(lastArg);
+
+    if (hasMetadata) {
+      metadata = lastArg;
+      // Content is everything between subcommand and metadata
+      content = ctx.args.slice(1, -1).join(" ");
+    } else {
+      content = ctx.args.slice(1).join(" ");
+    }
 
     if (!this.memoryManager) {
       ctx.send("error", "Memory manager not initialized.");
@@ -97,22 +134,24 @@ export class MemoryPlugin implements Plugin {
 
     if (subcommand === "add") {
       if (!content) {
-        ctx.send("message", "Usage: memory add <content>");
+        ctx.send("message", "Usage: memory add <content> [metadata]");
         return;
       }
       try {
-        const id = await this.memoryManager.add(content);
+        const id = await this.memoryManager.add(content, metadata);
         ctx.send("message", `Memory added with ID: ${id}`);
       } catch (e: any) {
         ctx.send("error", `Failed to add memory: ${e.message}`);
       }
     } else if (subcommand === "search") {
       if (!content) {
-        ctx.send("message", "Usage: memory search <query>");
+        ctx.send("message", "Usage: memory search <query> [filter]");
         return;
       }
       try {
-        const results = await this.memoryManager.search(content);
+        const results = await this.memoryManager.search(content, {
+          filter: metadata,
+        });
         if (results.length === 0) {
           ctx.send("message", "No memories found.");
         } else {
@@ -125,7 +164,7 @@ export class MemoryPlugin implements Plugin {
         ctx.send("error", `Failed to search memories: ${e.message}`);
       }
     } else {
-      ctx.send("message", "Usage: memory <add|search> <content>");
+      ctx.send("message", "Usage: memory <add|search> <content> [metadata]");
     }
   }
 }

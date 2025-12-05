@@ -103,7 +103,10 @@ export class AiPlugin implements Plugin {
   version = "0.1.0";
   private templates: Map<string, GenerationTemplate<any>> = new Map();
 
+  private context?: PluginContext;
+
   onLoad(ctx: PluginContext) {
+    this.context = ctx;
     ctx.registerCommand("talk", this.handleTalk.bind(this));
     ctx.registerCommand("gen", this.handleGen.bind(this));
     ctx.registerCommand("image", this.handleImage.bind(this));
@@ -219,13 +222,44 @@ export class AiPlugin implements Plugin {
     }
 
     try {
+      let systemPrompt = `You are roleplaying as ${target["name"]}.\
+${target["description"] ? `\nDescription: ${target["description"]}` : ""}
+${target["adjectives"] ? `\nAdjectives: ${(target["adjectives"] as string[]).join(", ")}` : ""}
+Keep your response short and in character.`;
+
+      // RAG: Fetch memories
+      if (this.context) {
+        const memoryPlugin = this.context.getPlugin("memory") as any;
+        if (memoryPlugin && memoryPlugin.memoryManager) {
+          try {
+            // We could filter by agent here if we enforced a convention, e.g.:
+            // const memories = await memoryPlugin.memoryManager.search(message, {
+            //   limit: 3,
+            //   filter: { agent: target["name"] }
+            // });
+            // For now, we do a broad search or maybe just search without filter.
+            // Let's assume global memories for now as per plan, or maybe we can try to be smart.
+            // Given the user's request for namespacing, let's try to filter by agent if possible?
+            // But we don't know if memories were saved with 'agent' metadata.
+            // So let's stick to global search for now, but comment that this is where we'd add it.
+            const memories = await memoryPlugin.memoryManager.search(message, {
+              limit: 3,
+            });
+            if (memories.length > 0) {
+              systemPrompt += `\n\nRelevant Memories:\n${memories
+                .map((m: any) => `- ${m.content}`)
+                .join("\n")}`;
+            }
+          } catch (e) {
+            console.warn("Failed to fetch memories:", e);
+          }
+        }
+      }
+
       const model = await getModel();
       const { text } = await generateText({
         model,
-        system: `You are roleplaying as ${target["name"]}.\
-${target["description"] ? `\nDescription: ${target["description"]}` : ""}
-${target["adjectives"] ? `\nAdjectives: ${(target["adjectives"] as string[]).join(", ")}` : ""}
-Keep your response short and in character.`,
+        system: systemPrompt,
         prompt: message,
       });
 
