@@ -24,7 +24,7 @@ for (const lib of libraries) {
 }
 
 const definitions = generateTypeDefinitions(opcodes);
-const outputPath = join(import.meta.dir, "../src/types.ts");
+const outputPath = join(import.meta.dir, "../src/generated_types.ts");
 
 writeFileSync(outputPath, definitions);
 console.log(`Generated type definitions at ${outputPath}`);

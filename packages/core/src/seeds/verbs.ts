@@ -1,4 +1,4 @@
-import "../types";
+import "../generated_types";
 
 export function bot_sudo() {
   const targetId = arg<number>(0);

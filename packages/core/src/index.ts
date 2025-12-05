@@ -37,7 +37,29 @@ export { scheduler } from "./scheduler";
 // Seed the database
 export { seed } from "./seed";
 
-export const pluginManager = new PluginManager();
+import { CoreInterface } from "./types";
+
+const coreImpl: CoreInterface = {
+  getEntity,
+  createEntity,
+  updateEntity,
+  deleteEntity,
+  resolveProps: (entity) =>
+    resolveProps(
+      entity,
+      createScriptContext({
+        caller: entity,
+        this: entity,
+        args: [],
+        send: () => {}, // No-op send for internal resolution
+      }),
+    ),
+  getOpcodeMetadata,
+  getOnlinePlayers: () => Array.from(clients.keys()),
+  registerLibrary: (library) => registerLibrary(library),
+};
+
+export const pluginManager = new PluginManager(coreImpl);
 
 // Registry of connected clients: PlayerID -> WebSocket
 const clients = new Map<number, Bun.ServerWebSocket<{ userId: number }>>();
@@ -349,23 +371,6 @@ export async function handleJsonRpcRequest(
         command: params.method,
         args: [],
         send: createSendFunction(ws),
-        core: {
-          getEntity,
-          createEntity,
-          updateEntity,
-          deleteEntity,
-          resolveProps: (entity) =>
-            resolveProps(
-              entity,
-              createScriptContext({
-                caller: player,
-                this: player,
-                args: [],
-                send: createSendFunction(ws),
-              }),
-            ),
-          getOpcodeMetadata,
-        },
       };
 
       try {

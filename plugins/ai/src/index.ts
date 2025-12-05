@@ -1,6 +1,7 @@
 import { Plugin, PluginContext, CommandContext } from "@viwo/core";
 import { generateText, generateObject, embed, streamText } from "ai";
 import { z } from "zod";
+import { AiLib } from "./lib/ai";
 
 import * as amazonBedrock from "@ai-sdk/amazon-bedrock";
 import * as anthropic from "@ai-sdk/anthropic";
@@ -134,11 +135,11 @@ export class AiPlugin implements Plugin {
   name = "ai";
   version = "0.1.0";
   private templates: Map<string, GenerationTemplate<any>> = new Map();
-
-  private context?: PluginContext;
+  private context!: PluginContext;
 
   onLoad(ctx: PluginContext) {
     this.context = ctx;
+    this.context.core.registerLibrary(AiLib);
     ctx.registerCommand("talk", this.handleTalk.bind(this));
     ctx.registerCommand("gen", this.handleGen.bind(this));
     ctx.registerCommand("image", this.handleImage.bind(this));
@@ -179,11 +180,11 @@ export class AiPlugin implements Plugin {
     this.templates.set(template.name, template);
   }
 
-  async handleCompletion(params: any, ctx: CommandContext) {
+  async handleCompletion(params: any) {
     const { code, position } = params; // position is { lineNumber, column }
 
     // Get opcode metadata to provide context about available functions
-    const opcodes = ctx.core.getOpcodeMetadata();
+    const opcodes = this.context.core.getOpcodeMetadata();
     const functionSignatures = opcodes
       .map((op) => {
         const params = op.parameters
@@ -240,13 +241,13 @@ export class AiPlugin implements Plugin {
     }
 
     // Check room contents.
-    const playerEntity = ctx.core.getEntity(ctx.player.id);
+    const playerEntity = this.context.core.getEntity(ctx.player.id);
     if (!playerEntity || !playerEntity["location"]) {
       ctx.send("message", "You are nowhere.");
       return;
     }
 
-    const roomItems = this.getResolvedRoom(ctx, playerEntity["location"] as number)?.contents;
+    const roomItems = this.getResolvedRoom(playerEntity["location"] as number)?.contents;
     const target = roomItems?.find((e: any) => e.name.toLowerCase() === targetName.toLowerCase());
 
     if (!target) {
@@ -278,12 +279,12 @@ export class AiPlugin implements Plugin {
       throw new Error("Usage: stream_talk { targetName, message }");
     }
 
-    const playerEntity = ctx.core.getEntity(ctx.player.id);
+    const playerEntity = this.context.core.getEntity(ctx.player.id);
     if (!playerEntity || !playerEntity["location"]) {
       throw new Error("You are nowhere.");
     }
 
-    const roomItems = this.getResolvedRoom(ctx, playerEntity["location"] as number)?.contents;
+    const roomItems = this.getResolvedRoom(playerEntity["location"] as number)?.contents;
     const target = roomItems?.find((e: any) => e.name.toLowerCase() === targetName.toLowerCase());
 
     if (!target) {
@@ -386,32 +387,32 @@ Keep your response short and in character.`;
         prompt: prompt,
       });
 
-      const playerEntity = ctx.core.getEntity(ctx.player.id);
+      const playerEntity = this.context.core.getEntity(ctx.player.id);
       if (!playerEntity || !playerEntity["location"]) return;
 
       if (templateName === "room") {
         // Create room and exit
-        const newRoomId = ctx.core.createEntity({
+        const newRoomId = this.context.core.createEntity({
           name: data.name,
           description: data.description,
           adjectives: data.adjectives,
           custom_css: data.custom_css,
         });
-        const room = this.getResolvedRoom(ctx, newRoomId);
+        const room = this.getResolvedRoom(newRoomId);
         if (room) {
           ctx.send("room_id", { roomId: room.id });
           ctx.send("message", `You are transported to ${data.name}.`);
         }
       } else {
         // Default: Create item in current room
-        ctx.core.createEntity({
+        this.context.core.createEntity({
           name: data.name,
           location: playerEntity["location"],
           description: data.description,
           adjectives: data.adjectives,
           custom_css: data.custom_css,
         });
-        const room = this.getResolvedRoom(ctx, playerEntity["location"] as number);
+        const room = this.getResolvedRoom(playerEntity["location"] as number);
         if (room) {
           ctx.send("room_id", { roomId: room.id });
           ctx.send("message", `Created ${data.name}.`);
@@ -443,9 +444,9 @@ Keep your response short and in character.`;
       // "image <target> <prompt>" -> targetName = args[0], prompt = args[1..]
 
       // Let's check if the instruction matches a target in the room
-      const currentPlayer = ctx.core.getEntity(ctx.player.id);
+      const currentPlayer = this.context.core.getEntity(ctx.player.id);
       if (currentPlayer && currentPlayer["location"]) {
-        const roomItems = this.getResolvedRoom(ctx, currentPlayer["location"] as number)?.contents;
+        const roomItems = this.getResolvedRoom(currentPlayer["location"] as number)?.contents;
         // Check if instruction starts with a target name
         // This is a bit fuzzy. The command is `image <args>`.
         // If args[0] is a target, we might want to use its prompt.
@@ -497,7 +498,7 @@ Keep your response short and in character.`;
         return;
       }
 
-      const playerEntity = ctx.core.getEntity(ctx.player.id);
+      const playerEntity = this.context.core.getEntity(ctx.player.id);
       if (!playerEntity) {
         ctx.send("message", "You are nowhere.");
         return;
@@ -507,7 +508,7 @@ Keep your response short and in character.`;
         targetId = playerEntity["location"] as number;
       } else {
         // Find item
-        const roomItems = this.getResolvedRoom(ctx, playerEntity["location"] as number)?.contents;
+        const roomItems = this.getResolvedRoom(playerEntity["location"] as number)?.contents;
         const item = roomItems?.find(
           (item) => (item["name"] as string).toLowerCase() === targetName.toLowerCase(),
         );
@@ -517,11 +518,11 @@ Keep your response short and in character.`;
       }
 
       if (targetId) {
-        const entity = ctx.core.getEntity(targetId);
+        const entity = this.context.core.getEntity(targetId);
         if (entity) {
-          ctx.core.updateEntity({ ...entity, image: publicUrl });
+          this.context.core.updateEntity({ ...entity, image: publicUrl });
           const room = {
-            ...ctx.core.getEntity(playerEntity["location"] as number),
+            ...this.context.core.getEntity(playerEntity["location"] as number),
           };
           if (room) {
             ctx.send("room_id", { roomId: room.id });
@@ -538,16 +539,16 @@ Keep your response short and in character.`;
     }
   }
 
-  getResolvedRoom(ctx: CommandContext, roomId: number) {
-    const room = ctx.core.getEntity(roomId);
+  getResolvedRoom(roomId: number) {
+    const room = this.context.core.getEntity(roomId);
     if (!room) {
       return;
     }
-    const resolved = ctx.core.resolveProps(room);
+    const resolved = this.context.core.resolveProps(room);
     const withContents = {
       ...resolved,
       contents: ((room["contents"] as number[]) ?? []).map((id) =>
-        ctx.core.resolveProps(ctx.core.getEntity(id)!),
+        this.context.core.resolveProps(this.context.core.getEntity(id)!),
       ),
     };
     return withContents;

@@ -1,6 +1,5 @@
-import { OpcodeMetadata } from "@viwo/scripting";
-import { Entity } from "@viwo/shared/jsonrpc";
 import { WebSocket } from "ws";
+import { CoreInterface } from "./types";
 
 /**
  * Context representing a connected player.
@@ -19,15 +18,6 @@ export interface CommandContext {
   command: string;
   args: any[];
   send: (type: string, payload: unknown) => void;
-  /** Core methods exposed to plugins */
-  core: {
-    getEntity: (id: number) => Entity | null;
-    createEntity: (data: Record<string, unknown>) => number;
-    updateEntity: (entity: Entity) => void;
-    deleteEntity: (id: number) => void;
-    resolveProps: (entity: Entity) => Entity;
-    getOpcodeMetadata: () => readonly OpcodeMetadata[];
-  };
 }
 
 /**
@@ -59,6 +49,8 @@ export interface PluginContext {
   ) => void;
   /** Gets a currently active plugin by name. */
   getPlugin: (name: string) => Plugin | undefined;
+  /** Core interface for accessing system functionality */
+  core: CoreInterface;
 }
 
 /** Manages the lifecycle of plugins and delegates commands to them. */
@@ -66,8 +58,11 @@ export class PluginManager {
   private plugins: Map<string, Plugin> = new Map();
   private commands: Map<string, (ctx: CommandContext) => void | Promise<void>> = new Map();
   private rpcMethods: Map<string, (params: any, ctx: CommandContext) => Promise<any>> = new Map();
+  private core: CoreInterface;
 
-  constructor() {}
+  constructor(core: CoreInterface) {
+    this.core = core;
+  }
 
   /**
    * Loads a plugin and registers its commands.
@@ -86,6 +81,7 @@ export class PluginManager {
         this.rpcMethods.set(method, handler);
       },
       getPlugin: (name) => this.plugins.get(name),
+      core: this.core,
     };
 
     await plugin.onLoad(context);
