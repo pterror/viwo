@@ -19,8 +19,6 @@ declare global {
     name: string;
     /** The compiled S-expression code for the verb */
     code: ScriptValue<unknown>;
-    /** Permission settings for the verb */
-    permissions: Record<string, unknown>;
   }
 
   interface Capability {

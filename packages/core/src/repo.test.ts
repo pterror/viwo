@@ -104,10 +104,9 @@ describe("Repo", () => {
     addVerb(id, "jump", { op: "jump" });
 
     const verb = getVerb(id, "jump");
-    updateVerb(verb!.id, { op: "leap" }, { call: "admin" });
+    updateVerb(verb!.id, { op: "leap" });
 
     const updated = getVerb(id, "jump");
     expect(updated?.code).toEqual({ op: "leap" });
-    expect(updated?.permissions).toEqual({ call: "admin" });
   });
 });

@@ -10,10 +10,6 @@ import { createScriptContext, evaluate, ScriptContext } from "@viwo/scripting";
  * @returns A new entity object with resolved properties.
  */
 export function resolveProps(entity: Entity, ctx: ScriptContext): Entity {
-  if (!ctx.send) {
-    return entity;
-  }
-
   // We need to clone the props so we don't mutate the actual entity in the repo
   // entity is already a bag of props, so we clone it entirely
   const resolved = { ...entity };
@@ -35,7 +31,7 @@ export function resolveProps(entity: Entity, ctx: ScriptContext): Entity {
           set gas(value) {
             ctx.gas = value;
           },
-          send: ctx.send,
+          send: ctx.send ?? (() => {}),
           warnings: ctx.warnings,
         }),
       );

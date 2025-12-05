@@ -57,9 +57,7 @@ export const create = defineOpcode<[Capability | null, object], number>("create"
   },
 });
 
-/**
- * Destroys an entity.
- */
+/** Destroys an entity. */
 export const destroy = defineOpcode<[Capability | null, Entity], null>("destroy", {
   metadata: {
     label: "Destroy",
@@ -326,9 +324,7 @@ export const setPrototype = defineOpcode<[Capability | null, Entity, number | nu
   },
 );
 
-/**
- * Resolves all properties of an entity, including dynamic ones.
- */
+/** Resolves all properties of an entity, including dynamic ones. */
 export const resolve_props = defineOpcode<[Entity], Entity>("resolve_props", {
   metadata: {
     label: "Resolve Props",

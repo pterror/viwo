@@ -21,7 +21,7 @@ function checkNetCapability(ctx: any, cap: Capability, targetDomain: string, met
   });
 }
 
-interface HttpResponse {
+export interface HttpResponse {
   ok: boolean;
   status: number;
   statusText: string;

@@ -25,7 +25,6 @@ export function initSchema(db: Database) {
       entity_id INTEGER NOT NULL,
       name TEXT NOT NULL,
       code TEXT NOT NULL,
-      permissions TEXT DEFAULT '{"call":"public"}',
       FOREIGN KEY(entity_id) REFERENCES entities(id) ON DELETE CASCADE,
       UNIQUE(entity_id, name)
     )

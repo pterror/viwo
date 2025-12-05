@@ -1,43 +1,23 @@
 import { describe, it, expect, beforeAll, afterAll } from "bun:test";
-import { fsWrite, fsList } from "./fs";
 import { createCapability } from "../../repo";
-import { db } from "../../db";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { createScriptContext } from "@viwo/scripting";
+import { createScriptContext, evaluate, registerLibrary } from "@viwo/scripting";
+import * as KernelLib from "./kernel";
+import * as FsLib from "./fs";
 
-// Mock context
-const mockCtx = createScriptContext({ this: { id: 1 }, caller: { id: 1 } });
+registerLibrary(KernelLib);
+registerLibrary(FsLib);
+
+const ctx = createScriptContext({ this: { id: 1 }, caller: { id: 1 } });
 
 describe("FS Library", () => {
-  const testDir = path.resolve("./tmp_test_fs");
-  let capId: string;
-  let cap: any;
+  const testDir = path.resolve(`./tmp_test_fs_${Math.random()}`);
 
   beforeAll(async () => {
-    // Setup DB
-    db.query(
-      "CREATE TABLE IF NOT EXISTS capabilities (id TEXT PRIMARY KEY, owner_id INTEGER, type TEXT, params TEXT)",
-    ).run();
-
-    // Create test directory
     await fs.mkdir(testDir, { recursive: true });
-
-    // Create capability
-    capId = createCapability(1, "fs.write", { path: testDir });
-    // We need to fetch it back to get the object structure expected by the opcode
-    // But for the test we can just construct a mock capability object that matches the interface
-    // and what checkCapability expects.
-    // However, checkCapability queries the DB? No, it takes a Capability object.
-    // The Capability object has params.
-
-    cap = {
-      id: capId,
-      owner_id: 1,
-      type: "fs.write",
-      params: { path: testDir },
-      __brand: "Capability",
-    };
+    createCapability(1, "fs.write", { path: testDir });
+    createCapability(1, "fs.read", { path: testDir });
   });
 
   afterAll(async () => {
@@ -46,7 +26,10 @@ describe("FS Library", () => {
 
   it("should write to a file", async () => {
     const filePath = path.join(testDir, "test.txt");
-    await fsWrite.handler([cap, filePath, "Hello World"], mockCtx);
+    await evaluate(
+      FsLib.fsWrite(KernelLib.getCapability("fs.write"), filePath, "Hello World"),
+      ctx,
+    );
 
     const content = await fs.readFile(filePath, "utf-8");
     expect(content).toBe("Hello World");
@@ -55,23 +38,13 @@ describe("FS Library", () => {
   it("should list files in a directory", async () => {
     const filePath = path.join(testDir, "test2.txt");
     await fs.writeFile(filePath, "Test 2");
-
-    const readCapId = createCapability(1, "fs.read", { path: testDir });
-    const readCap = {
-      id: readCapId,
-      owner_id: 1,
-      type: "fs.read",
-      params: { path: testDir },
-      __brand: "Capability",
-    };
-
-    const files = await fsList.handler([readCap, testDir], mockCtx);
+    const files = await evaluate(FsLib.fsList(KernelLib.getCapability("fs.read"), testDir), ctx);
     expect(files).toContain("test.txt");
     expect(files).toContain("test2.txt");
   });
 
   it("should fail without capability", async () => {
-    expect(fsWrite.handler([null, "path", "content"], mockCtx)).rejects.toThrow(
+    expect(evaluate(FsLib.fsWrite(null, "path", "content"), ctx)).rejects.toThrow(
       "fs.write: missing capability",
     );
   });

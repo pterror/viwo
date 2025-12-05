@@ -186,9 +186,7 @@ function executeLoop(
             ...createStackTrace(sp, stackOp, stackArgs),
           ]);
         }
-        if (!scriptError.context) {
-          scriptError.context = { op: op, args: args };
-        }
+        scriptError.context ??= { op: op, args: args };
         throw scriptError;
       }
 

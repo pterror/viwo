@@ -523,13 +523,7 @@ export function seed() {
     },
   });
 
-  addVerb(
-    mailboxProtoId,
-    "deposit",
-    // give missing
-    transpile(extractVerb(verbsPath, "mailbox_deposit")),
-    { call: "public" },
-  ); // Anyone can call deposit
+  addVerb(mailboxProtoId, "deposit", transpile(extractVerb(verbsPath, "mailbox_deposit")));
 
   // Give the player a mailbox
   createEntity(

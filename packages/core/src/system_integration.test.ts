@@ -1,11 +1,6 @@
-import { describe, test, expect, beforeEach, mock } from "bun:test";
-
-// Mock fs and fetch
-mock.module("node:fs/promises", () => ({
-  readFile: mock((_path: string) => Promise.resolve("file content")),
-  writeFile: mock((_path: string, _content: string) => Promise.resolve()),
-  readdir: mock((_path: string) => Promise.resolve(["file1.txt", "file2.txt"])),
-}));
+import { describe, test, expect, beforeEach, mock, beforeAll, afterAll } from "bun:test";
+import * as path from "node:path";
+import * as fs from "node:fs/promises";
 
 // const originalFetch = global.fetch;
 global.fetch = mock((_url: string | Request | URL) =>
@@ -35,8 +30,19 @@ describe("System Integration Security", () => {
   registerLibrary(FsLib);
   registerLibrary(NetLib);
 
+  const testDir = path.resolve(`./tmp_test_fs_${Math.random()}`);
+
   let admin: Entity;
   let user: Entity;
+
+  beforeAll(async () => {
+    await fs.mkdir(testDir, { recursive: true });
+    await fs.writeFile(path.join(testDir, "test.txt"), "file content");
+  });
+
+  afterAll(async () => {
+    await fs.rm(testDir, { recursive: true, force: true });
+  });
 
   beforeEach(() => {
     // Reset DB state
@@ -47,12 +53,9 @@ describe("System Integration Security", () => {
     // Create Admin (with full access)
     const adminId = createEntity({ name: "Admin" });
     admin = getEntity(adminId)!;
-    createCapability(adminId, "fs.read", { path: "/tmp" });
-    createCapability(adminId, "fs.write", { path: "/tmp" });
-    createCapability(adminId, "net.http", {
-      domain: "example.com",
-      methods: ["GET"],
-    });
+    createCapability(adminId, "fs.read", { path: testDir });
+    createCapability(adminId, "fs.write", { path: testDir });
+    createCapability(adminId, "net.http", { domain: "example.com", methods: ["GET"] });
 
     // Create User (no rights)
     const userId = createEntity({ name: "User" });
@@ -62,7 +65,7 @@ describe("System Integration Security", () => {
   test("FS.read with capability", async () => {
     const ctx = createScriptContext({ caller: admin, this: admin, args: [] });
     const content = await evaluate(
-      FsLib.fsRead(KernelLib.getCapability("fs.read"), "/tmp/test.txt"),
+      FsLib.fsRead(KernelLib.getCapability("fs.read"), path.join(testDir, "test.txt")),
       ctx,
     );
     expect(content).toBe("file content");
@@ -74,7 +77,7 @@ describe("System Integration Security", () => {
       evaluate(
         FsLib.fsRead(
           KernelLib.getCapability("fs.read"), // User has none, returns null
-          "/tmp/test.txt",
+          path.join(testDir, "test.txt"),
         ),
         ctx,
       ),
