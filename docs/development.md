@@ -113,3 +113,27 @@ The following packages and applications have specific build steps. All other pac
 ### Root Build Scripts
 
 - `npm run build:docs`: Builds the documentation and the playground, then copies the playground build to the docs distribution.
+
+## CI Checks
+
+We use a set of scripts to ensure code quality and consistency in the repository. These checks are run automatically in our CI pipeline.
+
+### Checking Documentation
+
+To ensure that every package and application has a corresponding `README.md` and documentation file in `docs/`:
+
+```bash
+bun run check:readmes
+```
+
+This script will list any missing files and exit with an error code if the repository is incomplete.
+
+### Running All Checks
+
+To run the full suite of CI checks locally (formatting, linting, typechecking, testing, and documentation checks):
+
+```bash
+bun run ci:check
+```
+
+It is recommended to run this command before pushing your changes to ensure they will pass the CI pipeline.
