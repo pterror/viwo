@@ -73,6 +73,7 @@ export default withMermaid(
           items: [
             { text: "Building Docs", link: "/development" },
             { text: "Type Generation", link: "/codegen" },
+            { text: "Quality Guide", link: "/quality" },
           ],
         },
       ],
