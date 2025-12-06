@@ -26,6 +26,9 @@ jobs:
       - name: Check Unused Code
         run: bun run check:unused
 
+      - name: Check Opcode Coverage
+        run: bun run check:opcodes
+
       - name: Lint
         run: bun run lint
 

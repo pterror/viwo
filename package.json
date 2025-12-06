@@ -33,11 +33,12 @@
     "preview:docs": "bun --filter @viwo/docs preview",
     "generate:types": "bun --filter '*' generate:types",
     "benchmark": "bun packages/core/src/benchmark_compiler.ts",
+    "check:opcodes": "bun --filter @viwo/scripting check:opcodes",
     "check:readmes": "bun scripts/check-readmes.ts",
     "check:unused": "knip",
     "check:circular": "madge --circular --extensions ts,tsx,js,jsx apps packages plugins",
     "commit": "bun generate:types && bun format && git add -A && git commit",
-    "ci:check": "bun run check:readmes && bun run check:unused && bun format --check && bun lint && bun typecheck && bun test --only-failures && bun run check:circular"
+    "ci:check": "bun check:readmes && bun check:unused && bun check:opcodes && bun format --check && bun lint && bun typecheck && bun test --only-failures && bun check:circular"
   },
   "workspaces": [
     "apps/*",

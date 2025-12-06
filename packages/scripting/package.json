@@ -12,7 +12,8 @@
     "typecheck": "tsgo --noEmit",
     "test": "bun test",
     "lint": "oxlint",
-    "format": "oxfmt"
+    "format": "oxfmt",
+    "check:opcodes": "bun scripts/check-opcodes.ts"
   },
   "dependencies": {
     "@viwo/shared": "workspace:*",
