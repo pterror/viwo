@@ -998,8 +998,6 @@ export function combat_attack(this: Entity) {
   const hp = (defProps["hp"] as number) ?? 100;
   const newHp = hp - damage;
 
-  // Combat Manager needs control over the target
-  // Assuming Combat Manager has global control or specific control
   let targetCap = get_capability("entity.control", { target_id: target.id });
   if (!targetCap) {
     targetCap = get_capability("entity.control", { "*": true });
@@ -1011,6 +1009,72 @@ export function combat_attack(this: Entity) {
 
     call(attacker, "tell", `You attack ${defProps["name"]} for ${damage} damage!`);
     call(target, "tell", `${attProps["name"]} attacks you for ${damage} damage!`);
+
+    if (newHp <= 0) {
+      call(attacker, "tell", `${defProps["name"]} is defeated!`);
+      call(target, "tell", "You are defeated!");
+    }
+  } else {
+    call(
+      attacker,
+      "tell",
+      `You attack ${defProps["name"]}, but it seems invulnerable (no permission).`,
+    );
+  }
+}
+
+export function combat_attack_elemental(this: Entity) {
+  const attacker = arg<Entity>(0);
+  const target = arg<Entity>(1);
+  const elementArg = arg<string>(2);
+
+  const attProps = resolve_props(attacker);
+  const defProps = resolve_props(target);
+
+  const element = elementArg ?? (attProps["element"] as string) ?? "normal";
+
+  const attack = (attProps["attack"] as number) ?? 10;
+  const defense = (defProps["defense"] as number) ?? 0;
+
+  // Attacker Stats
+  const attStats = (attProps["elemental_stats"] as Record<string, any>) ?? {};
+  const attMod = (attStats[element] ? attStats[element]["attack_scale"] : 1.0) ?? 1.0;
+  const finalAttack = attack * attMod;
+
+  // Target Stats
+  const defStats = (defProps["elemental_stats"] as Record<string, any>) ?? {};
+  const defMod = (defStats[element] ? defStats[element]["defense_scale"] : 1.0) ?? 1.0;
+  const resMod = (defStats[element] ? defStats[element]["damage_taken"] : 1.0) ?? 1.0;
+  const finalDefense = defense * defMod;
+
+  let baseDamage = finalAttack - finalDefense;
+  if (baseDamage < 1) baseDamage = 1;
+
+  const finalDamage = math.floor(baseDamage * resMod);
+
+  const hp = (defProps["hp"] as number) ?? 100;
+  const newHp = hp - finalDamage;
+
+  let targetCap = get_capability("entity.control", { target_id: target.id });
+  if (!targetCap) {
+    targetCap = get_capability("entity.control", { "*": true });
+  }
+
+  if (targetCap) {
+    target["hp"] = newHp;
+    set_entity(targetCap, target);
+
+    let msg = `You attack ${defProps["name"]} with ${element} for ${finalDamage} damage!`;
+    if (resMod > 1.0) msg += " It's super effective!";
+    if (resMod < 1.0 && resMod > 0) msg += " It's not very effective...";
+    if (resMod === 0) msg += " It had no effect!";
+
+    call(attacker, "tell", msg);
+    call(
+      target,
+      "tell",
+      `${attProps["name"]} attacks you with ${element} for ${finalDamage} damage!`,
+    );
 
     if (newHp <= 0) {
       call(attacker, "tell", `${defProps["name"]} is defeated!`);
@@ -1042,5 +1106,7 @@ export function combat_test(this: Entity) {
   send("message", `Turn: ${first["name"]}`);
 
   const target = first.id === warrior.id ? orc : warrior;
+
+  // Just call attack - the seed will determine if it's elemental or not
   call(this, "attack", first, target);
 }

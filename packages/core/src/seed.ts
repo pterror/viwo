@@ -578,20 +578,46 @@ export function seed() {
 
   addVerb(combatManagerId, "start", transpile(extractVerb(verbsPath, "combat_start")));
   addVerb(combatManagerId, "next_turn", transpile(extractVerb(verbsPath, "combat_next_turn")));
-  addVerb(combatManagerId, "attack", transpile(extractVerb(verbsPath, "combat_attack")));
+  // Use elemental attack for this manager
+  addVerb(combatManagerId, "attack", transpile(extractVerb(verbsPath, "combat_attack_elemental")));
 
-  // 9. Combat Verification
-  const warriorId = createEntity({
-    name: "Warrior",
-    location: lobbyId,
-    props: { hp: 100, attack: 15, defense: 5, speed: 10 },
+  // 9. Elemental Prototypes
+  const fireElementalProtoId = createEntity({
+    name: "Fire Elemental Prototype",
+    element: "fire",
+    elemental_stats: {
+      water: { damage_taken: 2.0 },
+      fire: { damage_taken: 0.0, attack_scale: 1.5 },
+    },
   });
 
-  const orcId = createEntity({
-    name: "Orc",
-    location: lobbyId,
-    props: { hp: 80, attack: 12, defense: 2, speed: 8 },
+  const waterElementalProtoId = createEntity({
+    name: "Water Elemental Prototype",
+    element: "water",
+    elemental_stats: {
+      fire: { damage_taken: 2.0 },
+      water: { damage_taken: 0.0, attack_scale: 1.5 },
+    },
   });
+
+  // 10. Combat Verification
+  const warriorId = createEntity(
+    {
+      name: "Fire Warrior",
+      location: lobbyId,
+      props: { hp: 100, attack: 15, defense: 5, speed: 10 },
+    },
+    fireElementalProtoId,
+  );
+
+  const orcId = createEntity(
+    {
+      name: "Water Orc",
+      location: lobbyId,
+      props: { hp: 80, attack: 12, defense: 2, speed: 8 },
+    },
+    waterElementalProtoId,
+  );
 
   addVerb(combatManagerId, "test", transpile(extractVerb(verbsPath, "combat_test")));
 

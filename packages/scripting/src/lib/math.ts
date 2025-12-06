@@ -227,3 +227,18 @@ export const random = defineFullOpcode<[number?, number?], number>("random", {
     return shouldFloor ? Math.floor(roll) : roll;
   },
 });
+
+/** Rounds down a number. */
+export const floor = defineFullOpcode<[number], number>("floor", {
+  metadata: {
+    label: "Floor",
+    category: "math",
+    description: "Rounds down a number.",
+    slots: [{ name: "Num", type: "block" }],
+    parameters: [{ name: "num", type: "number", description: "The number to floor." }],
+    returnType: "number",
+  },
+  handler: ([num], _ctx) => {
+    return Math.floor(num);
+  },
+});

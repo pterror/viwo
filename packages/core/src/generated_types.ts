@@ -202,6 +202,12 @@ declare global {
    */
   function div(a: number, b: number, ...args: number[]): number;
   /**
+   * Rounds down a number.
+   *
+   * @param num The number to floor.
+   */
+  function floor(num: number): number;
+  /**
    * Calculates the modulo of two numbers.
    *
    * @param a The dividend.
