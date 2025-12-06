@@ -12,6 +12,7 @@
 - [x] **Streaming**: Implement `streamText` support in `plugins/ai` for real-time typing effects.
 - [x] **Dynamic State Context**: Implement system for mutable personality traits and ephemeral emotions that feed into LLM context.
 - [x] **Director AI**: Meta-AI agent for pacing and environment control.
+- [ ] **Chat Tree**: SillyTavern-style chat tree for roleplay. This should not be the only way to roleplay, so it should be implemented in scripting (`seed.ts`).
 
 ## 3. Ubiquitous Access (Chatbot)
 
@@ -39,10 +40,10 @@
 - [ ] **Security**: Ensure kernel restrictions are actually restrictive (subset) in `packages/core/src/runtime/lib/kernel.ts`.
 - [ ] **Auth**: Implement proper authentication checks in `packages/core/src/index.ts`.
 - [ ] **TUI**: Fetch script content properly in `apps/tui/src/App.tsx`.
-- [ ] **Web**: Batch retrieve items in `apps/web/src/components/ItemEditor.tsx`.
 - [ ] **Core**: Solve transactional updates for multiple entities with capabilities in `packages/core/src/runtime/lib/core.ts`.
 - [ ] **Core**: Add capability-based permissions for verbs
 - [ ] **Core**: Consider splitting permissions for net.http into multiple capabilities
 - [ ] **Plugins**: Add capability-based permissions to opcodes defined by plugins
 - [ ] **Scripting**: Add async support to compiler
 - [ ] **Scripting**: Attempt to change BreakSignal and ContinueSignal to not throw, since we use a stack based interpreter so we should be able to simply return them
+- [ ] **Database**: Recursive CTEs for retrieving prototype chain

@@ -1,5 +1,12 @@
 import { serve } from "bun";
-import { createEntity, deleteEntity, getEntity, updateEntity, createCapability } from "./repo";
+import {
+  createEntity,
+  deleteEntity,
+  getEntity,
+  updateEntity,
+  createCapability,
+  getEntities,
+} from "./repo";
 import { createScriptContext, evaluate, getOpcodeMetadata, compile } from "@viwo/scripting";
 import * as CoreLib from "./runtime/lib/core";
 import * as KernelLib from "./runtime/lib/kernel";
@@ -21,6 +28,7 @@ export {
   updateEntity,
   getCapability,
   createCapability,
+  getEntities,
 } from "./repo";
 export { checkCapability } from "./runtime/utils";
 export { KernelLib };
@@ -340,6 +348,23 @@ export async function handleJsonRpcRequest(
         jsonrpc: "2.0",
         id: req.id,
         result: getOpcodeMetadata(GameOpcodes),
+      };
+    }
+    case "get_entities": {
+      const params = req.params as { ids: number[] };
+      if (!params || !Array.isArray(params.ids)) {
+        return {
+          jsonrpc: "2.0",
+          id: req.id,
+          error: { code: -32602, message: "Invalid params: ids array required" },
+        };
+      }
+      return {
+        jsonrpc: "2.0",
+        id: req.id,
+        result: {
+          entities: getEntities(params.ids),
+        },
       };
     }
     case "plugin_rpc": {

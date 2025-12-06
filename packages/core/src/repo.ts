@@ -12,12 +12,7 @@ import { ScriptValue } from "@viwo/scripting";
  * @param id - The ID of the entity to fetch.
  * @returns The resolved Entity object or null if not found.
  */
-export function getEntity(id: number): Entity | null {
-  const entity = db.query("SELECT * FROM entities WHERE id = ?").get(id) as any;
-  if (!entity) {
-    console.log(`getEntity: entity ${id} not found in DB`);
-    return null;
-  }
+const resolveEntity = (entity: any): Entity => {
   let props = JSON.parse(entity.props);
   // Recursive prototype resolution
   if (entity.prototype_id) {
@@ -28,6 +23,42 @@ export function getEntity(id: number): Entity | null {
     }
   }
   return { ...props, id: entity.id };
+};
+
+/**
+ * Fetches an entity by ID, resolving its properties against its prototype.
+ *
+ * This performs a "deep resolve" where instance properties override prototype properties.
+ *
+ * @param id - The ID of the entity to fetch.
+ * @returns The resolved Entity object or null if not found.
+ */
+export function getEntity(id: number): Entity | null {
+  const entity = db.query("SELECT * FROM entities WHERE id = ?").get(id) as any;
+  if (!entity) {
+    console.log(`getEntity: entity ${id} not found in DB`);
+    return null;
+  }
+  return resolveEntity(entity);
+}
+
+/**
+ * Fetches multiple entities by their IDs, resolving properties against prototypes.
+ *
+ * @param ids - The list of entity IDs to fetch.
+ * @returns An array of resolved Entity objects.
+ */
+export function getEntities(ids: number[]): Entity[] {
+  if (ids.length === 0) return [];
+  const placeholders = ids.map(() => "?").join(", ");
+  const rows = db
+    .query(`SELECT * FROM entities WHERE id IN (${placeholders})`)
+    .all(...ids) as any[];
+
+  // We map over the rows, but we might want to return them in the order of requested IDs?
+  // Or just return the list. The client can map them back.
+  // Let's return the list of found entities.
+  return rows.map(resolveEntity);
 }
 
 /**

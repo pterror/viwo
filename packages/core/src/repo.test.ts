@@ -8,6 +8,7 @@ import {
   getEntity,
   getVerb,
   updateVerb,
+  getEntities,
 } from "./repo";
 import { StdLib } from "@viwo/scripting";
 import { CoreLib } from ".";
@@ -108,5 +109,25 @@ describe("Repo", () => {
 
     const updated = getVerb(id, "jump");
     expect(updated?.code).toEqual({ op: "leap" });
+  });
+
+  test("getEntities", () => {
+    const protoId = createEntity({ name: "Proto", shared: true });
+    const id1 = createEntity({ name: "Item1" }, protoId);
+    const id2 = createEntity({ name: "Item2" });
+
+    const results = getEntities([id1, id2]);
+    expect(results.length).toBe(2);
+
+    const item1 = results.find((e) => e.id === id1);
+    const item2 = results.find((e) => e.id === id2);
+
+    expect(item1).toBeDefined();
+    expect(item2).toBeDefined();
+    expect(item1?.["name"]).toBe("Item1");
+    // Check prototype resolution
+    expect(item1?.["shared"]).toBe(true);
+    expect(item2?.["name"]).toBe("Item2");
+    expect(item2?.["shared"]).toBeUndefined();
   });
 });

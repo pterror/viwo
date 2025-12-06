@@ -187,6 +187,26 @@ export class ViwoClient {
   }
 
   /**
+   * Fetches specific entities by ID from the server.
+   * @param ids - The IDs of the entities to fetch.
+   * @returns A promise that resolves with the entities.
+   */
+  public async fetchEntities(ids: number[]) {
+    if (ids.length === 0) return [];
+    const response = await this.sendRequest("get_entities", { ids });
+    const entities = response.entities as Entity[];
+
+    // Merge into local state
+    const newEntities = new Map(this.state.entities);
+    for (const entity of entities) {
+      newEntities.set(entity.id, entity);
+    }
+    this.updateState({ entities: newEntities });
+
+    return entities;
+  }
+
+  /**
    * Subscribes to game state updates.
    * @param listener The callback function.
    * @returns A function to unsubscribe.

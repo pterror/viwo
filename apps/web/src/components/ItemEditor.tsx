@@ -26,16 +26,41 @@ export default function ItemEditor() {
   };
 
   const items: () => readonly Entity[] = () => {
-    const roomItems = (
-      (gameStore.state.entities.get(gameStore.state.roomId!)?.["contents"] as number[]) ?? []
-    ).map((id) => gameStore.state.entities.get(id)!);
-    const inventoryItems = (
-      (gameStore.state.entities.get(gameStore.state.playerId!)?.["contents"] as number[]) ?? []
-    ).map((id) => gameStore.state.entities.get(id)!);
+    // Identify missing IDs
+    const missingIds = new Set<number>();
+    const checkAndAdd = (id: number) => {
+      if (!gameStore.state.entities.has(id)) {
+        missingIds.add(id);
+      }
+    };
+
+    (gameStore.state.entities.get(gameStore.state.roomId!)?.["contents"] as number[])?.forEach(
+      checkAndAdd,
+    );
+    (gameStore.state.entities.get(gameStore.state.playerId!)?.["contents"] as number[])?.forEach(
+      checkAndAdd,
+    );
+
+    // Fetch missing entities
+    if (missingIds.size > 0) {
+      // Defer fetch to avoid loops in computation
+      setTimeout(() => {
+        gameStore.client.fetchEntities(Array.from(missingIds));
+      }, 0);
+    }
+
+    const roomItems =
+      (gameStore.state.entities.get(gameStore.state.roomId!)?.["contents"] as number[])
+        ?.map((id) => gameStore.state.entities.get(id))
+        .filter((x) => x !== undefined) ?? [];
+
+    const inventoryItems =
+      (gameStore.state.entities.get(gameStore.state.playerId!)?.["contents"] as number[])
+        ?.map((id) => gameStore.state.entities.get(id))
+        .filter((x) => x !== undefined) ?? [];
 
     // We want to distinguish between room and inventory, but also flatten.
     // Let's flatten separately and tag them.
-
     const flatRoom = flattenItems(roomItems).map((i) => ({
       ...i,
       source: "Room",
