@@ -1,8 +1,8 @@
 import { executeLambda } from "../interpreter";
-import { defineFullOpcode, ScriptError } from "../types";
+import { defineFullOpcode, ScriptError, ScriptExpression, UnwrapScriptExpression } from "../types";
 
 /** Creates a new list. */
-export const listNew = defineFullOpcode<[...unknown[]], any[]>("list.new", {
+const listNew_ = defineFullOpcode<[...unknown[]], any[]>("list.new", {
   metadata: {
     label: "Length",
     category: "list",
@@ -24,6 +24,11 @@ export const listNew = defineFullOpcode<[...unknown[]], any[]>("list.new", {
     return args;
   },
 });
+export const listNew = listNew_ as { [K in keyof typeof listNew_]: (typeof listNew_)[K] } & {
+  <Ts extends unknown[]>(
+    ...args: Ts
+  ): ScriptExpression<any[], { [K in keyof Ts]: UnwrapScriptExpression<Ts[K]> }>;
+};
 
 /** Returns the length of a list. */
 export const listLen = defineFullOpcode<[readonly unknown[]], number>("list.len", {

@@ -621,11 +621,9 @@ export function seed() {
   addVerb(regenEffectId, "on_tick", transpile(extractVerb(verbsPath, "regen_on_tick")));
 
   // Link Poison to Combat Manager
-  const cm = entity(combatManagerId);
-  cm["poison_effect"] = poisonEffectId;
-  const cmCap = get_capability("entity.control", { target_id: combatManagerId });
-  if (cmCap) {
-    set_entity(cmCap, cm);
+  const cm = getEntity(combatManagerId);
+  if (cm) {
+    updateEntity({ ...cm, poison_effect: poisonEffectId });
   }
 
   // 9. Elemental Prototypes

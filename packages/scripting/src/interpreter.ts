@@ -74,6 +74,16 @@ export class ReturnSignal {
 }
 
 /**
+ * Unsafely casts a value to its awaited type. Use this when you are sure that the value is not a Promise.
+ *
+ * @param value - The value to cast.
+ * @returns The value cast to its awaited type.
+ */
+export function unsafeAsAwaited<T>(value: T): Awaited<T> {
+  return value as Awaited<T>;
+}
+
+/**
  * Evaluates a script expression using an explicit stack machine with SOA (Structure of Arrays).
  *
  * @param ast - The script AST (S-expression) to evaluate.

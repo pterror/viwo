@@ -1,6 +1,13 @@
 import { evaluate, BreakSignal, ReturnSignal } from "../interpreter";
 import { Entity } from "@viwo/shared/jsonrpc";
-import { defineFullOpcode, ScriptContext, ScriptError, ScriptRaw } from "../types";
+import {
+  defineFullOpcode,
+  ScriptContext,
+  ScriptError,
+  ScriptExpression,
+  ScriptRaw,
+  UnwrapScriptExpression,
+} from "../types";
 
 function enterScope(ctx: ScriptContext) {
   const snapshot = { vars: ctx.vars, cow: ctx.cow };
@@ -67,10 +74,8 @@ export const caller = defineFullOpcode<[], Entity>("caller", {
 });
 
 // Control Flow
-/**
- * Executes a sequence of steps and returns the result of the last step.
- */
-export const seq = defineFullOpcode<unknown[], any, true>("seq", {
+/** Executes a sequence of steps and returns the result of the last step. */
+const seq_ = defineFullOpcode<unknown[], any, true>("seq", {
   metadata: {
     label: "Sequence",
     category: "logic",
@@ -124,6 +129,16 @@ export const seq = defineFullOpcode<unknown[], any, true>("seq", {
     }
   },
 });
+export const seq = seq_ as { [K in keyof typeof seq_]: (typeof seq_)[K] } & {
+  <Ts extends unknown[]>(
+    ...args: Ts
+  ): ScriptExpression<
+    any[],
+    Ts extends [...unknown[], infer Last]
+      ? UnwrapScriptExpression<Last>
+      : UnwrapScriptExpression<Ts[number]>
+  >;
+};
 
 /** Conditional execution. */
 const if_ = defineFullOpcode<[boolean, unknown, unknown?], any, true>("if", {

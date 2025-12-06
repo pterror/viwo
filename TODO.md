@@ -4,7 +4,7 @@
 
 - [x] **Combat System**: Standardized libraries for turn-based combat math and state.
 - [x] **Quest Engine**: State machine implementation for tracking multi-stage narrative arcs.
-- [ ] **World Gen**: Procedural generation tools for creating vast maps.
+- [x] **World Gen**: Procedural generation tools for creating vast maps.
 
 ## 2. AI-Native Roleplay (SillyTavern)
 

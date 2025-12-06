@@ -164,6 +164,8 @@ export type ScriptExpression<Args extends (string | ScriptValue_<unknown>)[], Re
   __returnType: Ret;
 };
 
+export type UnwrapScriptExpression<T> = T extends ScriptExpression<any, infer Ret> ? Ret : T;
+
 export interface OpcodeBuilder<
   Args extends (string | ScriptValue_<unknown>)[],
   Ret,

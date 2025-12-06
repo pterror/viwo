@@ -10,8 +10,9 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@viwo/core": "workspace:*",
-    "@viwo/plugin-ai": "workspace:*",
+    "@viwo/shared": "workspace:*",
+    "@viwo/scripting": "workspace:*",
+    "@viwo/plugin-procgen": "workspace:*",
     "@viwo/plugin-fs": "workspace:*",
     "@viwo/plugin-memory": "workspace:*",
     "@viwo/plugin-net": "workspace:*"
