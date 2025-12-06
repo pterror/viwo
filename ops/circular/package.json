@@ -1,6 +1,0 @@
-{
-  "name": "@viwo/op-circular",
-  "scripts": {
-    "check": "bun --cwd ../.. check:circular"
-  }
-}

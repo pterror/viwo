@@ -6,7 +6,6 @@
     "@types/bun": "^1.3.3",
     "@typescript/native-preview": "^7.0.0-dev.20251203.1",
     "knip": "^5.71.0",
-    "madge": "^8.0.0",
     "oxfmt": "^0.16.0",
     "oxlint": "^1.31.0",
     "typescript": "^6.0.0-dev.20251203"
@@ -40,7 +39,6 @@
     "check:opcodes": "bun --filter @viwo/scripting check:opcodes",
     "check:readmes": "bun scripts/check-readmes.ts",
     "check:unused": "knip",
-    "check:circular": "madge --circular --extensions ts,tsx,js,jsx apps packages plugins",
     "check": "bun --filter '@viwo/op-*' check"
   },
   "workspaces": [
