@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach } from "bun:test";
 import {
   createScriptContext,
   evaluate,
-  registerLibrary,
   StdLib,
   ListLib,
   StringLib,
@@ -12,15 +11,9 @@ import {
 import { Entity } from "@viwo/shared/jsonrpc";
 import { addVerb, createEntity, getEntity } from "../repo";
 import * as CoreLib from "../runtime/lib/core";
+import { GameOpcodes } from "./opcodes";
 
 describe("Book Item Scripting", () => {
-  registerLibrary(StdLib);
-  registerLibrary(ListLib);
-  registerLibrary(StringLib);
-  registerLibrary(ObjectLib);
-  registerLibrary(CoreLib);
-  registerLibrary(BooleanLib);
-
   let book: Entity;
   let caller: Entity;
   let messages: string[] = [];
@@ -71,6 +64,7 @@ describe("Book Item Scripting", () => {
         caller,
         this: book,
         send: (_type, payload) => messages.push(payload as string),
+        ops: GameOpcodes,
       }),
     );
     expect(messages[0]).toBe("Chapter 1\nChapter 2");
@@ -105,6 +99,7 @@ describe("Book Item Scripting", () => {
         this: book,
         args: [0],
         send: (_type, payload) => messages.push(payload as string),
+        ops: GameOpcodes,
       }),
     );
     expect(messages[0]).toContain("Chapter: Chapter 1");
@@ -119,6 +114,7 @@ describe("Book Item Scripting", () => {
         this: book,
         args: [99],
         send: (_type, payload) => messages.push(payload as string),
+        ops: GameOpcodes,
       }),
     );
     expect(messages[0]).toBe("Chapter not found.");
@@ -144,6 +140,7 @@ describe("Book Item Scripting", () => {
         this: book,
         args: ["Chapter 3", "Content 3"],
         send: (_type, payload) => messages.push(payload as string),
+        ops: GameOpcodes,
       }),
     );
     expect(messages[0]).toBe("Chapter added.");
@@ -200,6 +197,7 @@ describe("Book Item Scripting", () => {
         this: book,
         args: ["Content"],
         send: (_type, payload) => messages.push(payload as string),
+        ops: GameOpcodes,
       }),
     );
     expect(messages[0]).toContain("Found 2 matches");
@@ -213,6 +211,7 @@ describe("Book Item Scripting", () => {
         this: book,
         args: ["2"],
         send: (_type, payload) => messages.push(payload as string),
+        ops: GameOpcodes,
       }),
     );
     expect(messages[0]).toContain("Found 1 matches");

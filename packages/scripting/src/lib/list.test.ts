@@ -1,5 +1,5 @@
 import { expect, beforeEach } from "bun:test";
-import { evaluate, ScriptContext, registerLibrary, createScriptContext } from "../interpreter";
+import { evaluate, ScriptContext, createOpcodeRegistry, createScriptContext } from "../interpreter";
 import * as Core from "./std";
 import * as List from "./list";
 import * as MathLib from "./math";
@@ -7,10 +7,7 @@ import * as BooleanLib from "./boolean";
 import { createLibraryTester } from "./test-utils";
 
 createLibraryTester(List, "List Library", (test) => {
-  registerLibrary(Core);
-  registerLibrary(List);
-  registerLibrary(MathLib);
-  registerLibrary(BooleanLib);
+  const TEST_OPS = createOpcodeRegistry(Core, List, MathLib, BooleanLib);
 
   let ctx: ScriptContext;
 
@@ -18,6 +15,7 @@ createLibraryTester(List, "List Library", (test) => {
     ctx = createScriptContext({
       caller: { id: 1 } as any,
       this: { id: 2 } as any,
+      ops: TEST_OPS,
     });
   });
 

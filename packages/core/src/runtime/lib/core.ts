@@ -124,6 +124,7 @@ export const call = defineFullOpcode<[Entity, string, ...unknown[]], any>("call"
         ...(ctx.send ? { send: ctx.send } : {}),
         warnings: ctx.warnings,
         stack: [...(ctx.stack ?? []), { name: verb, args: callArgs }],
+        ops: ctx.ops,
       }),
     );
   },
@@ -413,6 +414,7 @@ export const sudo = defineFullOpcode<[Capability | null, Entity, string, unknown
           : {}),
         warnings: ctx.warnings,
         stack: [...(ctx.stack ?? []), { name: `sudo:${verb}`, args: evaluatedArgs }],
+        ops: ctx.ops,
       }),
     );
   },

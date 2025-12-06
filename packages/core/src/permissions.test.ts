@@ -1,26 +1,14 @@
 import { describe, test, expect, beforeEach } from "bun:test";
-import {
-  evaluate,
-  createScriptContext,
-  registerLibrary,
-  StdLib,
-  ObjectLib,
-  ListLib,
-  BooleanLib,
-} from "@viwo/scripting";
+import { evaluate, createScriptContext, StdLib, ObjectLib, BooleanLib } from "@viwo/scripting";
 import { Entity } from "@viwo/shared/jsonrpc";
 import { createEntity, getEntity, createCapability } from "./repo";
 import { CoreLib, db } from ".";
 import { seed } from "./seed";
 import * as KernelLib from "./runtime/lib/kernel";
 
-describe("Capability Permissions", () => {
-  registerLibrary(StdLib);
-  registerLibrary(ObjectLib);
-  registerLibrary(ListLib);
-  registerLibrary(KernelLib);
-  registerLibrary(CoreLib);
+import { GameOpcodes } from "./runtime/opcodes";
 
+describe("Capability Permissions", () => {
   let owner: Entity;
   let other: Entity;
   let admin: Entity;
@@ -82,6 +70,7 @@ describe("Capability Permissions", () => {
       caller: actor,
       this: actor,
       args: [],
+      ops: GameOpcodes,
     });
     return evaluate(script, ctx);
   };
@@ -121,6 +110,7 @@ describe("Capability Permissions", () => {
       caller: owner,
       this: owner,
       args: [],
+      ops: GameOpcodes,
     });
     await evaluate(delegateScript, ctx);
 
@@ -144,6 +134,7 @@ describe("Capability Permissions", () => {
         caller: owner,
         this: owner,
         args: [],
+        ops: GameOpcodes,
       });
 
       // Should fail because ID doesn't exist in DB
@@ -167,6 +158,7 @@ describe("Capability Permissions", () => {
         caller: other, // Attacker is the caller
         this: other,
         args: [],
+        ops: GameOpcodes,
       });
 
       // Should fail because owner_id check fails
@@ -183,7 +175,7 @@ describe("Capability Permissions", () => {
       const mintAuth = { __brand: "Capability" as const, id: mintAuthId };
       // Try to mint outside namespace
       const script = KernelLib.mint(mintAuth, "sys.sudo", ObjectLib.objNew());
-      const ctx = createScriptContext({ caller: owner, this: owner, args: [] });
+      const ctx = createScriptContext({ caller: owner, this: owner, args: [], ops: GameOpcodes });
       expect(Promise.resolve().then(() => evaluate(script, ctx))).rejects.toThrow(
         "mint: authority namespace 'user.1' does not cover 'sys.sudo'",
       );
@@ -194,7 +186,7 @@ describe("Capability Permissions", () => {
       const badAuthId = createCapability(owner.id, "entity.control", {});
       const badAuth = { __brand: "Capability" as const, id: badAuthId };
       const script = KernelLib.mint(badAuth, "some.cap", ObjectLib.objNew());
-      const ctx = createScriptContext({ caller: owner, this: owner, args: [] });
+      const ctx = createScriptContext({ caller: owner, this: owner, args: [], ops: GameOpcodes });
       expect(Promise.resolve().then(() => evaluate(script, ctx))).rejects.toThrow(
         "mint: authority must be sys.mint",
       );

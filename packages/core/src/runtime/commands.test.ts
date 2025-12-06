@@ -1,30 +1,14 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { db } from "../db";
-import {
-  evaluate,
-  registerLibrary,
-  createScriptContext,
-  ListLib,
-  StringLib,
-  ObjectLib,
-  BooleanLib,
-  StdLib,
-} from "@viwo/scripting";
-import * as Core from "./lib/core";
-import * as Kernel from "./lib/kernel";
+import { evaluate, createScriptContext, StdLib } from "@viwo/scripting";
+
 import { createEntity, getEntity, updateEntity, getVerb, addVerb, createCapability } from "../repo";
 import { Entity } from "@viwo/shared/jsonrpc";
 import { seed } from "../seed";
 
-describe("Player Commands", () => {
-  registerLibrary(StdLib);
-  registerLibrary(Core);
-  registerLibrary(ListLib);
-  registerLibrary(StringLib);
-  registerLibrary(ObjectLib);
-  registerLibrary(BooleanLib);
-  registerLibrary(Kernel);
+import { GameOpcodes } from "./opcodes";
 
+describe("Player Commands", () => {
   let player: Entity;
   let room: Entity;
   let send: (type: string, payload: unknown) => void;
@@ -87,6 +71,7 @@ describe("Player Commands", () => {
         this: freshPlayer,
         args,
         send,
+        ops: GameOpcodes,
       }),
     );
   };
@@ -219,11 +204,6 @@ describe("Player Commands", () => {
 });
 
 describe("Recursive Move Check", () => {
-  registerLibrary(Core);
-  registerLibrary(ListLib);
-  registerLibrary(StringLib);
-  registerLibrary(ObjectLib);
-
   let caller: Entity;
   let messages: unknown[] = [];
   let send: (type: string, payload: unknown) => void;
@@ -290,6 +270,7 @@ describe("Recursive Move Check", () => {
       this: box, // The verb is on Entity Base, which Box inherits
       args: [getEntity(itemId)!], // Move to Item
       send,
+      ops: GameOpcodes,
     });
 
     const moveVerb = getVerb(entityBase.id, "teleport");

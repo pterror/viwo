@@ -1,21 +1,9 @@
 import { serve } from "bun";
 import { createEntity, deleteEntity, getEntity, updateEntity, createCapability } from "./repo";
-import {
-  createScriptContext,
-  evaluate,
-  getOpcodeMetadata,
-  registerLibrary,
-  ListLib,
-  ObjectLib,
-  StringLib,
-  TimeLib,
-  MathLib,
-  BooleanLib,
-  StdLib,
-  compile,
-} from "@viwo/scripting";
+import { createScriptContext, evaluate, getOpcodeMetadata, compile } from "@viwo/scripting";
 import * as CoreLib from "./runtime/lib/core";
 import * as KernelLib from "./runtime/lib/kernel";
+import { GameOpcodes, registerGameLibrary } from "./runtime/opcodes";
 import { PluginManager, CommandContext } from "./plugin";
 import { scheduler } from "./scheduler";
 import { JsonRpcRequest, JsonRpcResponse, JsonRpcNotification, Entity } from "@viwo/shared/jsonrpc";
@@ -58,11 +46,12 @@ const coreImpl: CoreInterface = {
         this: entity,
         args: [],
         send: () => {}, // No-op send for internal resolution
+        ops: GameOpcodes,
       }),
     ),
-  getOpcodeMetadata,
+  getOpcodeMetadata: () => getOpcodeMetadata(GameOpcodes),
   getOnlinePlayers: () => Array.from(clients.keys()),
-  registerLibrary: (library) => registerLibrary(library),
+  registerLibrary: (library) => registerGameLibrary(library),
 };
 
 export const pluginManager = new PluginManager(coreImpl);
@@ -70,19 +59,13 @@ export const pluginManager = new PluginManager(coreImpl);
 // Registry of connected clients: PlayerID -> WebSocket
 const clients = new Map<number, Bun.ServerWebSocket<{ userId: number }>>();
 
-registerLibrary(StdLib);
-registerLibrary(CoreLib);
-registerLibrary(KernelLib);
-registerLibrary(ListLib);
-registerLibrary(ObjectLib);
-registerLibrary(StringLib);
-registerLibrary(TimeLib);
-registerLibrary(MathLib);
-registerLibrary(BooleanLib);
+// GameOpcodes initialized in runtime/opcodes.ts
 
 // Initialize scheduler
 // Initialize scheduler
 const BOT_ENTITY_ID = 4;
+
+scheduler.setOpcodes(GameOpcodes);
 
 scheduler.setSendFactory((entityId: number) => {
   const ws = clients.get(entityId);
@@ -316,6 +299,7 @@ export async function handleJsonRpcRequest(
           this: system,
           args: [],
           send: createSendFunction(ws),
+          ops: GameOpcodes,
         }),
       );
 
@@ -355,7 +339,7 @@ export async function handleJsonRpcRequest(
       return {
         jsonrpc: "2.0",
         id: req.id,
-        result: getOpcodeMetadata(),
+        result: getOpcodeMetadata(GameOpcodes),
       };
     }
     case "plugin_rpc": {
@@ -433,6 +417,7 @@ function executeVerb(
     this: getEntity(verb.source)!,
     args,
     send: createSendFunction(ws),
+    ops: GameOpcodes,
   });
 
   // Check cache
@@ -441,7 +426,7 @@ function executeVerb(
 
   if (!compiled) {
     try {
-      compiled = compile(verb.code);
+      compiled = compile(verb.code, GameOpcodes);
       verbCache.set(codeKey, compiled!);
     } catch (e) {
       console.error("Failed to compile verb:", e);

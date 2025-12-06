@@ -1,5 +1,4 @@
 import {
-  registerLibrary,
   getOpcodeMetadata,
   StdLib,
   MathLib,
@@ -8,7 +7,8 @@ import {
   ObjectLib,
   StringLib,
   TimeLib,
-  OpcodeDefinition,
+  createOpcodeRegistry,
+  defineOpcode,
 } from "@viwo/scripting";
 import { BlockDefinition } from "@viwo/web-editor";
 
@@ -25,30 +25,30 @@ const log = (msg: string) => {
 };
 
 // Register all standard libraries
-registerLibrary(StdLib);
-registerLibrary(MathLib);
-registerLibrary(BooleanLib);
-registerLibrary(ListLib);
-registerLibrary(ObjectLib);
-registerLibrary(StringLib);
-registerLibrary(TimeLib);
-
-// Custom log opcode to capture output
-const customLog: OpcodeDefinition = {
-  ...StdLib.log,
-  handler: (args) => {
-    // Join args with space
-    const msg = args.map(String).join(" ");
-    log(msg);
-    return null;
+export const ops = createOpcodeRegistry(
+  StdLib,
+  MathLib,
+  BooleanLib,
+  ListLib,
+  ObjectLib,
+  StringLib,
+  TimeLib,
+  // Register custom log (overwrites StdLib.log)
+  {
+    log: defineOpcode("log", {
+      ...StdLib.log,
+      handler: (args: any[]) => {
+        // Join args with space
+        const msg = args.map(String).join(" ");
+        log(msg);
+        return null;
+      },
+    }),
   },
-};
-
-// Register custom log (overwrites StdLib.log)
-registerLibrary({ log: customLog });
+);
 
 // Export opcodes for the editor
-export const playgroundOpcodes: BlockDefinition[] = getOpcodeMetadata().map((meta) => ({
+export const opcodes: BlockDefinition[] = Object.values(getOpcodeMetadata(ops)).map((meta) => ({
   ...meta,
   // Ensure type is compatible with BlockDefinition
   type: (meta.returnType as any) || "statement",

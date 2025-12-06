@@ -1,12 +1,6 @@
 import { describe, test, expect, beforeEach } from "bun:test";
 import { BooleanLib, StdLib } from "@viwo/scripting";
-import {
-  evaluate,
-  createScriptContext,
-  registerLibrary,
-  ObjectLib,
-  ListLib,
-} from "@viwo/scripting";
+import { evaluate, createScriptContext, ObjectLib, ListLib } from "@viwo/scripting";
 import { Entity } from "@viwo/shared/jsonrpc";
 import { createEntity, getEntity, addVerb, updateEntity, createCapability } from "./repo";
 import { db } from ".";
@@ -14,13 +8,9 @@ import * as CoreLib from "./runtime/lib/core";
 import * as KernelLib from "./runtime/lib/kernel";
 import { seed } from "./seed";
 
-describe("Mailbox Verification", () => {
-  registerLibrary(StdLib);
-  registerLibrary(ObjectLib);
-  registerLibrary(ListLib);
-  registerLibrary(CoreLib);
-  registerLibrary(KernelLib);
+import { GameOpcodes } from "./runtime/opcodes";
 
+describe("Mailbox Verification", () => {
   let sender: Entity;
   let receiver: Entity;
   let mailbox: Entity;
@@ -83,6 +73,7 @@ describe("Mailbox Verification", () => {
       caller: actor,
       this: system,
       args: [],
+      ops: GameOpcodes,
     });
     return evaluate(script, ctx);
   };
@@ -148,6 +139,7 @@ describe("Mailbox Verification", () => {
       caller: sender,
       this: system,
       args: [],
+      ops: GameOpcodes,
     });
 
     const result = await evaluate(callGive, ctx);
@@ -181,6 +173,7 @@ describe("Mailbox Verification", () => {
       caller: sender,
       this: system,
       args: [],
+      ops: GameOpcodes,
     });
 
     const contents = await evaluate(callLook, ctx);
@@ -209,6 +202,7 @@ describe("Mailbox Verification", () => {
       caller: receiver,
       this: system,
       args: [],
+      ops: GameOpcodes,
     });
 
     // First put something in there so we can see it

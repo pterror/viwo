@@ -2,7 +2,7 @@ import { expect, beforeEach } from "bun:test";
 import {
   evaluate,
   ScriptContext,
-  registerLibrary,
+  createOpcodeRegistry,
   ScriptError,
   createScriptContext,
 } from "../interpreter";
@@ -11,8 +11,7 @@ import * as Time from "./time";
 import { createLibraryTester } from "./test-utils";
 
 createLibraryTester(Time, "Time Library", (test) => {
-  registerLibrary(Core);
-  registerLibrary(Time);
+  const TEST_OPS = createOpcodeRegistry(Core, Time);
 
   let ctx: ScriptContext;
 
@@ -20,6 +19,7 @@ createLibraryTester(Time, "Time Library", (test) => {
     ctx = createScriptContext({
       caller: { id: 1 } as any,
       this: { id: 2 } as any,
+      ops: TEST_OPS,
     });
   });
 

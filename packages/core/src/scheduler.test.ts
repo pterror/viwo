@@ -1,18 +1,15 @@
 import { describe, it, expect, beforeAll } from "bun:test";
 import { scheduler } from "./scheduler";
 import { createEntity, addVerb, getEntity, createCapability } from "./repo";
-import { registerLibrary, StdLib, ObjectLib, MathLib } from "@viwo/scripting";
+import { StdLib, ObjectLib, MathLib } from "@viwo/scripting";
 import { CoreLib, db } from ".";
 import * as KernelLib from "./runtime/lib/kernel";
 
-describe("Scheduler Verification", () => {
-  registerLibrary(StdLib);
-  registerLibrary(ObjectLib);
-  registerLibrary(CoreLib);
-  registerLibrary(KernelLib);
+import { GameOpcodes } from "./runtime/opcodes";
 
+describe("Scheduler Verification", () => {
   // Start Scheduler
-  // Start Scheduler
+  scheduler.setOpcodes(GameOpcodes);
   scheduler.setSendFactory(() => (msg) => console.log("[Scheduler System Message]:", msg));
 
   setInterval(() => {

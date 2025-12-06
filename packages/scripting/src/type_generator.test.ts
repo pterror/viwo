@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { generateTypeDefinitions } from "./type_generator";
-import { OpcodeMetadata } from "./interpreter";
+import { OpcodeMetadata } from "./types";
 
 describe("generateTypeDefinitions", () => {
   test("generates basic function definitions", () => {

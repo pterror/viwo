@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { createScriptContext, evaluate, registerLibrary } from "../interpreter";
+import { createScriptContext, evaluate, createOpcodeRegistry } from "../interpreter";
 import * as Std from "./std";
 import * as Boolean from "./boolean";
 import * as Math from "./math";
@@ -25,15 +25,13 @@ const AsyncLib = {
 };
 
 test("async while loop", async () => {
-  registerLibrary(Std);
-  registerLibrary(Boolean);
-  registerLibrary(Math);
-  registerLibrary(AsyncLib);
+  const TEST_OPS = createOpcodeRegistry(Std, Boolean, Math, AsyncLib);
 
   const ctx = createScriptContext({
     caller: null!,
     this: null!,
     args: [],
+    ops: TEST_OPS,
   });
 
   // let i = 0;
@@ -57,10 +55,7 @@ test("async while loop", async () => {
 });
 
 test("async for loop", async () => {
-  registerLibrary(Std);
-  registerLibrary(Boolean);
-  registerLibrary(Math);
-  registerLibrary(AsyncLib);
+  const TEST_OPS = createOpcodeRegistry(Std, Boolean, Math, AsyncLib);
   // We need List lib for listNew, but it's not imported.
   // Let's just use a literal array if possible?
   // Std.for takes a block that evaluates to an array.
@@ -70,6 +65,7 @@ test("async for loop", async () => {
     caller: null!,
     this: null!,
     args: [],
+    ops: TEST_OPS,
   });
 
   const script = Std.seq(

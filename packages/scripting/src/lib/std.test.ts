@@ -1,19 +1,21 @@
 import { expect } from "bun:test";
 import { createLibraryTester } from "./test-utils";
-import { createScriptContext, registerLibrary } from "../interpreter";
+import { createScriptContext, createOpcodeRegistry } from "../interpreter";
 import { evaluate } from "../interpreter";
 import * as StdLib from "./std";
 import * as ListLib from "./list";
 import * as BooleanLib from "./boolean";
 import * as MathLib from "./math";
 
-registerLibrary(StdLib);
-registerLibrary(ListLib);
-registerLibrary(MathLib);
-registerLibrary(BooleanLib);
+const TEST_OPS = createOpcodeRegistry(StdLib, ListLib, MathLib, BooleanLib);
 
 createLibraryTester(StdLib, "Standard Library", (test) => {
-  const ctx = createScriptContext({ caller: { id: 1 }, this: { id: 2 }, args: [10, "a"] });
+  const ctx = createScriptContext({
+    caller: { id: 1 },
+    this: { id: 2 },
+    args: [10, "a"],
+    ops: TEST_OPS,
+  });
 
   // Values
   test("this", () => {

@@ -7,7 +7,7 @@ export interface CoreInterface {
   updateEntity: (entity: Entity) => void;
   deleteEntity: (id: number) => void;
   resolveProps: (entity: Entity) => Entity;
-  getOpcodeMetadata: () => readonly OpcodeMetadata[];
+  getOpcodeMetadata: () => Record<string, OpcodeMetadata>;
   getOnlinePlayers: () => number[];
   registerLibrary: (library: Record<string, any>) => void;
 }

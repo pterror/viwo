@@ -2,7 +2,7 @@ import { expect, beforeEach } from "bun:test";
 import {
   evaluate,
   ScriptContext,
-  registerLibrary,
+  createOpcodeRegistry,
   ScriptError,
   createScriptContext,
 } from "../interpreter";
@@ -14,11 +14,7 @@ import * as BooleanLib from "./boolean";
 import { createLibraryTester } from "./test-utils";
 
 createLibraryTester(StringLib, "String Library", (test) => {
-  registerLibrary(Core);
-  registerLibrary(StringLib);
-  registerLibrary(List);
-  registerLibrary(MathLib);
-  registerLibrary(BooleanLib);
+  const TEST_OPS = createOpcodeRegistry(Core, StringLib, List, MathLib, BooleanLib);
 
   let ctx: ScriptContext;
 
@@ -26,6 +22,7 @@ createLibraryTester(StringLib, "String Library", (test) => {
     ctx = createScriptContext({
       caller: { id: 1 } as any,
       this: { id: 2 } as any,
+      ops: TEST_OPS,
     });
   });
 

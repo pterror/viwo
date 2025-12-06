@@ -4,17 +4,15 @@ import {
   createScriptContext,
   evaluate,
   ListLib,
-  registerLibrary,
+  createOpcodeRegistry,
   StdLib,
   unsafeAsAwaited,
 } from "@viwo/scripting";
 
-registerLibrary(StdLib);
-registerLibrary(ListLib);
-registerLibrary(ProcGenLib);
+const TEST_OPS = createOpcodeRegistry(StdLib, ListLib, ProcGenLib);
 
 describe("procgen", () => {
-  const ctx = createScriptContext({ this: { id: 1 }, caller: { id: 1 } });
+  const ctx = createScriptContext({ this: { id: 1 }, caller: { id: 1 }, ops: TEST_OPS });
 
   test("determinism", () => {
     // We need to run this in a way that state is preserved if it was global,

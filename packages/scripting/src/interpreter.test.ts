@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { evaluate, registerLibrary, ScriptError, createScriptContext } from "./interpreter";
+import { evaluate, createOpcodeRegistry, ScriptError, createScriptContext } from "./interpreter";
 import * as StdLib from "./lib/std";
 import * as ObjectLib from "./lib/object";
 import * as ListLib from "./lib/list";
@@ -8,19 +8,14 @@ import * as MathLib from "./lib/math";
 import * as BooleanLib from "./lib/boolean";
 import { Entity } from "@viwo/shared/jsonrpc";
 
-registerLibrary(StdLib);
-registerLibrary(ObjectLib);
-registerLibrary(ListLib);
-registerLibrary(StringLib);
-registerLibrary(MathLib);
-registerLibrary(BooleanLib);
+const TEST_OPS = createOpcodeRegistry(StdLib, ObjectLib, ListLib, StringLib, MathLib, BooleanLib);
 
 describe("Interpreter", () => {
   const caller: Entity = { id: 1 };
   const target: Entity = { id: 2 };
   target["owner"] = 1;
 
-  const ctx = createScriptContext({ caller, this: target });
+  const ctx = createScriptContext({ caller, this: target, ops: TEST_OPS });
 
   test("literals", () => {
     expect(evaluate(1, ctx)).toBe(1);
@@ -193,7 +188,7 @@ describe("Interpreter", () => {
 });
 
 describe("Interpreter Errors and Warnings", () => {
-  const ctx = createScriptContext({ caller: { id: 1 }, this: { id: 2 } });
+  const ctx = createScriptContext({ caller: { id: 1 }, this: { id: 2 }, ops: TEST_OPS });
 
   test("throw", () => {
     try {
@@ -249,7 +244,7 @@ describe("Interpreter Errors and Warnings", () => {
 });
 
 describe("Interpreter Libraries", () => {
-  const ctx = createScriptContext({ caller: { id: 1 }, this: { id: 2 } });
+  const ctx = createScriptContext({ caller: { id: 1 }, this: { id: 2 }, ops: TEST_OPS });
 
   describe("Lambda & HOF", () => {
     test("lambda & apply", () => {
@@ -275,7 +270,7 @@ describe("Interpreter Libraries", () => {
 });
 
 describe("Interpreter Stack Traces", () => {
-  const ctx = createScriptContext({ caller: { id: 1 }, this: { id: 2 } });
+  const ctx = createScriptContext({ caller: { id: 1 }, this: { id: 2 }, ops: TEST_OPS });
 
   test("stack trace in lambda", () => {
     // (let fail (lambda () (throw "boom")))

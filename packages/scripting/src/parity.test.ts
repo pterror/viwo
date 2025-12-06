@@ -2,7 +2,7 @@ import { expect, test, describe } from "bun:test";
 import {
   evaluate,
   createScriptContext,
-  registerLibrary,
+  createOpcodeRegistry,
   StdLib,
   MathLib,
   BooleanLib,
@@ -10,14 +10,11 @@ import {
   ObjectLib,
   compile,
   ScriptContext,
+  StringLib,
 } from "./index";
 
 // Register libraries once
-registerLibrary(StdLib);
-registerLibrary(MathLib);
-registerLibrary(BooleanLib);
-registerLibrary(ListLib);
-registerLibrary(ObjectLib);
+const TEST_OPS = createOpcodeRegistry(StdLib, MathLib, BooleanLib, ListLib, ObjectLib, StringLib);
 
 function createTestContext(): ScriptContext {
   return createScriptContext({
@@ -25,6 +22,7 @@ function createTestContext(): ScriptContext {
     caller: { id: 200 } as any,
     args: [],
     gas: 10000,
+    ops: TEST_OPS,
   });
 }
 
@@ -42,7 +40,7 @@ async function checkParity(name: string, ast: any, ctxOverride?: Partial<ScriptC
 
     let resCompile, errCompile;
     try {
-      const compiledFn = compile(ast);
+      const compiledFn = compile(ast, TEST_OPS);
       resCompile = await compiledFn(ctx2);
     } catch (e: any) {
       errCompile = e;

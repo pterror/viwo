@@ -1,5 +1,4 @@
-import { OPS } from "./interpreter";
-import { ScriptContext, ScriptError, ScriptValue } from "./types";
+import { ScriptContext, ScriptError, ScriptOps, ScriptValue } from "./types";
 
 const chainedCompare = {
   ["<"]: (...args: any[]) => {
@@ -40,15 +39,15 @@ const chainedCompare = {
  * Compiles a ViwoScript AST into a JavaScript function.
  *
  * @param script The script to compile.
+ * @param ops The opcode registry to use for compilation.
  * @returns A function that takes a ScriptContext and returns a Promise resolving to the result.
  */
-export function compile<T>(script: ScriptValue<T>): (ctx: ScriptContext) => T {
+export function compile<T>(script: ScriptValue<T>, ops: ScriptOps): (ctx: ScriptContext) => T {
   return new Function(
-    "__ops__",
     "__chained_compare__",
     `return function compiled(__ctx__) {
-${compileValue(script, true)}}`,
-  )(OPS, chainedCompare);
+${compileValue(script, ops, true)}}`,
+  )(chainedCompare);
 }
 
 const KEYWORDS = new Set([
@@ -134,7 +133,7 @@ function compileChainedComparison(argExprs: string[], op: string): string {
       : `__chained_compare__["${op}"](${argExprs.join(", ")})`;
 }
 
-function compileValue(node: any, shouldReturn = false): string {
+function compileValue(node: any, ops: ScriptOps, shouldReturn = false): string {
   const prefix = shouldReturn ? "return " : "";
   if (!Array.isArray(node)) {
     if (
@@ -154,102 +153,117 @@ function compileValue(node: any, shouldReturn = false): string {
       if (args.length === 0) return "null";
       let code = "";
       for (let i = 0; i < args.length; i++) {
-        const result = compileValue(args[i], shouldReturn && i === args.length - 1);
+        const result = compileValue(args[i], ops, shouldReturn && i === args.length - 1);
         code += result + "\n";
       }
       return code;
     case "if":
-      return `if (${compileValue(args[0])}) {
-${compileValue(args[1], shouldReturn)}}${
+      return `if (${compileValue(args[0], ops)}) {
+${compileValue(args[1], ops, shouldReturn)}}${
         args[2]
           ? ` else {
-${compileValue(args[2], shouldReturn)}}`
+${compileValue(args[2], ops, shouldReturn)}}`
           : shouldReturn
             ? `else {
 return null}`
             : ""
       }`;
     case "while":
-      return `while (${compileValue(args[0])}) {
-${compileValue(args[1])}}`;
+      return `while (${compileValue(args[0], ops)}) {
+${compileValue(args[1], ops)}}`;
     case "for":
-      return `for (const ${toJSName(args[0])} of ${compileValue(args[1])}) {
-${compileValue(args[2])}}`;
+      return `for (const ${toJSName(args[0])} of ${compileValue(args[1], ops)}) {
+${compileValue(args[2], ops)}}`;
     case "let":
-      return `let ${toJSName(args[0])} = ${compileValue(args[1])};`;
+      return `let ${toJSName(args[0])} = ${compileValue(args[1], ops)};`;
     case "set":
-      return `${toJSName(args[0])} = ${compileValue(args[1])};`;
+      return `${toJSName(args[0])} = ${compileValue(args[1], ops)};`;
     case "break":
       return "break;";
     case "continue":
       return "continue;";
     case "return":
-      return `return ${args[0] ? compileValue(args[0]) : "null"};`;
+      return `return ${args[0] ? compileValue(args[0], ops) : "null"};`;
     case "throw":
-      return `throw ${compileValue(args[0])};`;
+      return `throw ${compileValue(args[0], ops)};`;
     case "try":
       return `try {
-${compileValue(args[0], shouldReturn)}
+${compileValue(args[0], ops, shouldReturn)}
 } catch (${args[1]}) {
-${compileValue(args[2], shouldReturn)}
+${compileValue(args[2], ops, shouldReturn)}
 }`;
     case "var":
       return `${prefix}${toJSName(args[0])}`;
     case "lambda":
       return `(${(args[0] as string[]).map((name) => toJSName(name)).join(", ")}) => {
-${compileValue(args[1], true)}}`;
+${compileValue(args[1], ops, true)}}`;
     case "quote":
       return `${prefix}${JSON.stringify(args[0])}`;
     case "list.new":
-      const compiledArgs = args.map((a) => compileValue(a));
+      const compiledArgs = args.map((a: any) => compileValue(a, ops));
       return `${prefix}[${compiledArgs.join(", ")}]`;
     case "obj.new":
       const props = [];
       for (const arg of args) {
-        const keyExpr = compileValue(arg[0]);
-        const valExpr = compileValue(arg[1]);
+        const keyExpr = compileValue(arg[0], ops);
+        const valExpr = compileValue(arg[1], ops);
         props.push(`[${keyExpr}]: ${valExpr}`);
       }
       return `${prefix}({ ${props.join(", ")} })`;
-  }
-  const exprs = args.map((a) => compileValue(a));
-  switch (op) {
     case "apply":
-      return `${prefix}(${exprs[0]})(${exprs.slice(1).join(", ")})`;
+      const applyExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}(${applyExprs[0]})(${applyExprs.slice(1).join(", ")})`;
     case "+":
-      return `${prefix}(${exprs.join(" + ")})`;
+      const plusExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}(${plusExprs.join(" + ")})`;
     case "-":
-      return `${prefix}(${exprs.join(" - ")})`;
+      const minusExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}(${minusExprs.join(" - ")})`;
     case "*":
-      return `${prefix}(${exprs.join(" * ")})`;
+      const multExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}(${multExprs.join(" * ")})`;
     case "/":
-      return `${prefix}(${exprs.join(" / ")})`;
+      const divExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}(${divExprs.join(" / ")})`;
     case "%":
-      return `${prefix}(${exprs.join(" % ")})`;
+      const modExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}(${modExprs.join(" % ")})`;
     case "^":
-      return `${prefix}(${exprs.join(" ** ")})`;
+      const powExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}(${powExprs.join(" ** ")})`;
     case "==":
-      return `${prefix}(${exprs.join(" === ")})`;
+      const eqExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}(${eqExprs.join(" === ")})`;
     case "!=":
-      return `${prefix}(${exprs.join(" !== ")})`;
+      const neqExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}(${neqExprs.join(" !== ")})`;
     case "<":
-      return `${prefix}${compileChainedComparison(exprs, "<")}`;
+      const ltExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${compileChainedComparison(ltExprs, "<")}`;
     case ">":
-      return `${prefix}${compileChainedComparison(exprs, ">")}`;
+      const gtExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${compileChainedComparison(gtExprs, ">")}`;
     case "<=":
-      return `${prefix}${compileChainedComparison(exprs, "<=")}`;
+      const lteExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${compileChainedComparison(lteExprs, "<=")}`;
     case ">=":
-      return `${prefix}${compileChainedComparison(exprs, ">=")}`;
+      const gteExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${compileChainedComparison(gteExprs, ">=")}`;
     case "and":
-      return `${prefix}(${exprs.join(" && ")})`;
+      const andExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}(${andExprs.join(" && ")})`;
     case "or":
-      return `${prefix}(${exprs.join(" || ")})`;
+      const orExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}(${orExprs.join(" || ")})`;
     case "not":
-      return `${prefix}!${exprs[0]}`;
+      const notExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}!${notExprs[0]}`;
     case "log":
-      return `${prefix}console.log(${exprs.join(", ")})`;
+      const logExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}console.log(${logExprs.join(", ")})`;
     case "str.concat":
-      return `${prefix}("" + ${exprs.join(" + ")}`;
+      const concatExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}("" + ${concatExprs.join(" + ")})`;
     case "this":
       return `${prefix}__ctx__.this`;
     case "caller":
@@ -257,61 +271,86 @@ ${compileValue(args[1], true)}}`;
 
     // System Opcodes
     case "arg":
-      return `${prefix}(__ctx__.args?.[${exprs[0]}] ?? null)`;
+      const argExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}(__ctx__.args?.[${argExprs[0]}] ?? null)`;
     case "args":
       return `${prefix}[...(__ctx__.args ?? [])]`;
     case "warn":
-      return `${prefix}__ctx__.warnings.push(String(${exprs[0]}))`;
+      const warnExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}__ctx__.warnings.push(String(${warnExprs[0]}))`;
     case "send":
-      return `${prefix}(__ctx__.send?.(${exprs[0]}, ${exprs[1]}) || null)`;
+      const sendExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}(__ctx__.send?.(${sendExprs[0]}, ${sendExprs[1]}) || null)`;
 
     // Math Opcodes
     case "math.floor":
-      return `${prefix}Math.floor(${exprs[0]})`;
+      const floorExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Math.floor(${floorExprs[0]})`;
     case "math.ceil":
-      return `${prefix}Math.ceil(${exprs[0]})`;
+      const ceilExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Math.ceil(${ceilExprs[0]})`;
     case "math.trunc":
-      return `${prefix}Math.trunc(${exprs[0]})`;
+      const truncExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Math.trunc(${truncExprs[0]})`;
     case "math.round":
-      return `${prefix}Math.round(${exprs[0]})`;
+      const roundExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Math.round(${roundExprs[0]})`;
     case "math.sin":
-      return `${prefix}Math.sin(${exprs[0]})`;
+      const sinExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Math.sin(${sinExprs[0]})`;
     case "math.cos":
-      return `${prefix}Math.cos(${exprs[0]})`;
+      const cosExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Math.cos(${cosExprs[0]})`;
     case "math.tan":
-      return `${prefix}Math.tan(${exprs[0]})`;
+      const tanExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Math.tan(${tanExprs[0]})`;
     case "math.asin":
-      return `${prefix}Math.asin(${exprs[0]})`;
+      const asinExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Math.asin(${asinExprs[0]})`;
     case "math.acos":
-      return `${prefix}Math.acos(${exprs[0]})`;
+      const acosExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Math.acos(${acosExprs[0]})`;
     case "math.atan":
-      return `${prefix}Math.atan(${exprs[0]})`;
+      const atanExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Math.atan(${atanExprs[0]})`;
     case "math.atan2":
-      return `${prefix}Math.atan2(${exprs[0]}, ${exprs[1]})`;
+      const atan2Exprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Math.atan2(${atan2Exprs[0]}, ${atan2Exprs[1]})`;
     case "math.log":
-      return `${prefix}Math.log(${exprs[0]})`;
+      const logMExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Math.log(${logMExprs[0]})`;
     case "math.log2":
-      return `${prefix}Math.log2(${exprs[0]})`;
+      const log2Exprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Math.log2(${log2Exprs[0]})`;
     case "math.log10":
-      return `${prefix}Math.log10(${exprs[0]})`;
+      const log10Exprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Math.log10(${log10Exprs[0]})`;
     case "math.exp":
-      return `${prefix}Math.exp(${exprs[0]})`;
+      const expExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Math.exp(${expExprs[0]})`;
     case "math.sqrt":
-      return `${prefix}Math.sqrt(${exprs[0]})`;
+      const sqrtExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Math.sqrt(${sqrtExprs[0]})`;
     case "math.abs":
-      return `${prefix}Math.abs(${exprs[0]})`;
+      const absExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Math.abs(${absExprs[0]})`;
     case "math.min":
-      return `${prefix}Math.min(${exprs.join(", ")})`;
+      const minExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Math.min(${minExprs.join(", ")})`;
     case "math.max":
-      return `${prefix}Math.max(${exprs.join(", ")})`;
+      const maxExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Math.max(${maxExprs.join(", ")})`;
     case "math.clamp":
-      return `${prefix}Math.min(Math.max(${exprs[0]}, ${exprs[1]}), ${exprs[2]})`;
+      const clampExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Math.min(Math.max(${clampExprs[0]}, ${clampExprs[1]}), ${clampExprs[2]})`;
     case "math.sign":
-      return `${prefix}Math.sign(${exprs[0]})`;
+      const signExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Math.sign(${signExprs[0]})`;
 
     case "random": {
+      const randomExprs: string[] = args.map((a: any) => compileValue(a, ops));
       // Inline implementation of random using IIFE to handle variable arguments and integer checks
-      const argsArray = `[${exprs.join(", ")}]`;
+      const argsArray = `[${randomExprs.join(", ")}]`;
       return `${prefix}(() => {
         const args = ${argsArray};
         if (args.length === 0) return Math.random();
@@ -327,122 +366,178 @@ ${compileValue(args[1], true)}}`;
 
     // List Opcodes
     case "list.len":
-      return `${prefix}${exprs[0]}.length`;
+      const listLenExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${listLenExprs[0]}.length`;
     case "list.empty":
-      return `${prefix}(${exprs[0]}.length === 0)`;
+      const listEmptyExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}(${listEmptyExprs[0]}.length === 0)`;
     case "list.get":
-      return `${prefix}${exprs[0]}[${exprs[1]}]`;
+      const listGetExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${listGetExprs[0]}[${listGetExprs[1]}]`;
     case "list.set":
-      return `${prefix}(${exprs[0]}[${exprs[1]}] = ${exprs[2]})`;
+      const listSetExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}(${listSetExprs[0]}[${listSetExprs[1]}] = ${listSetExprs[2]})`;
     case "list.push":
-      return `${prefix}${exprs[0]}.push(${exprs[1]})`;
+      const listPushExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${listPushExprs[0]}.push(${listPushExprs[1]})`;
     case "list.pop":
-      return `${prefix}${exprs[0]}.pop()`;
+      const listPopExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${listPopExprs[0]}.pop()`;
     case "list.unshift":
-      return `${prefix}${exprs[0]}.unshift(${exprs[1]})`;
+      const listUnshiftExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${listUnshiftExprs[0]}.unshift(${listUnshiftExprs[1]})`;
     case "list.shift":
-      return `${prefix}${exprs[0]}.shift()`;
+      const listShiftExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${listShiftExprs[0]}.shift()`;
     case "list.slice":
-      return `${prefix}${exprs[0]}.slice(${exprs[1]}${args[2] ? `, ${exprs[2]}` : ""})`;
+      const listSliceExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${listSliceExprs[0]}.slice(${listSliceExprs[1]}${
+        args[2] ? `, ${listSliceExprs[2]}` : ""
+      })`;
     case "list.splice": {
-      const items = exprs.slice(3);
-      return `${prefix}${exprs[0]}.splice(${exprs[1]}, ${exprs[2]}${
+      const listSpliceExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      const items = listSpliceExprs.slice(3);
+      return `${prefix}${listSpliceExprs[0]}.splice(${listSpliceExprs[1]}, ${listSpliceExprs[2]}${
         items.length > 0 ? ", " + items.join(", ") : ""
       })`;
     }
     case "list.find":
-      return `${prefix}(${exprs[0]}.find((item) => (${exprs[1]})(item)) ?? null)`;
+      const listFindExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}(${listFindExprs[0]}.find((item) => (${listFindExprs[1]})(item)) ?? null)`;
     case "list.map":
-      return `${prefix}${exprs[0]}.map((item) => (${exprs[1]})(item))`;
+      const listMapExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${listMapExprs[0]}.map((item) => (${listMapExprs[1]})(item))`;
     case "list.filter":
-      return `${prefix}${exprs[0]}.filter((item) => (${exprs[1]})(item))`;
+      const listFilterExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${listFilterExprs[0]}.filter((item) => (${listFilterExprs[1]})(item))`;
     case "list.reduce":
-      return `${prefix}${exprs[0]}.reduce((acc, item) => (${exprs[1]})(acc, item), ${exprs[2]})`;
+      const listReduceExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${listReduceExprs[0]}.reduce((acc, item) => (${listReduceExprs[1]})(acc, item), ${listReduceExprs[2]})`;
     case "list.flatMap":
-      return `${prefix}${exprs[0]}.flatMap((item) => (${exprs[1]})(item))`;
+      const listFlatMapExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${listFlatMapExprs[0]}.flatMap((item) => (${listFlatMapExprs[1]})(item))`;
     case "list.concat":
-      return `${prefix}[].concat(${exprs.join(", ")})`;
+      const listConcatExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}[].concat(${listConcatExprs.join(", ")})`;
     case "list.includes":
-      return `${prefix}${exprs[0]}.includes(${exprs[1]})`;
+      const listIncludesExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${listIncludesExprs[0]}.includes(${listIncludesExprs[1]})`;
     case "list.reverse":
-      return `${prefix}${exprs[0]}.reverse()`;
+      const listReverseExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${listReverseExprs[0]}.reverse()`;
     case "list.sort":
-      return `${prefix}${exprs[0]}.sort()`;
+      const listSortExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${listSortExprs[0]}.sort()`;
 
     // Object Opcodes
     case "obj.get":
-      return `${prefix}((${exprs[0]})[${exprs[1]}] ?? ${args[2] ? exprs[2] : "null"})`;
+      const objGetExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}((${objGetExprs[0]})[${objGetExprs[1]}] ?? ${
+        args[2] ? objGetExprs[2] : "null"
+      })`;
     case "obj.set":
-      return `${prefix}((${exprs[0]})[${exprs[1]}] = ${exprs[2]})`;
+      const objSetExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}((${objSetExprs[0]})[${objSetExprs[1]}] = ${objSetExprs[2]})`;
     case "obj.has":
-      return `${prefix}(${exprs[1]} in ${exprs[0]})`;
+      const objHasExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}(${objHasExprs[1]} in ${objHasExprs[0]})`;
     case "obj.del":
-      return `${prefix}(delete ${exprs[0]}[${exprs[1]}])`;
+      const objDelExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}(delete ${objDelExprs[0]}[${objDelExprs[1]}])`;
     case "obj.keys":
-      return `${prefix}Object.getOwnPropertyNames(${exprs[0]})`;
+      const objKeysExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Object.getOwnPropertyNames(${objKeysExprs[0]})`;
     case "obj.values":
-      return `${prefix}Object.getOwnPropertyNames(${exprs[0]}).map(k => ${exprs[0]}[k])`;
+      const objValuesExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Object.getOwnPropertyNames(${objValuesExprs[0]}).map(k => ${objValuesExprs[0]}[k])`;
     case "obj.entries":
-      return `${prefix}Object.getOwnPropertyNames(${exprs[0]}).map(k => [k, ${exprs[0]}[k]])`;
+      const objEntriesExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Object.getOwnPropertyNames(${objEntriesExprs[0]}).map(k => [k, ${objEntriesExprs[0]}[k]])`;
     case "obj.merge":
-      return `${prefix}Object.assign({}, ${exprs.join(", ")})`;
+      const objMergeExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Object.assign({}, ${objMergeExprs.join(", ")})`;
     case "obj.map":
-      return `${prefix}Object.fromEntries(Object.entries(${exprs[0]}).map(([k, v]) => [k, (${exprs[1]})(v, k)]))`;
+      const objMapExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Object.fromEntries(Object.entries(${objMapExprs[0]}).map(([k, v]) => [k, (${objMapExprs[1]})(v, k)]))`;
     case "obj.filter":
-      return `${prefix}Object.fromEntries(Object.entries(${exprs[0]}).filter(([k, v]) => (${exprs[1]})(v, k)))`;
+      const objFilterExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Object.fromEntries(Object.entries(${objFilterExprs[0]}).filter(([k, v]) => (${objFilterExprs[1]})(v, k)))`;
     case "obj.reduce":
-      return `${prefix}Object.entries(${exprs[0]}).reduce((acc, [k, v]) => (${exprs[1]})(acc, v, k), ${exprs[2]})`;
+      const objReduceExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Object.entries(${objReduceExprs[0]}).reduce((acc, [k, v]) => (${objReduceExprs[1]})(acc, v, k), ${objReduceExprs[2]})`;
     case "obj.flatMap":
-      return `${prefix}Object.entries(${exprs[0]}).reduce((acc, [k, v]) => {
-        const res = (${exprs[1]})(v, k);
+      const objFlatMapExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}Object.entries(${objFlatMapExprs[0]}).reduce((acc, [k, v]) => {
+        const res = (${objFlatMapExprs[1]})(v, k);
         if (res && typeof res === 'object' && !Array.isArray(res)) Object.assign(acc, res);
         return acc;
       }, {})`;
 
     // JSON Opcodes
     case "json.stringify":
-      return `${prefix}JSON.stringify(${exprs[0]})`;
+      const jsonStringifyExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}JSON.stringify(${jsonStringifyExprs[0]})`;
     case "json.parse":
+      const jsonParseExprs: string[] = args.map((a: any) => compileValue(a, ops));
       // Need to handle try-catch for parse? The lib opcode wraps in try-catch returning null.
       // We can use an IIFE or ternary if we want to be safe, or just call JSON.parse directly if we trust input.
       // The lib implementation: try { return JSON.parse(str); } catch { return null; }
-      return `${prefix}(() => { try { return JSON.parse(${exprs[0]}); } catch { return null; } })()`;
+      return `${prefix}(() => { try { return JSON.parse(${jsonParseExprs[0]}); } catch { return null; } })()`;
     case "typeof":
-      return `${prefix}((val) => Array.isArray(val) ? "array" : val === null ? "null" : typeof val)(${exprs[0]})`;
+      const typeofExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}((val) => Array.isArray(val) ? "array" : val === null ? "null" : typeof val)(${typeofExprs[0]})`;
 
     // String Opcodes
     case "str.len":
-      return `${prefix}${exprs[0]}.length`;
+      const strLenExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${strLenExprs[0]}.length`;
     case "str.split":
-      return `${prefix}${exprs[0]}.split(${exprs[1]})`;
+      const strSplitExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${strSplitExprs[0]}.split(${strSplitExprs[1]})`;
     case "str.slice":
-      return `${prefix}${exprs[0]}.slice(${exprs[1]}, ${args[2] ? exprs[2] : "undefined"})`;
+      const strSliceExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${strSliceExprs[0]}.slice(${strSliceExprs[1]}, ${
+        args[2] ? strSliceExprs[2] : "undefined"
+      })`;
     case "str.upper":
-      return `${prefix}${exprs[0]}.toUpperCase()`;
+      const strUpperExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${strUpperExprs[0]}.toUpperCase()`;
     case "str.lower":
-      return `${prefix}${exprs[0]}.toLowerCase()`;
+      const strLowerExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${strLowerExprs[0]}.toLowerCase()`;
     case "str.trim":
-      return `${prefix}${exprs[0]}.trim()`;
+      const strTrimExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${strTrimExprs[0]}.trim()`;
     case "str.replace":
-      return `${prefix}${exprs[0]}.replace(${exprs[1]}, ${args[2] ? exprs[2] : "undefined"})`;
+      const strReplaceExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${strReplaceExprs[0]}.replace(${strReplaceExprs[1]}, ${
+        args[2] ? strReplaceExprs[2] : "undefined"
+      })`;
     case "str.includes":
-      return `${prefix}${exprs[0]}.includes(${exprs[1]})`;
+      const strIncludesExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${strIncludesExprs[0]}.includes(${strIncludesExprs[1]})`;
     case "str.join":
-      return `${prefix}${exprs[0]}.join(${exprs[1]})`;
+      const strJoinExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}${strJoinExprs[0]}.join(${strJoinExprs[1]})`;
 
     // Time Opcodes
     case "time.now":
       return `${prefix}new Date().toISOString()`;
     case "time.format":
-      return `${prefix}new Date(${exprs[0]}).toISOString()`;
+      const timeFormatExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}new Date(${timeFormatExprs[0]}).toISOString()`;
     case "time.parse":
-      return `${prefix}new Date(${exprs[0]}).toISOString()`;
+      const timeParseExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}new Date(${timeParseExprs[0]}).toISOString()`;
     case "time.from_timestamp":
-      return `${prefix}new Date(${exprs[0]}).toISOString()`;
+      const timeFromTimestampExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}new Date(${timeFromTimestampExprs[0]}).toISOString()`;
     case "time.to_timestamp":
-      return `${prefix}new Date(${exprs[0]}).getTime()`;
+      const timeToTimestampExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `${prefix}new Date(${timeToTimestampExprs[0]}).getTime()`;
     case "time.offset":
-      const [amount, unit, base] = exprs;
+      const timeOffsetExprs: string[] = args.map((a: any) => compileValue(a, ops));
+      const [amount, unit, base] = timeOffsetExprs;
       return `${prefix}(() => {
         const d = new Date(${base} !== undefined ? ${base} : new Date().toISOString());
         const amt = ${amount};
@@ -457,10 +552,12 @@ ${compileValue(args[1], true)}}`;
         }
         return d.toISOString();
       })()`;
+    default:
+      const def = ops[op];
+      if (!def) throw new ScriptError("Unknown opcode: " + op);
+      const exprs: string[] = args.map((a: any) => compileValue(a, ops));
+      return `__ctx__.ops[${JSON.stringify(op)}].handler(${
+        def.metadata.lazy ? JSON.stringify(args) : `[${exprs.join(", ")}]`
+      }, __ctx__)`;
   }
-  const def = OPS[op];
-  if (!def) throw new ScriptError("Unknown opcode: " + op);
-  return `__ops__[${JSON.stringify(op)}].handler(${
-    def.metadata.lazy ? JSON.stringify(args) : `[${exprs.join(", ")}]`
-  }, __ctx__)`;
 }

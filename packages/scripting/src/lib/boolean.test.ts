@@ -1,10 +1,10 @@
 import { expect, beforeEach } from "bun:test";
-import { evaluate, ScriptContext, registerLibrary, createScriptContext } from "../interpreter";
+import { evaluate, ScriptContext, createOpcodeRegistry, createScriptContext } from "../interpreter";
 import * as BooleanOps from "./boolean";
 import { createLibraryTester } from "./test-utils";
 
 createLibraryTester(BooleanOps, "Boolean Library", (test) => {
-  registerLibrary(BooleanOps);
+  const TEST_OPS = createOpcodeRegistry(BooleanOps);
 
   let ctx: ScriptContext;
 
@@ -15,6 +15,7 @@ createLibraryTester(BooleanOps, "Boolean Library", (test) => {
       args: [],
       send: () => {},
       warnings: [],
+      ops: TEST_OPS,
     });
   });
 

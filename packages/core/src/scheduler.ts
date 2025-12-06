@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { getEntity, getVerb } from "./repo";
-import { evaluate, createScriptContext } from "@viwo/scripting";
+import { evaluate, createScriptContext, ScriptOps } from "@viwo/scripting";
 
 /**
  * Manages scheduled tasks (delayed verb executions).
@@ -34,6 +34,11 @@ class TaskScheduler {
    */
   setSendFactory(factory: (entityId: number) => (type: string, payload: unknown) => void) {
     this.sendFactory = factory;
+  }
+
+  private opcodes: ScriptOps = {};
+  setOpcodes(opcodes: ScriptOps) {
+    this.opcodes = opcodes;
   }
 
   private intervalId: Timer | null = null;
@@ -96,6 +101,7 @@ class TaskScheduler {
               this: entity,
               args,
               send,
+              ops: this.opcodes,
             }),
           );
         }

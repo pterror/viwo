@@ -1,6 +1,6 @@
 import { Component, createSignal, For } from "solid-js";
 import { ScriptEditor } from "@viwo/web-editor";
-import { playgroundOpcodes, clearOutput, getOutput } from "./runtime";
+import { opcodes, clearOutput, getOutput, ops } from "./runtime";
 import { examples } from "./examples";
 import { evaluate, createScriptContext } from "@viwo/scripting";
 
@@ -15,11 +15,7 @@ const App: Component = () => {
     clearOutput();
     setOutput("");
     try {
-      const ctx = createScriptContext({
-        caller: { id: 0 } as any,
-        this: { id: 0 } as any,
-      });
-
+      const ctx = createScriptContext({ caller: { id: 0 }, this: { id: 0 }, ops });
       await evaluate(script(), ctx);
       setOutput(getOutput());
     } catch (e: any) {
@@ -47,7 +43,7 @@ const App: Component = () => {
         </div>
       </header>
       <div class="playground__main">
-        <ScriptEditor value={script()} onChange={setScript} opcodes={playgroundOpcodes} />
+        <ScriptEditor value={script()} onChange={setScript} opcodes={opcodes} />
       </div>
       <div class="playground__output">
         <h3>Output</h3>

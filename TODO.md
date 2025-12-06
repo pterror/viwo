@@ -25,6 +25,7 @@
 - [ ] **Graph Queries**: Standard library functions for traversing entity relationships (backlinks, children, parents). (Status: Deferred, awaiting further design. We do not want to have a single fixed schema.)
 - [ ] **Wiki Features**: Bi-directional linking, revision history, and transclusion support.
 - [ ] **Custom Views**: Support for defining custom DB views/indexes for performance.
+- [ ] **Cloud Sync**: Plugins to sync whole DB (e.g. notes) to cloud storage (S3-compatible, Backblaze B2, Cloudflare R2, Google Drive, Dropbox, OneDrive etc.)
 
 ## Architecture & Core
 
@@ -45,3 +46,4 @@
 - [ ] **Core**: Consider splitting permissions for net.http into multiple capabilities
 - [ ] **Plugins**: Add capability-based permissions to opcodes defined by plugins
 - [ ] **Scripting**: Add async support to compiler
+- [ ] **Scripting**: Attempt to change BreakSignal and ContinueSignal to not throw, since we use a stack based interpreter so we should be able to simply return them

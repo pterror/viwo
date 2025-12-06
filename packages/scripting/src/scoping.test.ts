@@ -7,14 +7,9 @@ import * as BooleanLib from "./lib/boolean";
 import * as ListLib from "./lib/list";
 import * as ObjectLib from "./lib/object";
 import * as StringLib from "./lib/string";
-import { registerLibrary } from "./interpreter";
+import { createOpcodeRegistry } from "./interpreter";
 
-registerLibrary(StdLib);
-registerLibrary(MathLib);
-registerLibrary(BooleanLib);
-registerLibrary(ListLib);
-registerLibrary(ObjectLib);
-registerLibrary(StringLib);
+const TEST_OPS = createOpcodeRegistry(StdLib, MathLib, BooleanLib, ListLib, ObjectLib, StringLib);
 
 const run = async (code: string) => {
   try {
@@ -22,6 +17,7 @@ const run = async (code: string) => {
     const ctx = createScriptContext({
       caller: { id: 0 } as any,
       this: { id: 0 } as any,
+      ops: TEST_OPS,
     });
     return await evaluate(ast, ctx);
   } catch (e) {

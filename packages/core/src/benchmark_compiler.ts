@@ -1,17 +1,15 @@
 import {
   evaluate,
   createScriptContext,
-  registerLibrary,
   StdLib,
   MathLib,
   BooleanLib,
   compile,
   setTypechecking,
+  createOpcodeRegistry,
 } from "@viwo/scripting";
 
-registerLibrary(StdLib);
-registerLibrary(MathLib);
-registerLibrary(BooleanLib);
+const OPS = createOpcodeRegistry(StdLib, MathLib, BooleanLib);
 
 const ITERATIONS = 1_000_000;
 
@@ -44,9 +42,10 @@ const ctx2 = createScriptContext({
   caller: null!,
   args: [],
   gas: ITERATIONS * 100,
+  ops: OPS,
 });
 const startCompile = performance.now();
-const compiledFn = compile(script);
+const compiledFn = compile(script, OPS);
 console.log(compiledFn + "");
 const endCompile = performance.now();
 
@@ -59,6 +58,7 @@ const ctx1 = createScriptContext({
   caller: null!,
   args: [],
   gas: ITERATIONS * 100,
+  ops: OPS,
 });
 const startInterp = performance.now();
 const result = await evaluate(script, ctx1);

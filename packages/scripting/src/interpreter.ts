@@ -1,20 +1,14 @@
 import {
-  OpcodeDefinition,
+  OpcodeBuilder,
   OpcodeMetadata,
   ScriptContext,
   ScriptError,
+  ScriptOps,
   ScriptValue,
   StackFrame,
 } from "./types";
 
-export {
-  type OpcodeDefinition,
-  type OpcodeMetadata,
-  type ScriptContext,
-  ScriptError,
-  type ScriptValue,
-  type StackFrame,
-};
+export { type OpcodeBuilder, type ScriptContext, ScriptError, type ScriptValue, type StackFrame };
 
 let typecheck = true;
 
@@ -24,30 +18,20 @@ export function setTypechecking(enabled: boolean) {
   typecheck = enabled;
 }
 
-export const OPS: Record<string, OpcodeDefinition> = {};
-
 /**
- * Registers a library of opcodes.
+ * Creates a new opcode registry by merging multiple libraries.
  *
- * @param library - A record of opcode definitions.
+ * @param libs - List of libraries (records of opcode definitions) to merge.
+ * @returns A single record containing all opcodes.
  */
-export function registerLibrary(library: Record<string, OpcodeDefinition>) {
-  for (const def of Object.values(library)) {
-    OPS[def.metadata.opcode] = def;
+export function createOpcodeRegistry(...libs: ScriptOps[]): ScriptOps {
+  const registry: ScriptOps = {};
+  for (const lib of libs) {
+    for (const def of Object.values(lib)) {
+      registry[def.metadata.opcode] = def;
+    }
   }
-}
-
-export function getOpcode(name: string) {
-  return OPS[name]?.handler;
-}
-
-/**
- * Retrieves metadata for all registered opcodes.
- *
- * @returns An array of opcode metadata objects.
- */
-export function getOpcodeMetadata() {
-  return Object.values(OPS).map((def) => def.metadata);
+  return registry;
 }
 
 export function executeLambda(lambda: any, args: unknown[], ctx: ScriptContext): any {
@@ -111,7 +95,7 @@ export function evaluate<T>(ast: ScriptValue<T>, ctx: ScriptContext): T | Promis
 
   // Push initial frame
   const op = ast[0];
-  if (typeof op !== "string" || !OPS[op]) {
+  if (typeof op !== "string" || !ctx.ops[op]) {
     throw new ScriptError(`Unknown opcode: ${op}`, []);
   }
 
@@ -142,7 +126,7 @@ function executeLoop(
 
     const top = sp - 1;
     const op = stackOp[top]!;
-    const def = OPS[op];
+    const def = ctx.ops[op];
     if (!def) throw new ScriptError(`Unknown opcode: ${op}`);
 
     // If Lazy, pass all remaining args as is and execute immediately
@@ -169,7 +153,7 @@ function executeLoop(
       if (Array.isArray(nextArg)) {
         // It's a nested call, push a new frame
         const nextOp = nextArg[0];
-        if (typeof nextOp !== "string" || !OPS[nextOp]) {
+        if (typeof nextOp !== "string" || !ctx.ops[nextOp]) {
           throw new ScriptError(
             `Unknown opcode: ${nextOp}`,
             createStackTrace(sp, stackOp, stackArgs),
@@ -388,13 +372,27 @@ function validateArgs(op: string, args: unknown[], metadata: OpcodeMetadata) {
 }
 
 /**
+ * Retrieves metadata for all opcodes in a registry.
+ *
+ * @param ops - The opcode registry.
+ * @returns A record of opcode metadata.
+ */
+export function getOpcodeMetadata(ops: ScriptOps): Record<string, OpcodeMetadata> {
+  const metadata: Record<string, OpcodeMetadata> = {};
+  for (const [key, def] of Object.entries(ops)) {
+    metadata[key] = def.metadata;
+  }
+  return metadata;
+}
+
+/**
  * Creates a new script context with default values.
  *
  * @param ctx - Partial context to override defaults.
  * @returns A complete ScriptContext.
  */
 export function createScriptContext(
-  ctx: Pick<ScriptContext, "caller" | "this"> & Partial<ScriptContext>,
+  ctx: Pick<ScriptContext, "caller" | "this" | "ops"> & Partial<ScriptContext>,
 ): ScriptContext {
   return {
     args: [],

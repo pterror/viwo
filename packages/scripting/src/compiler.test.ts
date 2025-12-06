@@ -1,5 +1,5 @@
-import { describe, test, expect, beforeAll } from "bun:test";
-import { ScriptContext, createScriptContext, registerLibrary } from "./interpreter";
+import { describe, test, expect } from "bun:test";
+import { ScriptContext, createScriptContext, createOpcodeRegistry } from "./interpreter";
 import { compile } from "./compiler";
 import * as Std from "./lib/std";
 import * as ObjectLib from "./lib/object";
@@ -10,23 +10,16 @@ import * as BooleanLib from "./lib/boolean";
 import { Entity } from "@viwo/shared/jsonrpc";
 
 describe("Compiler", () => {
-  beforeAll(() => {
-    registerLibrary(Std);
-    registerLibrary(ObjectLib);
-    registerLibrary(List);
-    registerLibrary(StringLib);
-    registerLibrary(MathLib);
-    registerLibrary(BooleanLib);
-  });
+  const TEST_OPS = createOpcodeRegistry(Std, ObjectLib, List, StringLib, MathLib, BooleanLib);
 
   const caller: Entity = { id: 1 };
   const target: Entity = { id: 2 };
   target["owner"] = 1;
 
-  const ctx = createScriptContext({ caller, this: target });
+  const ctx = createScriptContext({ caller, this: target, ops: TEST_OPS });
 
   function run(script: any, context: ScriptContext = ctx) {
-    return compile(script)(context);
+    return compile(script, TEST_OPS)(context);
   }
 
   test("literals", () => {

@@ -28,6 +28,8 @@ export type ScriptContext = {
   vars: Record<string, unknown>;
   /** Call stack for error reporting. */
   stack: StackFrame[];
+  /** Opcode registry for this context. */
+  ops: Record<string, OpcodeBuilder<any[], any>>;
 };
 
 export type ScriptLibraryDefinition = Record<
@@ -119,11 +121,6 @@ export type OpcodeHandler<Args extends readonly unknown[], Ret, Lazy extends boo
   ctx: ScriptContext,
 ) => Ret | Promise<Ret>;
 
-export interface OpcodeDefinition<Lazy extends boolean = boolean> {
-  handler: OpcodeHandler<any, unknown, Lazy>;
-  metadata: OpcodeMetadata<Lazy>;
-}
-
 declare const RAW_MARKER: unique symbol;
 export type ScriptRaw<T> = { [RAW_MARKER]: T };
 
@@ -179,6 +176,10 @@ export interface OpcodeBuilder<
   opcode: string;
   handler: OpcodeHandler<Args, Ret, Lazy>;
   metadata: OpcodeMetadata<Lazy>;
+}
+
+export interface ScriptOps {
+  [opcode: string]: OpcodeBuilder<any, any>;
 }
 
 /**

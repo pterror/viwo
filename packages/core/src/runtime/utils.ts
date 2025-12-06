@@ -33,6 +33,7 @@ export function resolveProps(entity: Entity, ctx: ScriptContext): Entity {
           },
           send: ctx.send ?? (() => {}),
           warnings: ctx.warnings,
+          ops: ctx.ops,
         }),
       );
 

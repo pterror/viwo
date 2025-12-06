@@ -1,24 +1,21 @@
 import { expect, beforeAll } from "bun:test";
 import {
   evaluate,
-  registerLibrary,
   createScriptContext,
   ListLib,
   ScriptError,
   StdLib,
+  createOpcodeRegistry,
 } from "@viwo/scripting";
 import { createLibraryTester } from "@viwo/scripting/test-utils";
 import * as KernelLib from "./kernel";
 import * as CoreLib from "./core";
 import { addVerb, createCapability, createEntity, getEntity } from "../../repo";
 
-registerLibrary(KernelLib);
-registerLibrary(CoreLib);
-registerLibrary(ListLib);
-registerLibrary(StdLib);
+const OPS = createOpcodeRegistry(KernelLib, CoreLib, ListLib, StdLib);
 
 createLibraryTester(CoreLib, "Core Library", (test) => {
-  const ctx = createScriptContext({ caller: { id: 3 }, this: { id: 3 } });
+  const ctx = createScriptContext({ caller: { id: 3 }, this: { id: 3 }, ops: OPS });
   let id!: number;
 
   beforeAll(() => {
@@ -109,7 +106,7 @@ createLibraryTester(CoreLib, "Core Library", (test) => {
 
   test("sudo", () => {
     // 1. Deny if not system/bot (and missing capability)
-    const userCtx = createScriptContext({ caller: { id: 100 }, this: { id: 100 } });
+    const userCtx = createScriptContext({ caller: { id: 100 }, this: { id: 100 }, ops: OPS });
 
     expect(() =>
       evaluate(
@@ -124,7 +121,7 @@ createLibraryTester(CoreLib, "Core Library", (test) => {
     ).toThrow("Invalid capability");
 
     // 2. Allow if System (ID 3) with valid cap
-    const systemCtx = createScriptContext({ caller: { id }, this: { id } });
+    const systemCtx = createScriptContext({ caller: { id }, this: { id }, ops: OPS });
     expect(
       evaluate(
         CoreLib.sudo(
@@ -138,7 +135,7 @@ createLibraryTester(CoreLib, "Core Library", (test) => {
     ).toBe("resolved_value");
 
     // 3. Allow if Bot (ID 4) with valid cap
-    const botCtx = createScriptContext({ caller: { id: 4 }, this: { id: 4 } });
+    const botCtx = createScriptContext({ caller: { id: 4 }, this: { id: 4 }, ops: OPS });
     expect(
       evaluate(
         CoreLib.sudo(
@@ -159,6 +156,7 @@ createLibraryTester(CoreLib, "Core Library", (test) => {
       send: (type, payload) => {
         sentMessage = { type, payload };
       },
+      ops: OPS,
     });
 
     addVerb(103, "say_hello", StdLib.send("message", "Hello!"));

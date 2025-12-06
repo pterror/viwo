@@ -5,18 +5,14 @@ import * as fs from "node:fs/promises";
 import {
   createScriptContext,
   evaluate,
-  registerLibrary,
+  createOpcodeRegistry,
   StdLib,
   ObjectLib,
   ListLib,
 } from "@viwo/scripting";
 import * as FsLib from "./lib";
 
-registerLibrary(StdLib);
-registerLibrary(ObjectLib);
-registerLibrary(ListLib);
-registerLibrary(KernelLib);
-registerLibrary(FsLib);
+const TEST_OPS = createOpcodeRegistry(StdLib, ObjectLib, ListLib, KernelLib, FsLib);
 
 describe("FS Library", () => {
   const testDir = path.resolve(`./tmp_test_fs_${Math.random()}`);
@@ -49,7 +45,7 @@ describe("FS Library", () => {
   });
 
   it("should write to a file", async () => {
-    const ctx = createScriptContext({ caller: admin, this: admin });
+    const ctx = createScriptContext({ caller: admin, this: admin, ops: TEST_OPS });
     const filePath = path.join(testDir, "test.txt");
     await evaluate(
       FsLib.fsWrite(KernelLib.getCapability("fs.write"), filePath, "Hello World"),
@@ -61,7 +57,7 @@ describe("FS Library", () => {
   });
 
   it("should read from a file", async () => {
-    const ctx = createScriptContext({ caller: admin, this: admin });
+    const ctx = createScriptContext({ caller: admin, this: admin, ops: TEST_OPS });
     const filePath = path.join(testDir, "read_test.txt");
     await fs.writeFile(filePath, "Read Me");
     const content = await evaluate(FsLib.fsRead(KernelLib.getCapability("fs.read"), filePath), ctx);
@@ -69,7 +65,7 @@ describe("FS Library", () => {
   });
 
   it("should list files in a directory", async () => {
-    const ctx = createScriptContext({ caller: admin, this: admin });
+    const ctx = createScriptContext({ caller: admin, this: admin, ops: TEST_OPS });
     const filePath = path.join(testDir, "test2.txt");
     await fs.writeFile(filePath, "Test 2");
     const files = await evaluate(FsLib.fsList(KernelLib.getCapability("fs.read"), testDir), ctx);
@@ -78,14 +74,14 @@ describe("FS Library", () => {
   });
 
   it("should fail without capability", async () => {
-    const ctx = createScriptContext({ caller: user, this: user });
+    const ctx = createScriptContext({ caller: user, this: user, ops: TEST_OPS });
     expect(evaluate(FsLib.fsWrite(null, "path", "content"), ctx)).rejects.toThrow(
       "fs.write: missing capability",
     );
   });
 
   it("should fail to read without capability", async () => {
-    const ctx = createScriptContext({ caller: user, this: user });
+    const ctx = createScriptContext({ caller: user, this: user, ops: TEST_OPS });
     expect(
       evaluate(
         FsLib.fsRead(
@@ -98,7 +94,7 @@ describe("FS Library", () => {
   });
 
   it("should fail to read outside allowed path", async () => {
-    const ctx = createScriptContext({ caller: admin, this: admin });
+    const ctx = createScriptContext({ caller: admin, this: admin, ops: TEST_OPS });
     expect(
       evaluate(
         FsLib.fsRead(

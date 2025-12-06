@@ -1,20 +1,9 @@
 import { describe, it, test, expect, beforeEach, beforeAll } from "bun:test";
 import { db } from "../db";
 import * as CoreLib from "../runtime/lib/core";
-import * as KernelLib from "../runtime/lib/kernel";
 import { seed } from "../seed";
 import { createEntity, getEntity, updateEntity, getVerb, createCapability, addVerb } from "../repo";
-import {
-  evaluate,
-  registerLibrary,
-  createScriptContext,
-  StdLib,
-  ListLib,
-  StringLib,
-  ObjectLib,
-  TimeLib,
-  BooleanLib,
-} from "@viwo/scripting";
+import { evaluate, createScriptContext, ListLib, ObjectLib } from "@viwo/scripting";
 import { Entity } from "@viwo/shared/jsonrpc";
 import { extractVerb } from "../verb_loader";
 import { transpile } from "@viwo/scripting";
@@ -22,14 +11,7 @@ import { resolve } from "path";
 
 const verbsPath = resolve(__dirname, "../seeds/verbs.ts");
 
-registerLibrary(CoreLib);
-registerLibrary(KernelLib);
-registerLibrary(StdLib);
-registerLibrary(ListLib);
-registerLibrary(StringLib);
-registerLibrary(ObjectLib);
-registerLibrary(BooleanLib);
-registerLibrary(TimeLib);
+import { GameOpcodes } from "./opcodes";
 
 describe("Hotel Scripting", () => {
   let hotelLobby: Entity;
@@ -139,7 +121,7 @@ describe("Hotel Scripting", () => {
     // 2. Move out
     await evaluate(
       CoreLib.call(caller, "go", "out"),
-      createScriptContext({ caller, this: caller, send }),
+      createScriptContext({ caller, this: caller, send, ops: GameOpcodes }),
     );
 
     expect(messages[0]).toBe("Room 101 is now available.");
@@ -172,7 +154,7 @@ describe("Hotel Scripting", () => {
     // Call move "out"
     await evaluate(
       CoreLib.call(caller, "go", "out"),
-      createScriptContext({ caller, this: caller, send }),
+      createScriptContext({ caller, this: caller, send, ops: GameOpcodes }),
     );
 
     caller = getEntity(caller.id)!;
@@ -230,7 +212,7 @@ describe("Hotel Scripting", () => {
     // Note: The 'out' verb created the exits.
     await evaluate(
       CoreLib.call(caller, "go", "west"),
-      createScriptContext({ caller, this: caller, send }),
+      createScriptContext({ caller, this: caller, send, ops: GameOpcodes }),
     );
 
     caller = getEntity(caller.id)!;
@@ -261,7 +243,7 @@ describe("Hotel Scripting", () => {
     // Use "go out"
     await evaluate(
       CoreLib.call(caller, "go", "out"),
-      createScriptContext({ caller, this: caller, send }),
+      createScriptContext({ caller, this: caller, send, ops: GameOpcodes }),
     );
 
     caller = getEntity(caller.id)!;
@@ -272,7 +254,7 @@ describe("Hotel Scripting", () => {
     // 7. Move "back" (back to Floor Lobby)
     await evaluate(
       CoreLib.call(caller, "go", "back"),
-      createScriptContext({ caller, this: caller, send }),
+      createScriptContext({ caller, this: caller, send, ops: GameOpcodes }),
     );
 
     caller = getEntity(caller.id)!;
@@ -283,7 +265,7 @@ describe("Hotel Scripting", () => {
     // 8. Move "elevator" (back to Elevator)
     await evaluate(
       CoreLib.call(caller, "go", "elevator"),
-      createScriptContext({ caller, this: caller, send }),
+      createScriptContext({ caller, this: caller, send, ops: GameOpcodes }),
     );
 
     caller = getEntity(caller.id)!;
@@ -345,14 +327,14 @@ describe("Hotel Seed", () => {
     // 2. Teleport to Elevator
     await evaluate(
       CoreLib.call(player, "teleport", elevator),
-      createScriptContext({ caller: player, this: player }),
+      createScriptContext({ caller: player, this: player, ops: GameOpcodes }),
     );
 
     // 3. Push 1
     const pushVerb = getVerb(elevator.id, "push")!;
     await evaluate(
       pushVerb.code,
-      createScriptContext({ caller: player, this: elevator, args: [1] }),
+      createScriptContext({ caller: player, this: elevator, args: [1], ops: GameOpcodes }),
     );
 
     // 4. Out -> Creates Floor 1 Lobby + Wings
@@ -365,6 +347,7 @@ describe("Hotel Seed", () => {
         send: (type, payload) => {
           output = JSON.stringify({ type, payload });
         },
+        ops: GameOpcodes,
       }),
     );
 
@@ -374,7 +357,7 @@ describe("Hotel Seed", () => {
     // 5. Move "west"
     await evaluate(
       CoreLib.call(player, "go", "west"),
-      createScriptContext({ caller: player, this: player }),
+      createScriptContext({ caller: player, this: player, ops: GameOpcodes }),
     );
 
     // Player should be in West Wing now
@@ -397,6 +380,7 @@ describe("Hotel Seed", () => {
           if (output) output += "\n" + json;
           else output = json;
         },
+        ops: GameOpcodes,
       }),
     );
 
@@ -409,7 +393,7 @@ describe("Hotel Seed", () => {
     // 7. Try to enter valid room (e.g. 10)
     await evaluate(
       enterVerb.code,
-      createScriptContext({ caller: player, this: westWing, args: [10] }),
+      createScriptContext({ caller: player, this: westWing, args: [10], ops: GameOpcodes }),
     );
 
     // Player should be in Room 10
@@ -430,14 +414,14 @@ describe("Hotel Seed", () => {
     // 2. Teleport to Elevator
     await evaluate(
       CoreLib.call(player, "teleport", elevator),
-      createScriptContext({ caller: player, this: player }),
+      createScriptContext({ caller: player, this: player, ops: GameOpcodes }),
     );
 
     // 3. Push 2
     const pushVerb = getVerb(elevator.id, "push")!;
     await evaluate(
       pushVerb.code,
-      createScriptContext({ caller: player, this: elevator, args: [2] }),
+      createScriptContext({ caller: player, this: elevator, args: [2], ops: GameOpcodes }),
     );
 
     // 4. Out -> Creates Floor 2 Lobby + Wings
@@ -450,6 +434,7 @@ describe("Hotel Seed", () => {
         send: (type, payload) => {
           output = JSON.stringify({ type, payload });
         },
+        ops: GameOpcodes,
       }),
     );
 
@@ -459,7 +444,7 @@ describe("Hotel Seed", () => {
     // 5. Move "east"
     await evaluate(
       CoreLib.call(player, "go", "east"),
-      createScriptContext({ caller: player, this: player }),
+      createScriptContext({ caller: player, this: player, ops: GameOpcodes }),
     );
 
     const playerAfterEast = getEntity(player.id)!;
@@ -481,6 +466,7 @@ describe("Hotel Seed", () => {
           if (output) output += "\n" + json;
           else output = json;
         },
+        ops: GameOpcodes,
       }),
     );
 
@@ -489,7 +475,7 @@ describe("Hotel Seed", () => {
     // 7. Try to enter valid room (e.g. 60)
     await evaluate(
       enterVerb.code,
-      createScriptContext({ caller: player, this: eastWing, args: [60] }),
+      createScriptContext({ caller: player, this: eastWing, args: [60], ops: GameOpcodes }),
     );
 
     const playerInRoom = getEntity(player.id)!;
@@ -501,7 +487,7 @@ describe("Hotel Seed", () => {
     const obj = {};
     const res = await evaluate(
       ObjectLib.objGet(obj, "missing", ListLib.listNew()),
-      createScriptContext({ caller: player, this: player }),
+      createScriptContext({ caller: player, this: player, ops: GameOpcodes }),
     );
     expect(res).toEqual([]);
   });

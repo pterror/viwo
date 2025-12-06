@@ -70,7 +70,7 @@ export class AiPlugin implements Plugin {
 
     // Get opcode metadata to provide context about available functions
     const opcodes = this.context.core.getOpcodeMetadata();
-    const functionSignatures = opcodes
+    const functionSignatures = Object.values(opcodes)
       .map((op) => {
         const params = op.parameters
           ? op.parameters.map((p) => `${p.name}: ${p.type}`).join(", ")
