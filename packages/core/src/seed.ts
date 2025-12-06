@@ -183,6 +183,11 @@ export function seed() {
 
   addVerb(playerBaseId, "set", transpile(extractVerb(verbsPath, "player_set")));
 
+  // Quest Verbs
+  addVerb(playerBaseId, "quest_start", transpile(extractVerb(verbsPath, "player_quest_start")));
+  addVerb(playerBaseId, "quest_update", transpile(extractVerb(verbsPath, "player_quest_update")));
+  addVerb(playerBaseId, "quest_log", transpile(extractVerb(verbsPath, "player_quest_log")));
+
   // 3. Create a Lobby Room
   const lobbyId = createEntity(
     {
@@ -662,6 +667,79 @@ export function seed() {
   );
 
   addVerb(combatManagerId, "test", transpile(extractVerb(verbsPath, "combat_test")));
+
+  addVerb(combatManagerId, "test", transpile(extractVerb(verbsPath, "combat_test")));
+
+  // 11. Quest Engine Seeds
+  const questBaseId = createEntity({
+    name: "Quest Base",
+    description: "A base definition for quests.",
+  });
+
+  addVerb(questBaseId, "get_structure", transpile(extractVerb(verbsPath, "quest_get_structure")));
+  addVerb(questBaseId, "get_node", transpile(extractVerb(verbsPath, "quest_get_node")));
+
+  createEntity(
+    {
+      name: "Party Preparation",
+      description: "Get ready for the big party!",
+      structure: {
+        id: "party_prep",
+        type: "sequence",
+        description: "Prepare for the party.",
+        children: ["gather_supplies", "invite_friends"],
+      },
+      nodes_map: {
+        party_prep: {
+          id: "party_prep",
+          type: "sequence",
+          description: "Prepare for the party.",
+          children: ["gather_supplies", "invite_friends"],
+        },
+        gather_supplies: {
+          id: "gather_supplies",
+          type: "parallel_all",
+          description: "Gather Supplies",
+          children: ["get_chips", "get_drinks"],
+          parent_id: "party_prep",
+        },
+        invite_friends: {
+          id: "invite_friends",
+          type: "leaf",
+          description: "Invite Friends",
+          parent_id: "party_prep",
+        },
+        get_chips: {
+          id: "get_chips",
+          type: "leaf",
+          description: "Get Chips",
+          parent_id: "gather_supplies",
+        },
+        get_drinks: {
+          id: "get_drinks",
+          type: "leaf",
+          description: "Get Drinks",
+          parent_id: "gather_supplies",
+        },
+      },
+    },
+    questBaseId,
+  );
+
+  // Create Chips and Drinks items in Gemstore so they exist
+  createEntity({
+    name: "Bag of Chips",
+    location: gemstoreId,
+    description: "Salty and crunchy.",
+    adjectives: ["food:chips"],
+  });
+
+  createEntity({
+    name: "Sode Pop",
+    location: gemstoreId,
+    description: "Fizzy drink.",
+    adjectives: ["food:drink"],
+  });
 
   console.log("Database seeded successfully.");
 }

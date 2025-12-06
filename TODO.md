@@ -3,7 +3,7 @@
 ## 1. Deep Simulation (Sandbox)
 
 - [x] **Combat System**: Standardized libraries for turn-based combat math and state.
-- [ ] **Quest Engine**: State machine implementation for tracking multi-stage narrative arcs.
+- [x] **Quest Engine**: State machine implementation for tracking multi-stage narrative arcs.
 - [ ] **World Gen**: Procedural generation tools for creating vast maps.
 
 ## 2. AI-Native Roleplay (SillyTavern)
