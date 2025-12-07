@@ -6,11 +6,11 @@ import {
   BooleanLib,
   ListLib,
   ObjectLib,
-  type OpcodeMetadata,
   StringLib,
   TimeLib,
   StdLib,
   generateTypeDefinitions,
+  RandomLib,
 } from "@viwo/scripting";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -27,16 +27,9 @@ const libraries = [
   StringLib,
   TimeLib,
   StdLib,
+  RandomLib,
 ];
-
-const opcodes: OpcodeMetadata[] = [];
-
-for (const lib of libraries) {
-  for (const value of Object.values(lib)) {
-    opcodes.push(value.metadata);
-  }
-}
-
+const opcodes = libraries.flatMap((lib) => Object.values(lib).map((value) => value.metadata));
 const definitions = generateTypeDefinitions(opcodes);
 const outputPath = join(import.meta.dir, "../src/generated_types.ts");
 

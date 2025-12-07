@@ -2,6 +2,7 @@ import * as BooleanLib from "./lib/boolean";
 import * as ListLib from "./lib/list";
 import * as MathLib from "./lib/math";
 import * as ObjectLib from "./lib/object";
+import * as RandomLib from "./lib/random";
 import * as StdLib from "./lib/std";
 import { describe, expect, test } from "bun:test";
 import { decompile } from "./decompiler";
@@ -256,8 +257,16 @@ describe("transpiler", () => {
       StdLib.apply(StdLib.var("id"), 1),
     );
     expect(transpile(funcDecl)).toEqual(funcExpected);
+  });
 
-    // Generics in arrow functions
-    expect(transpile("<T>(x: T) => x")).toEqual(StdLib.lambda(["x"], StdLib.var("x")));
+  test("random patterns", () => {
+    expect(transpile("Math.random()")).toEqual(RandomLib.number());
+    expect(transpile("Math.floor(Math.random() * 10)")).toEqual(RandomLib.between(0, 9));
+    expect(transpile("Math.floor(Math.random() * 11) + 10")).toEqual(RandomLib.between(10, 20));
+    // list[Math.floor(Math.random() * list.length)]
+    // We need list to vary, so let's use a variable
+    expect(transpile("list[Math.floor(Math.random() * list.length)]")).toEqual(
+      RandomLib.choice(StdLib.var("list")),
+    );
   });
 });

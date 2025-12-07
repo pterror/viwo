@@ -35,23 +35,20 @@ const HELPERS = {
       return true;
     },
   },
-  random: (...args: number[]) => {
-    if (args.length === 0) {
-      return Math.random();
-    }
-    let max = 1,
-      min = 0;
-    if (args.length === 1) {
-      [max = 0] = args;
-    } else {
-      [min = 0, max = 0] = args;
-    }
+  "random.between": (min: number, max: number) => {
     if (min > max) {
       throw new Error("random: min must be less than or equal to max");
     }
-    const roll = Math.random() * (max - min + 1) + min;
-    const shouldFloor = Number.isInteger(min) && Number.isInteger(max);
-    return shouldFloor ? Math.floor(roll) : roll;
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  },
+  "random.choice": (list: any[]) => {
+    if (!Array.isArray(list)) {
+      return null;
+    }
+    if (list.length === 0) {
+      return null;
+    }
+    return list[Math.floor(Math.random() * list.length)];
   },
   timeOffset: (amount: number, unit: string, base?: string) => {
     const date = new Date(base !== undefined ? base : new Date().toISOString());
@@ -307,7 +304,7 @@ ${compileValue(args[1], ops, true)}}`;
       return `return ${compiledArgs[0] ?? "null"};`;
     }
     case "std.throw": {
-      return `throw ${compiledArgs[0]};`;
+      return `throw new Error(${compiledArgs[0]});`;
     }
     case "list.new": {
       return `${prefix}[${compiledArgs.join(", ")}]`;
@@ -447,8 +444,15 @@ ${compileValue(args[1], ops, true)}}`;
     case "math.sign": {
       return `${prefix}Math.sign(${compiledArgs[0]})`;
     }
-    case "random": {
-      return `${prefix}__helpers__.random(${compiledArgs.join(", ")})`;
+    case "random.number": {
+      return `${prefix}Math.random()`;
+    }
+    case "random.between": {
+      // Inline optimization for constant 0 min?
+      return `${prefix}__helpers__["random.between"](${compiledArgs.join(", ")})`;
+    }
+    case "random.choice": {
+      return `${prefix}__helpers__["random.choice"](${compiledArgs[0]})`;
     }
     case "list.len": {
       return `${prefix}${compiledArgs[0]}.length`;

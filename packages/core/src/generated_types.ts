@@ -226,13 +226,6 @@ declare global {
    */
   function pow(base: number, exp: number, ...args: number[]): number;
   /**
-   * Generates a random number.
-   *
-   * @param min The minimum value (inclusive).
-   * @param max The maximum value (inclusive).
-   */
-  function random(min?: number, max?: number): number;
-  /**
    * Subtracts numbers.
    *
    * @param left The number to subtract from.
@@ -1001,6 +994,25 @@ declare global {
      * @param value The value to stringify.
      */
     function stringify(value: unknown): string;
+  }
+  namespace random {
+    /**
+     * Returns a random integer between min (inclusive) and max (inclusive).
+     *
+     * @param min The minimum value (inclusive).
+     * @param max The maximum value (inclusive).
+     */
+    function between(min: number, max: number): number;
+    /**
+     * Returns a random item from a list.
+     *
+     * @param list The list to pick from.
+     */
+    function choice(list: any[]): any;
+    /**
+     * Returns a random floating-point number between 0 (inclusive) and 1 (exclusive).
+     */
+    function number(): number;
   }
 }
 

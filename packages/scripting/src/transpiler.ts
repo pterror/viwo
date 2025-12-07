@@ -2,6 +2,7 @@ import * as BooleanLib from "./lib/boolean";
 import * as ListLib from "./lib/list";
 import * as MathLib from "./lib/math";
 import * as ObjectLib from "./lib/object";
+import * as RandomLib from "./lib/random";
 import * as StdLib from "./lib/std";
 import * as StringLib from "./lib/string";
 import { RESERVED_TYPESCRIPT_KEYWORDS } from "./type_generator";
@@ -147,6 +148,42 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
 
     switch (op) {
       case ts.SyntaxKind.PlusToken: {
+        // Optimization: random.between(0, Diff) + Min -> random.between(Min, Min + Diff)?
+        // Actually, if we have `random.between(0, max) + min`, this logic is:
+        // range [0, max] + min => [min, max + min].
+        // If we want random.between(min, targetMax), then targetMax = max + min.
+        // So max = targetMax - min.
+        // The original JS was `Math.floor(Math.random() * (Max - Min + 1)) + Min`.
+        // Math.floor(...) part became `random.between(0, Max - Min)`. (Since range size is Max - Min + 1, so indices 0 to Max - Min).
+        // So we see `random.between(0, Max - Min) + Min`.
+        // This is equivalent to `random.between(Min, Max)`.
+
+        // Pattern match: left + right or right + left
+        // oxlint-disable-next-line consistent-function-scoping
+        const isRandomBetweenZero = (node: any) =>
+          Array.isArray(node) && node[0] === "random.between" && node[1] === 0;
+
+        let randNode: any = null;
+        let offset: any = null;
+
+        if (isRandomBetweenZero(left)) {
+          randNode = left;
+          offset = right;
+        } else if (isRandomBetweenZero(right)) {
+          randNode = right;
+          offset = left;
+        }
+
+        if (randNode) {
+          const [, _zero, maxParam] = randNode;
+          // newMax = maxParam + offset
+          const newMax =
+            typeof maxParam === "number" && typeof offset === "number"
+              ? maxParam + offset
+              : MathLib.add(maxParam, offset);
+          return RandomLib.between(offset, newMax);
+        }
+
         return MathLib.add(left, right);
       }
       case ts.SyntaxKind.MinusToken: {
@@ -339,6 +376,40 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
     }
     const obj = transpileNode(node.expression, scope);
     const key = transpileNode(node.argumentExpression, scope);
+
+    // Pattern match: list[random.between(0, list.length - 1)] -> random.choice(list)
+    if (Array.isArray(key) && key[0] === "random.between") {
+      const [, min, max] = key;
+      // Check min == 0
+      if (min === 0) {
+        // Check max == list.length - 1
+        // max might be ["-", ["list.len", list], 1] or similar
+        // or max might be literal if list has known length? Unlikely for generic lists.
+
+        // Check if max is `obj.length - 1`
+        if (Array.isArray(max) && max[0] === "-") {
+          const [, subLeft, subRight] = max;
+          if (subRight === 1 && Array.isArray(subLeft)) {
+            // Check if subLeft is list.len of obj
+            // subLeft could be ["list.len", obj] or compiled `obj.length`
+            // Note `obj.length` transpiles to `str.len` if it's string or `list.len`?
+            // Wait, `obj.length` property access transpiles to `objGet(obj, "length")`.
+            // BUT, `list.len` opcode is usually manual.
+            // The compiler uses `list.len` for `length` property?
+            // Does `transpiler.ts` ever produce `list.len`?
+            // No, it produces `obj.get(obj, "length")`.
+
+            // So we look for `["obj.get", obj, "length"]`.
+            // Check strictly that the object is the same.
+            // Simple structural equality check?
+            if (JSON.stringify(subLeft) === JSON.stringify(["obj.get", obj, "length"])) {
+              return RandomLib.choice(obj);
+            }
+          }
+        }
+      }
+    }
+
     if (typeof key === "number") {
       return ListLib.listGet(obj, key);
     }
@@ -352,6 +423,40 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
 
     const expr = node.expression;
     const args = node.arguments.map((argument) => transpileNode(argument, scope));
+
+    // Pattern Matching for Math.random variations (prioritize over generic opcode)
+    if (
+      ts.isPropertyAccessExpression(expr) &&
+      expr.expression.getText() === "Math" &&
+      expr.name.text === "floor"
+    ) {
+      const [inner] = args;
+      if (Array.isArray(inner) && inner[0] === "*") {
+        const [, left, right] = inner;
+        // oxlint-disable-next-line consistent-function-scoping
+        const isRandom = (node: any) => Array.isArray(node) && node[0] === "random.number";
+
+        let range: any = null;
+        if (isRandom(left)) {
+          range = right;
+        } else if (isRandom(right)) {
+          range = left;
+        }
+
+        if (range) {
+          const max = typeof range === "number" ? range - 1 : MathLib.sub(range, 1);
+          return RandomLib.between(0, max);
+        }
+      }
+    }
+
+    if (
+      ts.isPropertyAccessExpression(expr) &&
+      expr.expression.getText() === "Math" &&
+      expr.name.text === "random"
+    ) {
+      return RandomLib.number();
+    }
 
     let opcodeName: string | null = null;
 
@@ -386,8 +491,94 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
       return [opcodeName, ...args];
     }
 
+    // Pattern Matching for Math.random variations
+    // This block was moved up.
+    // if (
+    //   ts.isPropertyAccessExpression(expr) &&
+    //   expr.expression.getText() === "Math" &&
+    //   expr.name.text === "floor" &&
+    //   node.arguments.length === 1
+    // ) {
+    //   // Check for Math.floor(Math.random() * N ...) pattern
+    //   const arg = node.arguments[0];
+    //   // Expect BinaryExpression: Math.random() * ...
+    //   if (arg && ts.isBinaryExpression(arg)) {
+    //     // Case: Math.random() * N (where N is list.length or just a number)
+    //     // ...
+    //     // This pattern matching is complex on raw AST nodes.
+    //     // Let's inspect the compiled `args` instead, relying on recursive transpilation?
+    //     // args[0] is the transpiled argument to Math.floor.
+    //   }
+    // }
+
+    // Since we transpiled args already:
+    // This block was moved up.
+    // if (
+    //   ts.isPropertyAccessExpression(expr) &&
+    //   expr.expression.getText() === "Math" &&
+    //   expr.name.text === "floor"
+    // ) {
+    //   const inner = args[0];
+    //   // Check for Math.random() * X
+    //   // Pattern: [*, [random.number], X] or [*, X, [random.number]]
+    //   // MathLib.mul(a, b) -> ["*", a, b]
+
+    //   if (Array.isArray(inner) && inner[0] === "*") {
+    //     const [, left, right] = inner;
+    //     const isRandom = (node: any) => Array.isArray(node) && node[0] === "random.number";
+
+    //     let range: any = null;
+    //     if (isRandom(left)) {
+    //       range = right;
+    //     } else if (isRandom(right)) {
+    //       range = left;
+    //     }
+
+    //     if (range) {
+    //       // Optimization: Math.floor(Math.random() * N) -> random.between(0, N - 1)
+    //       // Note: N must be the range size.
+    //       // If range is a literal number, we can subtract 1.
+    //       // If range is generic expression, we construct ["-", range, 1].
+    //       const max = typeof range === "number" ? range - 1 : MathLib.sub(range, 1);
+    //       return RandomLib.between(0, max);
+    //     }
+    //   }
+    //   // Check for Math.random() * (Max - Min + 1) + Min
+    //   // This would be wrapped in `+` normally, outside of Math.floor for the Min part?
+    //   // Wait, the standard pattern is `Math.floor(Math.random() * (Max - Min + 1)) + Min` reference: compiler implementation.
+    //   // So the + Min is OUTSIDE Math.floor.
+    //   // So here we only see `Math.floor(...)`.
+    //   // The outer + Min will be handled by the parent BinaryExpression handler.
+    //   // The parent BinaryExpression sees: `Math.floor(...) + Min`.
+    //   // It transpiles left and right.
+    //   // Left becomes `random.between(0, Max - Min)`.
+    //   // Right is `Min`.
+    //   // So we get `random.between(0, Diff) + Min`.
+    //   // This is not quite `random.between(Min, Max)`.
+    //   // To get `random.between(Min, Max)`, we'd need to pattern match the addition.
+
+    //   // HOWEVER, user asked to support: `Math.floor(Math.random() * N)` -> `random.between(0, N-1)`
+    //   // This captures the "simple form".
+    //   // The specialized form `between(min, max)` logic is harder to recapture if it was compiled to `floor(...) + min`.
+    //   // Unless we implement `random.between` logic in the BinaryExpression handler for `+`.
+    //   // But let's stick to the `floor` handler first.
+    // }
+
+    // This block was moved up.
+    // if (
+    //   ts.isPropertyAccessExpression(expr) &&
+    //   expr.expression.getText() === "Math" &&
+    //   expr.name.text === "random"
+    // ) {
+    //   return RandomLib.number();
+    // }
+
     return StdLib.apply(transpileNode(expr, scope), ...args);
   }
+
+  // Intercept element access logic for random.choice?
+  // list[Math.floor(Math.random() * list.length)]
+  // This is handled in `ts.isElementAccessExpression`.
 
   if (ts.isArrowFunction(node)) {
     const parameters = node.parameters.map((parameter) => parameter.name.getText());

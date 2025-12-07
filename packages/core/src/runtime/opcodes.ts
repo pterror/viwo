@@ -5,6 +5,7 @@ import {
   ListLib,
   MathLib,
   ObjectLib,
+  RandomLib,
   type ScriptOps,
   StdLib,
   StringLib,
@@ -22,6 +23,7 @@ export const GameOpcodes = createOpcodeRegistry(
   TimeLib,
   MathLib,
   BooleanLib,
+  RandomLib,
 );
 
 export function registerGameLibrary(lib: ScriptOps) {

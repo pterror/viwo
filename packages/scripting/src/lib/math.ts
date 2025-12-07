@@ -172,62 +172,6 @@ export const pow = defineFullOpcode<[number, number, ...number[]], number>("^", 
   },
 });
 
-/**
- * Generates a random number.
- * - `random()`: Returns a float between 0 (inclusive) and 1 (exclusive).
- * - `random(max)`: Returns a number between 0 (inclusive) and `max` (inclusive). If `max` is an integer, returns an integer.
- * - `random(min, max)`: Returns a number between `min` (inclusive) and `max` (inclusive). If `min` and `max` are integers, returns an integer.
- */
-export const random = defineFullOpcode<[number?, number?], number>("random", {
-  handler: (args, _ctx) => {
-    // random(max), random(min, max) or random() -> 0..1
-    if (args.length === 0) {
-      return Math.random();
-    }
-
-    let min = 0;
-    let max = 1;
-
-    if (args.length === 1) {
-      max = args[0] as number;
-    } else {
-      [min, max] = args as [number, number];
-    }
-
-    const shouldFloor = min % 1 === 0 && max % 1 === 0;
-
-    if (min > max) {
-      throw new Error("random: min must be less than or equal to max");
-    }
-    const roll = Math.random() * (max - min + 1) + min;
-    return shouldFloor ? Math.floor(roll) : roll;
-  },
-  metadata: {
-    category: "math",
-    description: "Generates a random number.",
-    label: "Random",
-    parameters: [
-      {
-        description: "The minimum value (inclusive).",
-        name: "min",
-        optional: true,
-        type: "number",
-      },
-      {
-        description: "The maximum value (inclusive).",
-        name: "max",
-        optional: true,
-        type: "number",
-      },
-    ],
-    returnType: "number",
-    slots: [
-      { default: 0, name: "Min", type: "number" },
-      { default: 1, name: "Max", type: "number" },
-    ],
-  },
-});
-
 /** Rounds down a number. */
 export const floor = defineFullOpcode<[number], number>("math.floor", {
   handler: ([num], _ctx) => Math.floor(num),

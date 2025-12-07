@@ -48,8 +48,6 @@
 - [ ] **Database**: Recursive CTEs for retrieving prototype chain
 - [ ] **Style**: Convert `apps/web/src/components/ThemeEditor.tsx` to BEM in `packages/shared/src/index.css`
 - [ ] **Scripting**: Figure out what to do with the duplication of `procgen.random` vs Std `random` opcodes
-- [ ] **Scripting**: Namespace all standard library functions (e.g. `std.log`, `std.let`, `std.if` etc)
-- [ ] **Scripting**: `std.string`, `std.boolean` etc. for type conversion
 - [ ] **Scripting**: Convert ALL generic parameter lists of `defineFullOpcode` usages to named tuples.
 - [ ] **Seed**: Fix hotel seed - floors and rooms should be 'ephemeral' - that is, they should be destroyed when a: no longer in use and b: not modified.
 - [ ] **Seed**: Make sure mailbox uses capability based permissions.
@@ -70,5 +68,3 @@
 - [ ] **AI**: Add support for streaming text in `plugins/ai/src/lib.ts`
 - [ ] **Compiler**: Disallow accessing dangerous keys in `packages/scripting/src/compiler.ts`
 - [ ] **Core**: Fix tests in `packages/core/src/runtime/lib/core.test.ts`: `call` test should verify, using a mocked verb, that it actually calls the verb; `set_entity` and `set_prototype` should add real testcases
-- [ ] **Compiler**: Compile `throw new Error(x)` into `["throw", x]`
-- [ ] **Scripting**: Split `random` into multiple opcodes (`random.number`, `random.choice`, `random.up_to`, `random.between`)

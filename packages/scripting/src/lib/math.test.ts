@@ -54,20 +54,6 @@ createLibraryTester(MathOps, "Math Library", (test) => {
     expect(evaluate(MathOps.pow(2, 3, 2), ctx)).toBe(512); // 2^(3^2) = 2^9 = 512
   });
 
-  test("random", () => {
-    const r1 = evaluate(MathOps.random(), ctx);
-    expect(r1).toBeGreaterThanOrEqual(0);
-    expect(r1).toBeLessThan(1);
-
-    const r2 = evaluate(MathOps.random(10), ctx);
-    expect(r2).toBeGreaterThanOrEqual(0);
-    expect(r2).toBeLessThanOrEqual(10);
-
-    const r3 = evaluate(MathOps.random(5, 10), ctx);
-    expect(r3).toBeGreaterThanOrEqual(5);
-    expect(r3).toBeLessThanOrEqual(10);
-  });
-
   // Rounding
   test("math.floor", () => {
     expect(evaluate(MathOps.floor(1.5), ctx)).toBe(1);

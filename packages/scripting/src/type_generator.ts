@@ -81,7 +81,7 @@ function renderNamespaceContent(name: string, content: any, indent: string): str
   const innerIndent = `${indent}  `;
   if (content._funcs) {
     for (const func of content._funcs) {
-      output += `${innerIndent}${func}\n`;
+      output += `${(func as string).replaceAll(/^/gm, innerIndent)}\n`;
     }
   }
   for (const key of Object.keys(content)) {
@@ -99,7 +99,7 @@ function renderNamespace(name: string, content: any, indent: string): string {
   const innerIndent = `${indent}  `;
   if (content._funcs) {
     for (const func of content._funcs) {
-      output += `${innerIndent}${func}\n`;
+      output += `${(func as string).replaceAll(/^/gm, innerIndent)}\n`;
     }
   }
   for (const key of Object.keys(content)) {
@@ -247,7 +247,7 @@ type ScriptExpression<Args extends (string | ScriptValue_<unknown>)[], Result> =
   return `\
 // oxlint-disable max-params, ban-types
 declare global {
-${definitions.replaceAll(/^/gm, "  ")}
+${definitions.replaceAll(/^(.)/gm, "  $1")}
 }
 
 // oxlint-disable-next-line require-module-specifiers

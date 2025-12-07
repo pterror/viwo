@@ -371,7 +371,7 @@ export function status_check() {
 
 export function color_lib_random_color(this: Entity) {
   const colors = (this["colors"] as any[]) ?? [];
-  list.get(colors, random(0, list.len(colors) - 1));
+  list.get(colors, random.between(0, list.len(colors) - 1));
 }
 
 export function mood_ring_update_color(this: Entity) {
@@ -938,7 +938,7 @@ Generate a single sentence of atmospheric prose describing a subtle event in thi
   }
 
   // Schedule next tick
-  const delay = random(20_000, 60_000);
+  const delay = random.between(20_000, 60_000);
   schedule("tick", [], delay);
 }
 
