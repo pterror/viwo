@@ -23,8 +23,9 @@ describe("compiler security attributes", () => {
   });
 
   it("should prevent dynamic access to dangerous keys (runtime)", () => {
-    const fn = compile(["std.let", "k", "constructor"], ops);
-    // Wait, ["std.let", ...] is a statement. compile returns a function.
+    expect(() => {
+      compile(["std.let", "k", "constructor"], ops);
+    }).not.toThrow(); // Wait, ["std.let", ...] is a statement. compile returns a function.
     // We need to use valid AST that does dynamic access.
     // ["std.seq", ["std.let", "k", "constructor"], ["obj.get", ["obj.new"], ["std.var", "k"]]]
 
@@ -83,5 +84,20 @@ describe("compiler security attributes", () => {
     expect(() => {
       compiledFn({} as any);
     }).toThrow(/Security Error: Cannot access dangerous key "constructor"/);
+  });
+
+  it("should optimize constant keys (no runtime check)", () => {
+    const script = ["obj.get", ["obj.new", ["foo", "bar"]], "foo"];
+    const compiledFn = compile(script, ops);
+    const funcString = compiledFn.toString();
+    expect(funcString).not.toContain("checkObjKey");
+    expect(compiledFn({} as any)).toBe("bar");
+  });
+
+  it("should NOT optimize dynamic keys (runtime check present)", () => {
+    const script = ["obj.get", ["obj.new", ["foo", "bar"]], ["std.var", "k"]];
+    const compiledFn = compile(script, ops);
+    const funcString = compiledFn.toString();
+    expect(funcString).toContain("checkObjKey");
   });
 });

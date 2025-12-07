@@ -306,7 +306,8 @@ ${compileValue(args[1], ops, true)}}`;
           validateKey(arg[0]);
           const keyExpr = compileValue(arg[0], ops);
           const valExpr = compileValue(arg[1], ops);
-          props.push(`[__helpers__.checkObjKey(${keyExpr})]: ${valExpr}`);
+          const isSafe = typeof arg[0] === "string" || typeof arg[0] === "number";
+          props.push(`[${isSafe ? keyExpr : `__helpers__.checkObjKey(${keyExpr})`}]: ${valExpr}`);
         }
         return `${prefix}({ ${props.join(", ")} })`;
       }
@@ -478,11 +479,19 @@ ${compileValue(args[1], ops, true)}}`;
     }
     case "list.get": {
       validateKey(args[1]);
-      return `${prefix}${compiledArgs[0]}[__helpers__.checkObjKey(${compiledArgs[1]})]`;
+      const [listExpr, keyExpr] = compiledArgs;
+      const [, keyArg] = args;
+      const isSafe = typeof keyArg === "string" || typeof keyArg === "number";
+      return `${prefix}${listExpr}[${isSafe ? keyExpr : `__helpers__.checkObjKey(${keyExpr})`}]`;
     }
     case "list.set": {
       validateKey(args[1]);
-      return `${prefix}(${compiledArgs[0]}[__helpers__.checkObjKey(${compiledArgs[1]})] = ${compiledArgs[2]})`;
+      const [listExpr, keyExpr, valExpr] = compiledArgs;
+      const [, keyArg] = args;
+      const isSafe = typeof keyArg === "string" || typeof keyArg === "number";
+      return `${prefix}(${listExpr}[${
+        isSafe ? keyExpr : `__helpers__.checkObjKey(${keyExpr})`
+      }] = ${valExpr})`;
     }
     case "list.push": {
       return `${prefix}${compiledArgs[0]}.push(${compiledArgs[1]})`;
@@ -536,21 +545,37 @@ ${compileValue(args[1], ops, true)}}`;
     }
     case "obj.get": {
       validateKey(args[1]);
-      return `${prefix}((${compiledArgs[0]})[__helpers__.checkObjKey(${compiledArgs[1]})] ?? ${
-        compiledArgs[2] !== undefined ? compiledArgs[2] : "null"
-      })`;
+      const [objExpr, keyExpr, defExpr] = compiledArgs;
+      const [, keyArg] = args;
+      const isSafe = typeof keyArg === "string" || typeof keyArg === "number";
+      return `${prefix}((${objExpr})[${
+        isSafe ? keyExpr : `__helpers__.checkObjKey(${keyExpr})`
+      }] ?? ${defExpr !== undefined ? defExpr : "null"})`;
     }
     case "obj.set": {
       validateKey(args[1]);
-      return `${prefix}((${compiledArgs[0]})[__helpers__.checkObjKey(${compiledArgs[1]})] = ${compiledArgs[2]})`;
+      const [objExpr, keyExpr, valExpr] = compiledArgs;
+      const [, keyArg] = args;
+      const isSafe = typeof keyArg === "string" || typeof keyArg === "number";
+      return `${prefix}((${objExpr})[${
+        isSafe ? keyExpr : `__helpers__.checkObjKey(${keyExpr})`
+      }] = ${valExpr})`;
     }
     case "obj.has": {
       validateKey(args[1]);
-      return `${prefix}(__helpers__.checkObjKey(${compiledArgs[1]}) in ${compiledArgs[0]})`;
+      const [objExpr, keyExpr] = compiledArgs;
+      const [, keyArg] = args;
+      const isSafe = typeof keyArg === "string" || typeof keyArg === "number";
+      return `${prefix}(${isSafe ? keyExpr : `__helpers__.checkObjKey(${keyExpr})`} in ${objExpr})`;
     }
     case "obj.del": {
       validateKey(args[1]);
-      return `${prefix}(delete ${compiledArgs[0]}[__helpers__.checkObjKey(${compiledArgs[1]})])`;
+      const [objExpr, keyExpr] = compiledArgs;
+      const [, keyArg] = args;
+      const isSafe = typeof keyArg === "string" || typeof keyArg === "number";
+      return `${prefix}(delete ${objExpr}[${
+        isSafe ? keyExpr : `__helpers__.checkObjKey(${keyExpr})`
+      }])`;
     }
     case "obj.keys": {
       return `${prefix}Object.getOwnPropertyNames(${compiledArgs[0]})`;
