@@ -1,16 +1,16 @@
-import { describe, it, expect, beforeEach } from "bun:test";
+import * as CoreLib from "../runtime/lib/core";
 import {
+  BooleanLib,
+  ListLib,
+  ObjectLib,
+  StdLib,
+  StringLib,
   createScriptContext,
   evaluate,
-  StdLib,
-  ListLib,
-  StringLib,
-  ObjectLib,
-  BooleanLib,
 } from "@viwo/scripting";
-import { Entity } from "@viwo/shared/jsonrpc";
 import { addVerb, createEntity, getEntity } from "../repo";
-import * as CoreLib from "../runtime/lib/core";
+import { beforeEach, describe, expect, it } from "bun:test";
+import type { Entity } from "@viwo/shared/jsonrpc";
 import { GameOpcodes } from "./opcodes";
 
 describe("Book Item Scripting", () => {
@@ -24,17 +24,17 @@ describe("Book Item Scripting", () => {
 
     // Setup entities
     const bookId = createEntity({
-      name: "Test Book",
       chapters: [
-        { title: "Chapter 1", content: "Content 1" },
-        { title: "Chapter 2", content: "Content 2" },
+        { content: "Content 1", title: "Chapter 1" },
+        { content: "Content 2", title: "Chapter 2" },
       ],
+      name: "Test Book",
     });
     book = getEntity(bookId)!;
 
     const callerId = createEntity({
-      name: "Reader",
       is_wizard: true,
+      name: "Reader",
     });
     caller = getEntity(callerId)!;
 
@@ -62,9 +62,9 @@ describe("Book Item Scripting", () => {
       script,
       createScriptContext({
         caller,
-        this: book,
-        send: (_type, payload) => messages.push(payload as string),
         ops: GameOpcodes,
+        send: (_type, payload) => messages.push(payload as string),
+        this: book,
       }),
     );
     expect(messages[0]).toBe("Chapter 1\nChapter 2");
@@ -95,11 +95,11 @@ describe("Book Item Scripting", () => {
     await evaluate(
       script,
       createScriptContext({
-        caller,
-        this: book,
         args: [0],
-        send: (_type, payload) => messages.push(payload as string),
+        caller,
         ops: GameOpcodes,
+        send: (_type, payload) => messages.push(payload as string),
+        this: book,
       }),
     );
     expect(messages[0]).toContain("Chapter: Chapter 1");
@@ -110,11 +110,11 @@ describe("Book Item Scripting", () => {
     await evaluate(
       script,
       createScriptContext({
-        caller,
-        this: book,
         args: [99],
-        send: (_type, payload) => messages.push(payload as string),
+        caller,
         ops: GameOpcodes,
+        send: (_type, payload) => messages.push(payload as string),
+        this: book,
       }),
     );
     expect(messages[0]).toBe("Chapter not found.");
@@ -136,11 +136,11 @@ describe("Book Item Scripting", () => {
     await evaluate(
       script,
       createScriptContext({
-        caller,
-        this: book,
         args: ["Chapter 3", "Content 3"],
-        send: (_type, payload) => messages.push(payload as string),
+        caller,
         ops: GameOpcodes,
+        send: (_type, payload) => messages.push(payload as string),
+        this: book,
       }),
     );
     expect(messages[0]).toBe("Chapter added.");
@@ -193,11 +193,11 @@ describe("Book Item Scripting", () => {
     await evaluate(
       script,
       createScriptContext({
-        caller,
-        this: book,
         args: ["Content"],
-        send: (_type, payload) => messages.push(payload as string),
+        caller,
         ops: GameOpcodes,
+        send: (_type, payload) => messages.push(payload as string),
+        this: book,
       }),
     );
     expect(messages[0]).toContain("Found 2 matches");
@@ -207,11 +207,11 @@ describe("Book Item Scripting", () => {
     await evaluate(
       script,
       createScriptContext({
-        caller,
-        this: book,
         args: ["2"],
-        send: (_type, payload) => messages.push(payload as string),
+        caller,
         ops: GameOpcodes,
+        send: (_type, payload) => messages.push(payload as string),
+        this: book,
       }),
     );
     expect(messages[0]).toContain("Found 1 matches");

@@ -1,12 +1,11 @@
-import { describe, test, expect, beforeEach } from "bun:test";
-import { evaluate, createScriptContext, ObjectLib } from "@viwo/scripting";
-import { Entity } from "@viwo/shared/jsonrpc";
-import { createEntity, getEntity, createCapability, getCapabilities } from "./repo";
 import * as CoreLib from "./runtime/lib/core";
 import * as KernelLib from "./runtime/lib/kernel";
-import { db } from ".";
-
+import { ObjectLib, createScriptContext, evaluate } from "@viwo/scripting";
+import { beforeEach, describe, expect, test } from "bun:test";
+import { createCapability, createEntity, getCapabilities, getEntity } from "./repo";
+import type { Entity } from "@viwo/shared/jsonrpc";
 import { GameOpcodes } from "./runtime/opcodes";
+import { db } from ".";
 
 describe("Capability Security", () => {
   // let sys: Entity;
@@ -37,7 +36,7 @@ describe("Capability Security", () => {
   });
 
   test("Kernel.get_capability", async () => {
-    const ctx = createScriptContext({ caller: admin, this: admin, args: [], ops: GameOpcodes });
+    const ctx = createScriptContext({ args: [], caller: admin, ops: GameOpcodes, this: admin });
     const cap = await evaluate(KernelLib.getCapability("sys.mint"), ctx);
     expect(cap).not.toBeNull();
     expect((cap as any)?.__brand).toBe("Capability");
@@ -45,7 +44,7 @@ describe("Capability Security", () => {
 
   test("Kernel.mint", async () => {
     // Admin mints a capability for themselves
-    const ctx = createScriptContext({ caller: admin, this: admin, args: [], ops: GameOpcodes });
+    const ctx = createScriptContext({ args: [], caller: admin, ops: GameOpcodes, this: admin });
     const newCap = await evaluate(
       KernelLib.mint(KernelLib.getCapability("sys.mint"), "test.cap", ObjectLib.objNew()),
       ctx,
@@ -54,13 +53,13 @@ describe("Capability Security", () => {
     expect((newCap as any)?.__brand).toBe("Capability");
 
     // Verify in DB
-    const caps = getCapabilities(admin.id);
-    expect(caps.find((c) => c.type === "test.cap")).toBeDefined();
+    const capabilities = getCapabilities(admin.id);
+    expect(capabilities.find((capability) => capability.type === "test.cap")).toBeDefined();
   });
 
   test("Core.create requires capability", async () => {
     // User tries to create without capability
-    const ctx = createScriptContext({ caller: user, this: user, args: [], ops: GameOpcodes });
+    const ctx = createScriptContext({ args: [], caller: user, ops: GameOpcodes, this: user });
 
     // Should fail because first arg is not capability (it's the object)
     // Or if we pass null/invalid cap
@@ -70,14 +69,14 @@ describe("Capability Security", () => {
     try {
       await evaluate(CoreLib.create(null, ObjectLib.objNew(["name", "Fail"])), ctx);
       expect(true).toBe(false); // Should not reach here
-    } catch (e) {
-      expect(e).toBeDefined();
+    } catch (error) {
+      expect(error).toBeDefined();
     }
   });
 
   test("Core.create with capability", async () => {
     // Admin creates entity
-    const ctx = createScriptContext({ caller: admin, this: admin, args: [], ops: GameOpcodes });
+    const ctx = createScriptContext({ args: [], caller: admin, ops: GameOpcodes, this: admin });
     const newId = await evaluate(
       CoreLib.create(KernelLib.getCapability("sys.create"), ObjectLib.objNew(["name", "Success"])),
       ctx,
@@ -86,7 +85,7 @@ describe("Capability Security", () => {
   });
 
   test("Core.set_entity requires capability", async () => {
-    const ctx = createScriptContext({ caller: user, this: user, args: [], ops: GameOpcodes });
+    const ctx = createScriptContext({ args: [], caller: user, ops: GameOpcodes, this: user });
     const targetId = createEntity({ name: "Target" });
 
     try {
@@ -98,13 +97,13 @@ describe("Capability Security", () => {
         ctx,
       );
       expect(true).toBe(false);
-    } catch (e) {
-      expect(e).toBeDefined();
+    } catch (error) {
+      expect(error).toBeDefined();
     }
   });
 
   test("Core.set_entity with capability", async () => {
-    const ctx = createScriptContext({ caller: admin, this: admin, args: [], ops: GameOpcodes });
+    const ctx = createScriptContext({ args: [], caller: admin, ops: GameOpcodes, this: admin });
     const targetId = createEntity({ name: "Target" });
 
     await evaluate(

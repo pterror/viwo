@@ -1,8 +1,8 @@
+import { copyFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
-import { existsSync, mkdirSync, copyFileSync } from "fs";
 
 const args = process.argv.slice(2);
-const command = args[0];
+const [command] = args;
 
 const CORE_PATH = join(process.cwd(), "../../packages/core");
 const DB_PATH = join(CORE_PATH, "world.sqlite");
@@ -12,21 +12,21 @@ if (!existsSync(BACKUP_DIR)) {
   mkdirSync(BACKUP_DIR, { recursive: true });
 }
 
-async function main() {
+function main() {
   switch (command) {
     case "backup": {
       if (!existsSync(DB_PATH)) {
         console.error("Database not found at", DB_PATH);
         process.exit(1);
       }
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const timestamp = new Date().toISOString().replaceAll(/[:.]/g, "-");
       const backupPath = join(BACKUP_DIR, `world-${timestamp}.sqlite`);
       copyFileSync(DB_PATH, backupPath);
       console.log(`Backup created at ${backupPath}`);
       break;
     }
     case "restore": {
-      const backupFile = args[1];
+      const [, backupFile] = args;
       if (!backupFile) {
         console.error("Usage: restore <backup_file_name_or_path>");
         process.exit(1);
@@ -47,13 +47,14 @@ async function main() {
       console.log(`Database restored from ${sourcePath}`);
       break;
     }
-    default:
+    default: {
       console.log("Usage: viwo-cli <command>");
       console.log("Commands:");
       console.log("  backup   - Create a backup of the world database");
       console.log("  restore  - Restore the world database from a backup");
       break;
+    }
   }
 }
 
-main().catch(console.error);
+main();

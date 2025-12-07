@@ -1,13 +1,14 @@
-import {
+// oxlint-disable prefer-add-event-listener
+import type {
+  Entity,
+  JsonRpcNotification,
   JsonRpcRequest,
   JsonRpcResponse,
-  JsonRpcNotification,
   MessageNotification,
-  UpdateNotification,
-  RoomIdNotification,
   PlayerIdNotification,
+  RoomIdNotification,
   StreamChunkNotification,
-  Entity,
+  UpdateNotification,
 } from "@viwo/shared/jsonrpc";
 
 export type CommandArgument = string | number | boolean | null | readonly CommandArgument[];
@@ -33,22 +34,22 @@ export type MessageListener = (message: GameMessage) => void;
 export class ViwoClient {
   private socket: WebSocket | null = null;
   private state: GameState = {
+    entities: new Map(),
     isConnected: false,
     messages: [],
-    entities: new Map(),
-    roomId: null,
-    playerId: null,
     opcodes: null,
+    playerId: null,
+    roomId: null,
   };
   private responseResolveFunctions = new Map<number, (value: any) => void>();
   private idCounter = 1;
-  private stateListeners: Set<StateListener> = new Set();
-  private messageListeners: Set<MessageListener> = new Set();
+  private stateListeners = new Set<StateListener>();
+  private messageListeners = new Set<MessageListener>();
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectInterval: number;
   private url: string;
 
-  constructor(url: string = "ws://localhost:8080", reconnectInterval: number = 2000) {
+  constructor(url = "ws://localhost:8080", reconnectInterval = 2000) {
     this.url = url;
     this.reconnectInterval = reconnectInterval;
   }
@@ -58,7 +59,9 @@ export class ViwoClient {
    * Automatically handles reconnection if the connection is lost.
    */
   public connect() {
-    if (this.state.isConnected || this.socket) return;
+    if (this.state.isConnected || this.socket) {
+      return;
+    }
 
     this.socket = new WebSocket(this.url);
 
@@ -93,8 +96,8 @@ export class ViwoClient {
       try {
         const data = JSON.parse(event.data.toString());
         this.handleMessage(data);
-      } catch (e) {
-        console.error("Failed to parse message", e);
+      } catch (error) {
+        console.error("Failed to parse message", error);
       }
     };
   }
@@ -161,12 +164,13 @@ export class ViwoClient {
       return Promise.reject(new Error("Socket not connected"));
     }
 
-    const id = this.idCounter++;
+    const id = this.idCounter;
+    this.idCounter += 1;
     const req: JsonRpcRequest = {
+      id,
       jsonrpc: "2.0",
       method,
       params,
-      id,
     };
 
     this.socket.send(JSON.stringify(req));
@@ -214,7 +218,9 @@ export class ViwoClient {
    * @returns A promise that resolves with the entities.
    */
   public async fetchEntities(ids: number[]) {
-    if (ids.length === 0) return [];
+    if (ids.length === 0) {
+      return [];
+    }
     const response = await this.sendRequest("get_entities", { ids });
     const entities = response.entities as Entity[];
 
@@ -299,8 +305,8 @@ export class ViwoClient {
       } else {
         console.error("RPC Error:", response.error);
         this.addMessage({
-          type: "error",
           text: `Error: ${response.error.message}`,
+          type: "error",
         });
         resolve(null);
       }
@@ -311,15 +317,15 @@ export class ViwoClient {
   private handleNotification(notification: JsonRpcNotification) {
     switch (notification.method) {
       case "message": {
-        const params = (notification as MessageNotification).params;
+        const { params } = notification as MessageNotification;
         this.addMessage({
-          type: params.type === "info" ? "message" : "error",
           text: params.text,
+          type: params.type === "info" ? "message" : "error",
         });
         break;
       }
       case "update": {
-        const params = (notification as UpdateNotification).params;
+        const { params } = notification as UpdateNotification;
         const newEntities = new Map(this.state.entities);
         for (const entity of params.entities) {
           newEntities.set(entity.id, entity);
@@ -328,32 +334,32 @@ export class ViwoClient {
         break;
       }
       case "room_id": {
-        const params = (notification as RoomIdNotification).params;
+        const { params } = notification as RoomIdNotification;
         this.updateState({ roomId: params.roomId });
         break;
       }
       case "player_id": {
-        const params = (notification as PlayerIdNotification).params;
+        const { params } = notification as PlayerIdNotification;
         this.updateState({ playerId: params.playerId });
         break;
       }
       case "stream_start": {
         // Start a new empty message
         this.addMessage({
-          type: "message",
           text: "",
+          type: "message",
         });
         break;
       }
       case "stream_chunk": {
-        const params = (notification as StreamChunkNotification).params;
+        const { params } = notification as StreamChunkNotification;
         // Append to the last message
         // We need to be careful not to mutate the state directly in a way that SolidJS doesn't pick up,
         // but here we are replacing the messages array.
         // However, we want to modify the *last* message.
         const messages = [...this.state.messages];
         if (messages.length > 0) {
-          const lastMsg = messages[messages.length - 1];
+          const lastMsg = messages.at(-1);
           if (lastMsg?.type === "message") {
             messages[messages.length - 1] = { ...lastMsg, text: lastMsg.text + params.chunk };
             this.updateState({ messages });
@@ -365,8 +371,9 @@ export class ViwoClient {
         // Nothing to do for now
         break;
       }
-      default:
+      default: {
         console.warn("Unknown notification method:", notification.method);
+      }
     }
   }
 }

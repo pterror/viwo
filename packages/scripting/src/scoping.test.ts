@@ -1,13 +1,12 @@
-import { expect, test, describe } from "bun:test";
-import { transpile } from "./transpiler";
-import { evaluate, createScriptContext } from "./interpreter";
-import * as StdLib from "./lib/std";
-import * as MathLib from "./lib/math";
 import * as BooleanLib from "./lib/boolean";
 import * as ListLib from "./lib/list";
+import * as MathLib from "./lib/math";
 import * as ObjectLib from "./lib/object";
+import * as StdLib from "./lib/std";
 import * as StringLib from "./lib/string";
-import { createOpcodeRegistry } from "./interpreter";
+import { createOpcodeRegistry, createScriptContext, evaluate } from "./interpreter";
+import { describe, expect, test } from "bun:test";
+import { transpile } from "./transpiler";
 
 const TEST_OPS = createOpcodeRegistry(StdLib, MathLib, BooleanLib, ListLib, ObjectLib, StringLib);
 
@@ -16,13 +15,13 @@ const run = async (code: string) => {
     const ast = transpile(code);
     const ctx = createScriptContext({
       caller: { id: 0 } as any,
-      this: { id: 0 } as any,
       ops: TEST_OPS,
+      this: { id: 0 } as any,
     });
     return await evaluate(ast, ctx);
-  } catch (e) {
-    console.error("Test execution failed:", e);
-    throw e;
+  } catch (error) {
+    console.error("Test execution failed:", error);
+    throw error;
   }
 };
 

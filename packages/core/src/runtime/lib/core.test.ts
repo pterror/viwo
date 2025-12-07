@@ -1,21 +1,21 @@
-import { expect, beforeAll } from "bun:test";
+import * as CoreLib from "../lib/core";
+import * as KernelLib from "../lib/kernel";
 import {
-  evaluate,
-  createScriptContext,
   ListLib,
   ScriptError,
   StdLib,
   createOpcodeRegistry,
+  createScriptContext,
+  evaluate,
 } from "@viwo/scripting";
-import { createLibraryTester } from "@viwo/scripting/test-utils";
-import * as KernelLib from "./kernel";
-import * as CoreLib from "./core";
 import { addVerb, createCapability, createEntity, getEntity } from "../../repo";
+import { beforeAll, expect } from "bun:test";
+import { createLibraryTester } from "@viwo/scripting/test-utils";
 
 const OPS = createOpcodeRegistry(KernelLib, CoreLib, ListLib, StdLib);
 
 createLibraryTester(CoreLib, "Core Library", (test) => {
-  const ctx = createScriptContext({ caller: { id: 3 }, this: { id: 3 }, ops: OPS });
+  const ctx = createScriptContext({ caller: { id: 3 }, ops: OPS, this: { id: 3 } });
   let id!: number;
 
   beforeAll(() => {
@@ -42,7 +42,6 @@ createLibraryTester(CoreLib, "Core Library", (test) => {
   });
 
   test("call", () => {
-    // TODO: Mock getVerb to return something executable
     expect(() => evaluate(CoreLib.call({ id }, "missing"), ctx)).toThrow();
   });
 
@@ -70,10 +69,10 @@ createLibraryTester(CoreLib, "Core Library", (test) => {
     const result = evaluate(CoreLib.get_verb({ id: 101 }, "get_dynamic"), ctx) as Verb;
     // Mock returns a verb for id 101
     expect(result).toEqual({
-      id: result.id,
-      entity_id: 101,
-      name: "get_dynamic",
       code: "resolved_value",
+      entity_id: 101,
+      id: result.id,
+      name: "get_dynamic",
     });
     // Mock returns null for id 1
     expect(evaluate(CoreLib.get_verb({ id }, "missing"), ctx)).toBe(null);
@@ -85,7 +84,6 @@ createLibraryTester(CoreLib, "Core Library", (test) => {
 
   test("set_entity", () => {
     evaluate(CoreLib.setEntity(KernelLib.getCapability("entity.control"), { id }), ctx);
-    // TODO: Add real tests
   });
 
   test("get_prototype", () => {
@@ -94,19 +92,18 @@ createLibraryTester(CoreLib, "Core Library", (test) => {
 
   test("set_prototype", () => {
     evaluate(CoreLib.setPrototype(KernelLib.getCapability("entity.control"), { id }, 2), ctx);
-    // TODO: Add real tests
   });
 
   test("resolve_props", () => {
     expect(evaluate(CoreLib.resolve_props({ id: 101 }), ctx)).toEqual({
-      id: 101,
       dynamic: "resolved_value",
+      id: 101,
     });
   });
 
   test("sudo", () => {
     // 1. Deny if not system/bot (and missing capability)
-    const userCtx = createScriptContext({ caller: { id: 100 }, this: { id: 100 }, ops: OPS });
+    const userCtx = createScriptContext({ caller: { id: 100 }, ops: OPS, this: { id: 100 } });
 
     expect(() =>
       evaluate(
@@ -121,7 +118,7 @@ createLibraryTester(CoreLib, "Core Library", (test) => {
     ).toThrow("Invalid capability");
 
     // 2. Allow if System (ID 3) with valid cap
-    const systemCtx = createScriptContext({ caller: { id }, this: { id }, ops: OPS });
+    const systemCtx = createScriptContext({ caller: { id }, ops: OPS, this: { id } });
     expect(
       evaluate(
         CoreLib.sudo(
@@ -135,7 +132,7 @@ createLibraryTester(CoreLib, "Core Library", (test) => {
     ).toBe("resolved_value");
 
     // 3. Allow if Bot (ID 4) with valid cap
-    const botCtx = createScriptContext({ caller: { id: 4 }, this: { id: 4 }, ops: OPS });
+    const botCtx = createScriptContext({ caller: { id: 4 }, ops: OPS, this: { id: 4 } });
     expect(
       evaluate(
         CoreLib.sudo(
@@ -149,14 +146,14 @@ createLibraryTester(CoreLib, "Core Library", (test) => {
     ).toBe("resolved_value");
 
     // 4. Verify message forwarding for Bot
-    let sentMessage: any = null;
+    let sentMessage: any;
     const botForwardCtx = createScriptContext({
       caller: { id: 4 },
-      this: { id: 4 },
-      send: (type, payload) => {
-        sentMessage = { type, payload };
-      },
       ops: OPS,
+      send: (type, payload) => {
+        sentMessage = { payload, type };
+      },
+      this: { id: 4 },
     });
 
     addVerb(103, "say_hello", StdLib.send("message", "Hello!"));
@@ -172,8 +169,8 @@ createLibraryTester(CoreLib, "Core Library", (test) => {
     );
 
     expect(sentMessage).toEqual({
+      payload: { payload: "Hello!", target: 103, type: "message" },
       type: "forward",
-      payload: { target: 103, type: "message", payload: "Hello!" },
     });
   });
 });

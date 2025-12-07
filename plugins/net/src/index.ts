@@ -1,5 +1,5 @@
-import { Plugin, PluginContext } from "@viwo/core";
 import * as NetLib from "./lib";
+import type { Plugin, PluginContext } from "@viwo/core";
 
 export class NetPlugin implements Plugin {
   name = "net";

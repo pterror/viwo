@@ -4,9 +4,9 @@ import { join, relative } from "node:path";
 const rootDir = process.cwd();
 
 const mappings = [
-  { source: "apps", docs: "docs/apps" },
-  { source: "packages", docs: "docs/packages" },
-  { source: "plugins", docs: "docs/plugins" },
+  { docs: "docs/apps", source: "apps" },
+  { docs: "docs/packages", source: "packages" },
+  { docs: "docs/plugins", source: "plugins" },
 ];
 
 const missingFiles: string[] = [];
@@ -40,7 +40,9 @@ for (const { source, docs } of mappings) {
   for (const item of items) {
     const itemPath = join(sourceDir, item);
     // Skip hidden files/dirs
-    if (item.startsWith(".")) continue;
+    if (item.startsWith(".")) {
+      continue;
+    }
 
     if (statSync(itemPath).isDirectory()) {
       // Check source README
@@ -53,9 +55,9 @@ for (const { source, docs } of mappings) {
 }
 
 if (missingFiles.length > 0) {
-  console.error("\u001b[31mError: The following files are missing:\u001b[0m");
-  missingFiles.forEach((f) => console.error(` - ${f}`));
+  console.error("\u001B[31mError: The following files are missing:\u001B[0m");
+  missingFiles.forEach((file) => console.error(` - ${file}`));
   process.exit(1);
 }
 
-console.log("\u001b[32mAll checks passed.\u001b[0m");
+console.log("\u001B[32mAll checks passed.\u001B[0m");

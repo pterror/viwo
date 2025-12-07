@@ -1,4 +1,8 @@
+// These imports pull in type declarations for opcodes.
+// oxlint-disable-next-line no-unassigned-import
 import "../generated_types";
+// oxlint-disable-next-line no-unassigned-import
+import "../plugin_types";
 
 export function bot_sudo() {
   const targetId = arg<number>(0);
@@ -14,12 +18,12 @@ export function system_get_available_verbs() {
 
   const addVerbs = (entityId: number) => {
     const entityVerbs = verbs(entity(entityId));
-    for (const v of entityVerbs) {
-      const key = `${v.name}:${entityId}`;
+    for (const verb of entityVerbs) {
+      const key = `${verb.name}:${entityId}`;
       if (!seen[key]) {
         seen[key] = true;
-        (v as any)["source"] = entityId;
-        list.push(verbsList, v);
+        (verb as any)["source"] = entityId;
+        list.push(verbsList, verb);
       }
     }
   };
@@ -111,7 +115,7 @@ export function entity_base_teleport() {
           checkId = null;
         } else {
           const checkEnt = entity(checkId);
-          checkId = (checkEnt["location"] as number) || null;
+          checkId = (checkEnt["location"] as number) ?? null;
         }
       }
 
@@ -312,9 +316,8 @@ export function player_create() {
       send("message", `You create ${name}.`);
       call(caller(), "look");
       return itemId;
-    } else {
-      send("message", "You do not have permission to create here.");
     }
+    send("message", "You do not have permission to create here.");
   }
   return;
 }
@@ -392,7 +395,7 @@ export function dynamic_ring_get_adjectives() {
 
 export function special_watch_tick() {
   send("message", `Tick Tock: ${time.format(time.now(), "time")}`);
-  schedule("tick", [], 10000);
+  schedule("tick", [], 10_000);
 }
 
 export function special_watch_start() {
@@ -401,7 +404,7 @@ export function special_watch_start() {
 
 export function clock_tick() {
   send("message", `BONG! It is ${time.format(time.now(), "time")}`);
-  schedule("tick", [], 15000);
+  schedule("tick", [], 15_000);
 }
 
 export function clock_start() {
@@ -410,7 +413,7 @@ export function clock_start() {
 
 export function clock_tower_toll() {
   send("message", `The Clock Tower tolls: ${time.format(time.now(), "time")}`);
-  schedule("toll", [], 60000);
+  schedule("toll", [], 60_000);
 }
 
 export function clock_tower_start() {
@@ -423,20 +426,24 @@ export function mailbox_deposit() {
 
 export function book_read(this: Entity) {
   const index = arg<number>(0);
-  if (index === null) throw "Please specify a chapter index (0-based).";
-  const chapters = this["chapters"] as any[];
+  if (index === null) {
+    throw new Error("Please specify a chapter index (0-based).");
+  }
+  const chapters = this["chapters"] as { title: string; content: string }[];
   const chapter = list.get(chapters, index);
-  if (!chapter) throw "Chapter not found.";
-  call(caller(), "tell", `Reading: ${chapter["title"]}\n\n${chapter["content"]}`);
+  if (!chapter) {
+    throw new Error("Chapter not found.");
+  }
+  call(caller(), "tell", `Reading: ${chapter.title}\n\n${chapter.content}`);
 }
 
 export function book_list_chapters(this: Entity) {
-  const chapters = this["chapters"] as any[];
+  const chapters = this["chapters"] as { title: string; content: string }[];
   call(
     caller(),
     "tell",
     `Chapters:\n${str.join(
-      list.map(chapters, (c: any) => c["title"]),
+      list.map(chapters, (chapter) => chapter.title),
       "\n",
     )}`,
   );
@@ -445,7 +452,9 @@ export function book_list_chapters(this: Entity) {
 export function book_add_chapter(this: Entity) {
   const title = arg(0);
   const content = arg(1);
-  if (!title || !content) throw "Usage: add_chapter <title> <content>";
+  if (!title || !content) {
+    throw new Error("Usage: add_chapter <title> <content>");
+  }
   const chapters = this["chapters"] as any[];
   const newChapter: Record<string, any> = {};
   newChapter["title"] = title;
@@ -457,17 +466,18 @@ export function book_add_chapter(this: Entity) {
 
 export function book_search_chapters(this: Entity) {
   const query = str.lower(arg(0));
-  const chapters = this["chapters"] as any[];
-  const results = list.filter(chapters, (c: any) => {
-    return (
-      str.includes(str.lower(c["title"]), query) || str.includes(str.lower(c["content"]), query)
-    );
-  });
+  const chapters = this["chapters"] as { title: string; content: string }[];
+  const results = list.filter(
+    chapters,
+    (chapter) =>
+      str.includes(str.lower(chapter.title), query) ||
+      str.includes(str.lower(chapter.content), query),
+  );
   call(
     caller(),
     "tell",
     `Found ${list.len(results)} matches:\n${str.join(
-      list.map(results, (c: any) => c["title"]),
+      list.map(results, (chapter) => chapter.title),
       "\n",
     )}`,
   );
@@ -515,7 +525,7 @@ export function hotel_room_leave_updated(this: Entity) {
     const occupants = list.len(newContents);
     if (occupants === 0) {
       // Reset owner
-      this["owner"] = null;
+      this["owner"] = undefined;
       // Reset name
       const roomNumber = this["room_number"];
       this["name"] = `Room ${roomNumber}`;
@@ -666,12 +676,12 @@ export function elevator_on_enter(this: Entity) {
   const controlCap = get_capability("entity.control", { target_id: this.id });
 
   if (controlCap) {
-    let i = 0;
+    let idx = 0;
     // Iterate 1 to 100 to find active floors
-    while (i < 100) {
-      i = i + 1;
-      const f = String(i);
-      const lobbyId = floors[f];
+    while (idx < 100) {
+      idx += 1;
+      const fn = String(idx);
+      const lobbyId = floors[fn];
       if (lobbyId) {
         const lobby = entity(lobbyId);
         const lobbyContents = (lobby["contents"] as number[]) ?? [];
@@ -699,7 +709,7 @@ export function elevator_on_enter(this: Entity) {
           // But the type is number.
           // We can set to 0? Or just leave it and check for truthiness?
           // If we set to 0, `if (destId)` will be false.
-          floors[f] = 0;
+          floors[fn] = 0;
         }
       }
     }
@@ -768,7 +778,7 @@ export function wing_enter_room(this: Entity) {
       roomData["location"] = this.id;
       roomData["description"] = "A standard hotel room.";
       roomData["room_number"] = roomNumber;
-      roomData["owner"] = null;
+      roomData["owner"] = undefined;
 
       roomId = create(createCap, roomData);
       set_prototype(createCap, entity(roomId), HOTEL_ROOM_PROTO_ID_PLACEHOLDER);
@@ -826,7 +836,9 @@ export function golem_on_hear() {
 
 export function entity_base_get_llm_prompt(this: Entity) {
   let prompt = `You are ${this["name"]}.`;
-  if (this["description"]) prompt += `\n${this["description"]}`;
+  if (this["description"]) {
+    prompt += `\n${this["description"]}`;
+  }
 
   if (this["prose_mood"]) {
     prompt += `\n${this["prose_mood"]}`;
@@ -844,13 +856,17 @@ export function entity_base_get_llm_prompt(this: Entity) {
 
 export function entity_base_get_image_gen_prompt(this: Entity) {
   let parts: string[] = [];
-  if (this["image_gen_prefix"]) parts.push(this["image_gen_prefix"] as string);
-  if (this["description"]) parts.push(this["description"] as string);
-  if (this["adjectives"]) parts.push(str.join(this["adjectives"] as string[], ", "));
+  if (this["image_gen_prefix"]) {
+    parts.push(this["image_gen_prefix"] as string);
+  }
+  if (this["description"]) {
+    parts.push(this["description"] as string);
+  }
+  if (this["adjectives"]) {
+    parts.push(str.join(this["adjectives"] as string[], ", "));
+  }
   return str.join(parts, ", ");
 }
-
-import "../plugin_types";
 
 export function director_tick(this: Entity) {
   // 1. Pick a target room (Lobby for now)
@@ -896,7 +912,7 @@ export function director_tick(this: Entity) {
   }
 
   if (!lobbyId) {
-    schedule("tick", [], 60000);
+    schedule("tick", [], 60_000);
     return;
   }
 
@@ -922,7 +938,7 @@ Generate a single sentence of atmospheric prose describing a subtle event in thi
   }
 
   // Schedule next tick
-  const delay = random(20000, 60000);
+  const delay = random(20_000, 60_000);
   schedule("tick", [], delay);
 }
 
@@ -933,7 +949,7 @@ export function director_start() {
 export function combat_start(this: Entity) {
   const participants = arg<Entity[]>(0);
   if (!participants || list.len(participants) < 2) {
-    return null;
+    return;
   }
 
   const createCap = get_capability("sys.create", {});
@@ -941,10 +957,10 @@ export function combat_start(this: Entity) {
 
   if (!createCap || !controlCap) {
     send("message", "Combat Manager missing capabilities.");
-    return null;
+    return;
   }
 
-  const participantIds = list.map(participants, (p: Entity) => p.id);
+  const participantIds = list.map(participants, (participant: Entity) => participant.id);
 
   const sessionData: Record<string, any> = {};
   sessionData["name"] = "Combat Session";
@@ -964,7 +980,9 @@ export function combat_next_turn(this: Entity) {
   // Combat Manager needs control over the session it created
   const controlCap = get_capability("entity.control", { target_id: sessionId });
 
-  if (!controlCap) return null;
+  if (!controlCap) {
+    return null;
+  }
 
   let index = session["current_turn_index"] as number;
   const order = session["turn_order"] as number[];
@@ -975,7 +993,7 @@ export function combat_next_turn(this: Entity) {
 
   // Loop until we find someone who can act or run out of participants
   while (attempts < maxAttempts) {
-    index = index + 1;
+    index += 1;
     if (index >= list.len(order)) {
       index = 0;
       const round = session["round"] as number;
@@ -993,7 +1011,7 @@ export function combat_next_turn(this: Entity) {
       call(entity(candidateId), "tell", "You are unable to act this turn!");
     }
 
-    attempts = attempts + 1;
+    attempts += 1;
   }
 
   session["current_turn_index"] = index;
@@ -1009,7 +1027,9 @@ export function combat_apply_status(this: Entity) {
   const magnitude = arg<number>(3); // optional
   // const source = arg<Entity>(4); // optional - unused for now
 
-  if (!target || !effectEntity) return;
+  if (!target || !effectEntity) {
+    return;
+  }
 
   const effectId = effectEntity.id;
   const effectKey = `${effectId}`;
@@ -1020,8 +1040,12 @@ export function combat_apply_status(this: Entity) {
   // Create new effect data
   const newEffect: Record<string, any> = {};
   newEffect["effect_id"] = effectId;
-  if (duration !== null) newEffect["duration"] = duration;
-  if (magnitude !== null) newEffect["magnitude"] = magnitude;
+  if (duration !== null) {
+    newEffect["duration"] = duration;
+  }
+  if (magnitude !== null) {
+    newEffect["magnitude"] = magnitude;
+  }
 
   // Update target
   // We need to mutate the dictionary. `effects` is a reference so modifying it works locally,
@@ -1047,7 +1071,9 @@ export function combat_apply_status(this: Entity) {
 
 export function combat_tick_status(this: Entity) {
   const target = arg<Entity>(0);
-  if (!target) return true;
+  if (!target) {
+    return true;
+  }
 
   const effects = (target["status_effects"] as Record<string, any>) ?? {};
   const effectKeys = obj.keys(effects);
@@ -1058,7 +1084,9 @@ export function combat_tick_status(this: Entity) {
     controlCap = get_capability("entity.control", { "*": true });
   }
 
-  if (!controlCap) return true; // Can't modify, so assume true?
+  if (!controlCap) {
+    return true;
+  } // Can't modify, so assume true?
 
   for (const key of effectKeys) {
     const effectData = effects[key];
@@ -1068,12 +1096,14 @@ export function combat_tick_status(this: Entity) {
     // Call on_tick
     // Expect on_tick to return false if the entity should skip turn
     const result = call(effectEntity, "on_tick", target, effectData);
-    if (result === false) canAct = false;
+    if (result === false) {
+      canAct = false;
+    }
 
     // Handle Duration
     if (effectData["duration"] !== undefined && effectData["duration"] !== null) {
-      const d = effectData["duration"] as number;
-      const newDuration = d - 1;
+      const duration = effectData["duration"] as number;
+      const newDuration = duration - 1;
       effectData["duration"] = newDuration;
 
       if (newDuration <= 0) {
@@ -1115,7 +1145,9 @@ export function combat_attack(this: Entity) {
   const defense = (defProps["defense"] as number) ?? 0;
 
   let damage = attack - defense;
-  if (damage < 1) damage = 1;
+  if (damage < 1) {
+    damage = 1;
+  }
 
   const hp = (defProps["hp"] as number) ?? 100;
   const newHp = hp - damage;
@@ -1160,17 +1192,19 @@ export function combat_attack_elemental(this: Entity) {
 
   // Attacker Stats
   const attStats = (attProps["elemental_stats"] as Record<string, any>) ?? {};
-  const attMod = (attStats[element] ? attStats[element]["attack_scale"] : 1.0) ?? 1.0;
+  const attMod = (attStats[element] ? attStats[element]["attack_scale"] : 1) ?? 1;
   const finalAttack = attack * attMod;
 
   // Target Stats
   const defStats = (defProps["elemental_stats"] as Record<string, any>) ?? {};
-  const defMod = (defStats[element] ? defStats[element]["defense_scale"] : 1.0) ?? 1.0;
-  const resMod = (defStats[element] ? defStats[element]["damage_taken"] : 1.0) ?? 1.0;
+  const defMod = (defStats[element] ? defStats[element]["defense_scale"] : 1) ?? 1;
+  const resMod = (defStats[element] ? defStats[element]["damage_taken"] : 1) ?? 1;
   const finalDefense = defense * defMod;
 
   let baseDamage = finalAttack - finalDefense;
-  if (baseDamage < 1) baseDamage = 1;
+  if (baseDamage < 1) {
+    baseDamage = 1;
+  }
 
   const finalDamage = math.floor(baseDamage * resMod);
 
@@ -1187,9 +1221,15 @@ export function combat_attack_elemental(this: Entity) {
     set_entity(targetCap, target);
 
     let msg = `You attack ${defProps["name"]} with ${element} for ${finalDamage} damage!`;
-    if (resMod > 1.0) msg += " It's super effective!";
-    if (resMod < 1.0 && resMod > 0) msg += " It's not very effective...";
-    if (resMod === 0) msg += " It had no effect!";
+    if (resMod > 1) {
+      msg += " It's super effective!";
+    }
+    if (resMod < 1 && resMod > 0) {
+      msg += " It's not very effective...";
+    }
+    if (resMod === 0) {
+      msg += " It had no effect!";
+    }
 
     call(attacker, "tell", msg);
     call(
@@ -1279,7 +1319,9 @@ export function regen_on_tick(this: Entity) {
   const maxHp = (resolve_props(target)["max_hp"] as number) ?? 100;
 
   let newHp = hp + magnitude;
-  if (newHp > maxHp) newHp = maxHp;
+  if (newHp > maxHp) {
+    newHp = maxHp;
+  }
 
   let controlCap = get_capability("entity.control", { target_id: target.id });
   if (!controlCap) {
@@ -1332,8 +1374,8 @@ export function player_quest_start() {
 
   // Initialize state
   const questState: any = {
-    status: "active",
     started_at: time.to_timestamp(time.now()),
+    status: "active",
     tasks: {},
   };
 
@@ -1370,11 +1412,15 @@ export function player_quest_update() {
     controlCap = get_capability("entity.control", { "*": true });
   }
 
-  if (!controlCap) return; // Silent fail or error?
+  if (!controlCap) {
+    return;
+  } // Silent fail or error?
 
   const quests = (player["quests"] as Record<string, any>) ?? {};
   const qState = quests[String(questId)];
-  if (!qState || qState.status !== "active") return;
+  if (!qState || qState.status !== "active") {
+    return;
+  }
 
   // Update local task status
   // If status is "active", we might need to cascade down
@@ -1383,7 +1429,9 @@ export function player_quest_update() {
   const currentTaskState = qState.tasks[taskId] || {};
 
   // Prevent redundant updates
-  if (currentTaskState.status === status) return;
+  if (currentTaskState.status === status) {
+    return;
+  }
 
   qState.tasks[taskId] = { ...currentTaskState, status: status };
 
@@ -1403,7 +1451,9 @@ export function player_quest_update() {
   // Better: Quest Entity provides "get_node(id)".
   const node = call(questEnt, "get_node", taskId) as any;
 
-  if (!node) return;
+  if (!node) {
+    return;
+  }
 
   if (status === "active") {
     // Cascade Down
@@ -1434,14 +1484,16 @@ export function player_quest_update() {
         if (parentNode.type === "sequence") {
           // Find next sibling
           // Index of current
-          let nextChildId = null;
+          let nextChildId;
           let found = false;
           for (const childId of parentNode.children) {
             if (found) {
               nextChildId = childId;
               break;
             }
-            if (childId === taskId) found = true;
+            if (childId === taskId) {
+              found = true;
+            }
           }
 
           if (nextChildId) {
@@ -1509,9 +1561,11 @@ export function player_quest_log() {
 
   for (const qId of obj.keys(quests)) {
     const qState = quests[qId];
-    if (qState.status !== "active") continue; // Only show active? Or completed too?
+    if (qState.status !== "active") {
+      continue;
+    } // Only show active? Or completed too?
 
-    const questEnt = entity(parseInt(qId));
+    const questEnt = entity(parseInt(qId, 10));
     const structure = call(questEnt, "get_structure") as any;
 
     output = str.concat(output, `\n[${questEnt["name"]}]\n`);
@@ -1519,7 +1573,7 @@ export function player_quest_log() {
     // DFS for print
     // recursive print?
     // We'll define a lambda/helper if possible or just iterative stack
-    const stack: any[] = [{ id: structure.id, depth: 0 }];
+    const stack: any[] = [{ depth: 0, id: structure.id }];
 
     // We need to print in order. Stack is LIFO.
     // If we want preorder traversal (Root -> Child 1 -> Child 2), we push children in reverse order.
@@ -1530,15 +1584,18 @@ export function player_quest_log() {
       const taskState = qState.tasks[item.id] || { status: "locked" };
 
       let indent = "";
-      let i = 0;
-      while (i < item.depth) {
+      let idx = 0;
+      while (idx < item.depth) {
         indent = str.concat(indent, "  ");
-        i = i + 1;
+        idx += 1;
       }
 
       let mark = "[ ]";
-      if (taskState.status === "completed") mark = "[x]";
-      else if (taskState.status === "active") mark = "[>]";
+      if (taskState.status === "completed") {
+        mark = "[x]";
+      } else if (taskState.status === "active") {
+        mark = "[>]";
+      }
       // Locked items generally shouldn't be shown if they are far down, but let's show them as locked.
 
       output = str.concat(output, `${indent}${mark} ${node.description}\n`);
@@ -1547,8 +1604,8 @@ export function player_quest_log() {
         // Push reverse
         let idx = list.len(node.children) - 1;
         while (idx >= 0) {
-          list.push(stack, { id: node.children[idx], depth: item.depth + 1 });
-          idx = idx - 1;
+          list.push(stack, { depth: item.depth + 1, id: node.children[idx] });
+          idx -= 1;
         }
       }
     }
@@ -1566,7 +1623,7 @@ export function quest_get_structure(this: Entity) {
 export function quest_get_node(this: Entity) {
   const nodeId = arg<string>(0);
   const map = this["nodes_map"] as Record<string, any>;
-  return map ? map[nodeId] : null;
+  return map ? map[nodeId] : undefined;
 }
 export function quest_test(this: Entity) {
   const player = arg<Entity>(0);

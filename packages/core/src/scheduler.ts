@@ -1,14 +1,12 @@
-import { db } from "./db";
+import { type ScriptOps, createScriptContext, evaluate } from "@viwo/scripting";
 import { getEntity, getVerb } from "./repo";
-import { evaluate, createScriptContext, ScriptOps } from "@viwo/scripting";
+import { db } from "./db";
 
 /**
  * Manages scheduled tasks (delayed verb executions).
  * Tasks are persisted in the database until execution.
  */
 class TaskScheduler {
-  constructor() {}
-
   /**
    * Schedules a verb to be executed on an entity after a delay.
    *
@@ -41,15 +39,17 @@ class TaskScheduler {
     this.opcodes = opcodes;
   }
 
-  private intervalId: Timer | null = null;
+  private intervalId: Timer | undefined = undefined;
 
   /**
    * Starts the scheduler loop.
    *
    * @param intervalMs - The interval in milliseconds to check for due tasks.
    */
-  start(intervalMs: number = 1000) {
-    if (this.intervalId) return;
+  start(intervalMs = 1000) {
+    if (this.intervalId) {
+      return;
+    }
     this.intervalId = setInterval(() => this.process(), intervalMs);
     console.log(`[Scheduler] Started with interval ${intervalMs}ms`);
   }
@@ -60,7 +60,7 @@ class TaskScheduler {
   stop() {
     if (this.intervalId) {
       clearInterval(this.intervalId);
-      this.intervalId = null;
+      this.intervalId = undefined;
       console.log("[Scheduler] Stopped");
     }
   }
@@ -72,43 +72,43 @@ class TaskScheduler {
   async process() {
     const now = Date.now();
     const tasks = db.query("SELECT * FROM scheduled_tasks WHERE execute_at <= ?").all(now) as any[];
-
-    if (tasks.length === 0) return;
-
+    if (tasks.length === 0) {
+      return;
+    }
     // Delete tasks immediately
-    const ids = tasks.map((t) => t.id);
+    const ids = tasks.map((task) => task.id);
     db.query(`DELETE FROM scheduled_tasks WHERE id IN (${ids.join(",")})`).run();
-
     if (!this.sendFactory) {
       throw new Error("[Scheduler] No send factory set.");
     }
+    await Promise.all(
+      tasks.map(async (task) => {
+        // Create a send function specific to this entity
 
-    for (const task of tasks) {
-      // Create a send function specific to this entity
+        try {
+          const entity = getEntity(task.entity_id);
+          const verb = getVerb(task.entity_id, task.verb);
+          const args = JSON.parse(task.args);
 
-      try {
-        const entity = getEntity(task.entity_id);
-        const verb = getVerb(task.entity_id, task.verb);
-        const args = JSON.parse(task.args);
+          const send = this.sendFactory(task.entity_id);
 
-        const send = this.sendFactory(task.entity_id);
-
-        if (entity && verb) {
-          await evaluate(
-            verb.code,
-            createScriptContext({
-              caller: entity, // System is caller? Or self?
-              this: entity,
-              args,
-              send,
-              ops: this.opcodes,
-            }),
-          );
+          if (entity && verb) {
+            await evaluate(
+              verb.code,
+              createScriptContext({
+                args,
+                caller: entity, // System is caller? Or self?
+                ops: this.opcodes,
+                send,
+                this: entity,
+              }),
+            );
+          }
+        } catch (error) {
+          console.error(`[Scheduler] Error executing task ${task.id}:`, error);
         }
-      } catch (e) {
-        console.error(`[Scheduler] Error executing task ${task.id}:`, e);
-      }
-    }
+      }),
+    );
   }
 }
 

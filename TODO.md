@@ -46,3 +46,31 @@
 - [ ] **Scripting**: Add async support to compiler
 - [ ] **Scripting**: Attempt to change BreakSignal and ContinueSignal to not throw, since we use a stack based interpreter so we should be able to simply return them
 - [ ] **Database**: Recursive CTEs for retrieving prototype chain
+- [ ] **Scripting**: Support `Number` or `parseInt(x, 10)` + `parseFloat` (but given a fitting name)
+- [ ] **Style**: Convert `apps/web/src/components/ThemeEditor.tsx` to BEM in `packages/shared/src/index.css`
+- [ ] **Scripting**: Figure out what to do with the duplication of `procgen.random` vs Std `random` opcodes
+- [ ] **Scripting**: Convert ALL generic parameter lists of `defineFullOpcode` usages to named tuples.
+- [ ] **Compiler**: Deduplicate every instance of `args.map((arg: any) => compileValue(arg, ops))` by computing it once and splitting the switch-case into two
+- [ ] **Compiler**: Avoid IIFEs in `time.offset`, `typeof`, and `random` because it breaks `return` etc. Instead refactor `chainedCompare` into `helpers` (`__helpers__` in compiled code, which would need to also be added to the end of `KEYWORDS` in `compiler.ts`) and use that.
+- [ ] **Seed**: Fix hotel seed - floors and rooms should be 'ephemeral' - that is, they should be destroyed when a: no longer in use and b: not modified.
+- [ ] **Seed**: Make sure mailbox uses capability based permissions.
+- [ ] **Decompiler**: Return the last element in the body in `packages/scripting/src/decompiler.ts`. See `packages/scripting/src/compiler.ts` for a similar implementation.
+- [ ] **Compiler**: Fix documentation to remove IIFEs
+- [ ] **Compiler**: Does this supersede the decompiler?
+- [ ] **Transpiler**: Handle all compiler constructs
+- [ ] **Compiler**: Consider tracking usages of `__ctx__` and removing it from the parameter list if it is unused
+- [ ] **Scripting**: Either document wildcard capability support (see `packages/core/src/runtime/lib/kernel.ts`), or remove it
+- [ ] **Lint**: Enable type-aware linting: https://oxc.rs/docs/guide/usage/linter/type-aware.html
+- [ ] **Codegen**: Autogenerate `packages/core/src/plugin_types.ts` without introducing dependency on `@viwo/plugin-ai`
+- [ ] **Codegen**: Add all other plugins to `packages/core/src/plugin_types.ts` (net, fs, procgen)
+- [ ] **AI**: Better syntax for custom OpenAI-compatible endpoints for `getProvider`
+- [ ] **Plugins**: Consider making calls like `this.context.getPlugin("memory")` type-safe
+- [ ] **AI**: Make `modelSpec`s configurable in `plugins/ai/src/index.ts`
+- [ ] **AI**: Remove dependency on Zod since all schemas should be defined at runtime
+- [ ] **Libraries**: Library with opcodes to construct JSON Schemas. Also export regular functions for other plugins to construct JSON Schemas at compile-time
+- [ ] **AI**: Return images and audio in a usable format in `plugins/ai/src/lib.ts`
+- [ ] **AI**: Add support for specifying image size in `plugins/ai/src/lib.ts`
+- [ ] **AI**: Add support for streaming text in `plugins/ai/src/lib.ts`
+- [ ] **Compiler**: Disallow accessing dangerous keys in `packages/scripting/src/compiler.ts`
+- [ ] **Core**: Fix tests in `packages/core/src/runtime/lib/core.test.ts`: `call` test should verify, using a mocked verb, that it actually calls the verb; `set_entity` and `set_prototype` should add real testcases
+- [ ] **Compiler**: Compile `throw new Error(x)` into `["throw", x]`

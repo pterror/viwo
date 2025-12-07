@@ -1,29 +1,29 @@
-import { describe, test, expect, mock } from "bun:test";
-import { handleJsonRpcRequest } from "./index";
-import { JsonRpcRequest } from "@viwo/shared/jsonrpc";
+import { describe, expect, mock, test } from "bun:test";
+import type { JsonRpcRequest } from "@viwo/shared/jsonrpc";
 import { createEntity } from "./repo";
+import { handleJsonRpcRequest } from "./index";
 
 describe("Login Logic", () => {
   test("Login with valid entity ID", async () => {
-    const entityId = createEntity({ name: "Test User", description: "Test" });
+    const entityId = createEntity({ description: "Test", name: "Test User" });
     const ws = {
       data: { userId: 0 },
       send: mock(() => {}),
     };
 
     const req: JsonRpcRequest = {
+      id: 1,
       jsonrpc: "2.0",
       method: "login",
       params: { entityId },
-      id: 1,
     };
 
     const response = await handleJsonRpcRequest(req, 0, ws);
 
     expect(response).toEqual({
-      jsonrpc: "2.0",
       id: 1,
-      result: { status: "ok", playerId: entityId },
+      jsonrpc: "2.0",
+      result: { playerId: entityId, status: "ok" },
     });
 
     expect(ws.data.userId).toBe(entityId);
@@ -37,18 +37,18 @@ describe("Login Logic", () => {
     };
 
     const req: JsonRpcRequest = {
+      id: 2,
       jsonrpc: "2.0",
       method: "login",
-      params: { entityId: 999999 }, // Non-existent ID
-      id: 2,
+      params: { entityId: 999_999 }, // Non-existent ID
     };
 
     const response = await handleJsonRpcRequest(req, 0, ws);
 
     expect(response).toEqual({
-      jsonrpc: "2.0",
+      error: { code: -32_000, message: "Entity not found" },
       id: 2,
-      error: { code: -32000, message: "Entity not found" },
+      jsonrpc: "2.0",
     });
 
     expect(ws.data.userId).toBe(0);
@@ -61,18 +61,18 @@ describe("Login Logic", () => {
     };
 
     const req: JsonRpcRequest = {
+      id: 3,
       jsonrpc: "2.0",
       method: "login",
       params: {}, // Missing entityId
-      id: 3,
     };
 
     const response = await handleJsonRpcRequest(req, 0, ws);
 
     expect(response).toEqual({
-      jsonrpc: "2.0",
+      error: { code: -32_602, message: "Invalid params: entityId required" },
       id: 3,
-      error: { code: -32602, message: "Invalid params: entityId required" },
+      jsonrpc: "2.0",
     });
   });
 });

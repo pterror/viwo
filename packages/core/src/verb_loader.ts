@@ -1,7 +1,7 @@
 import { readFileSync } from "fs";
 
 export function extractVerb(filePath: string, verbName: string): string {
-  const content = readFileSync(filePath, "utf-8");
+  const content = readFileSync(filePath, "utf8");
 
   // Find start of function: export function verbName(...) {
   const startRegex = new RegExp(`^export function ${verbName}\\s*\\(.*\\)\\s*\\{`, "m");

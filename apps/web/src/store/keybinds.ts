@@ -3,12 +3,12 @@ import { createStore } from "solid-js/store";
 export type ActionType = "north" | "south" | "east" | "west" | "look" | "inventory";
 
 export const ACTION_LABELS: Record<ActionType, string> = {
+  east: "Move East",
+  inventory: "Toggle Inventory",
+  look: "Look",
   north: "Move North",
   south: "Move South",
-  east: "Move East",
   west: "Move West",
-  look: "Look",
-  inventory: "Toggle Inventory",
 };
 
 interface KeybindsState {
@@ -16,12 +16,12 @@ interface KeybindsState {
 }
 
 const DEFAULT_BINDINGS: Record<ActionType, string> = {
+  east: "d",
+  inventory: "i",
+  look: "l",
   north: "w",
   south: "s",
-  east: "d",
   west: "a",
-  look: "l",
-  inventory: "i",
 };
 
 const STORAGE_KEY = "viwo_keybinds";
@@ -32,8 +32,8 @@ export const loadBindings = (): Record<ActionType, string> => {
     if (stored) {
       return { ...DEFAULT_BINDINGS, ...JSON.parse(stored) };
     }
-  } catch (e) {
-    console.error("Failed to load keybinds", e);
+  } catch (error) {
+    console.error("Failed to load keybinds", error);
   }
   return { ...DEFAULT_BINDINGS };
 };
@@ -43,26 +43,21 @@ const [state, setState] = createStore<KeybindsState>({
 });
 
 export const keybindsStore = {
-  state,
-
+  // Key is expected to be in format "Ctrl+Shift+Key" or just "Key"
+  // We do case-insensitive comparison for the key part, but modifiers should be standard
+  getActionForKey: (key: string): ActionType | undefined =>
+    (Object.keys(state.bindings) as ActionType[]).find((action) => {
+      const binding = state.bindings[action];
+      return binding.toLowerCase() === key.toLowerCase();
+    }),
   getKey: (action: ActionType) => state.bindings[action],
-
-  setKey: (action: ActionType, key: string) => {
-    setState("bindings", action, key);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.bindings));
-  },
-
   resetDefaults: () => {
     setState("bindings", { ...DEFAULT_BINDINGS });
     localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_BINDINGS));
   },
-
-  getActionForKey: (key: string): ActionType | undefined => {
-    // Key is expected to be in format "Ctrl+Shift+Key" or just "Key"
-    // We do case-insensitive comparison for the key part, but modifiers should be standard
-    return (Object.keys(state.bindings) as ActionType[]).find((action) => {
-      const binding = state.bindings[action];
-      return binding.toLowerCase() === key.toLowerCase();
-    });
+  setKey: (action: ActionType, key: string) => {
+    setState("bindings", action, key);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.bindings));
   },
+  state,
 };

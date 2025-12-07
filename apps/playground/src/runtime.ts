@@ -1,16 +1,16 @@
 import {
-  getOpcodeMetadata,
-  StdLib,
-  MathLib,
   BooleanLib,
   ListLib,
+  MathLib,
   ObjectLib,
+  StdLib,
   StringLib,
   TimeLib,
   createOpcodeRegistry,
   defineOpcode,
+  getOpcodeMetadata,
 } from "@viwo/scripting";
-import { BlockDefinition } from "@viwo/web-editor";
+import type { BlockDefinition } from "@viwo/web-editor";
 
 // Simple output buffer
 const outputBuffer: string[] = [];
@@ -41,7 +41,7 @@ export const ops = createOpcodeRegistry(
         // Join args with space
         const msg = args.map(String).join(" ");
         log(msg);
-        return null;
+        return;
       },
     }),
   },
@@ -50,7 +50,7 @@ export const ops = createOpcodeRegistry(
 // Export opcodes for the editor
 export const opcodes: BlockDefinition[] = Object.values(getOpcodeMetadata(ops)).map((meta) => ({
   ...meta,
+  category: meta.category as any,
   // Ensure type is compatible with BlockDefinition
   type: (meta.returnType as any) || "statement",
-  category: meta.category as any,
 }));

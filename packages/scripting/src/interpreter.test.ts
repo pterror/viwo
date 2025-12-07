@@ -1,12 +1,12 @@
-import { describe, test, expect } from "bun:test";
-import { evaluate, createOpcodeRegistry, ScriptError, createScriptContext } from "./interpreter";
-import * as StdLib from "./lib/std";
-import * as ObjectLib from "./lib/object";
-import * as ListLib from "./lib/list";
-import * as StringLib from "./lib/string";
-import * as MathLib from "./lib/math";
 import * as BooleanLib from "./lib/boolean";
-import { Entity } from "@viwo/shared/jsonrpc";
+import * as ListLib from "./lib/list";
+import * as MathLib from "./lib/math";
+import * as ObjectLib from "./lib/object";
+import * as StdLib from "./lib/std";
+import * as StringLib from "./lib/string";
+import { ScriptError, createOpcodeRegistry, createScriptContext, evaluate } from "./interpreter";
+import { describe, expect, test } from "bun:test";
+import type { Entity } from "@viwo/shared/jsonrpc";
 
 const TEST_OPS = createOpcodeRegistry(StdLib, ObjectLib, ListLib, StringLib, MathLib, BooleanLib);
 
@@ -15,7 +15,7 @@ describe("Interpreter", () => {
   const target: Entity = { id: 2 };
   target["owner"] = 1;
 
-  const ctx = createScriptContext({ caller, this: target, ops: TEST_OPS });
+  const ctx = createScriptContext({ caller, ops: TEST_OPS, this: target });
 
   test("literals", () => {
     expect(evaluate(1, ctx)).toBe(1);
@@ -62,14 +62,14 @@ describe("Interpreter", () => {
     const script = StdLib.seq(StdLib.let("a", 1), StdLib.let("b", 2));
 
     // We expect it to throw
-    let error;
+    let savedError;
     try {
       evaluate(script, lowGasCtx);
-    } catch (e) {
-      error = e;
+    } catch (error) {
+      savedError = error;
     }
-    expect(error).toBeDefined();
-    expect((error as Error).message).toContain("Script ran out of gas!");
+    expect(savedError).toBeDefined();
+    expect((savedError as Error).message).toContain("Script ran out of gas!");
   });
 
   test("loops", () => {
@@ -160,11 +160,12 @@ describe("Interpreter", () => {
   test("errors", () => {
     // Unknown opcode
     try {
-      // @ts-expect-error
+      // @ts-expect-error We are testing an ill-formed S-expression script.
+      // It is correct behavior for this to be a type error.
       evaluate(["unknown_op"], ctx);
       expect(true).toBe(false);
-    } catch (e: any) {
-      expect(e.message).toContain("Unknown opcode: unknown_op");
+    } catch (error: any) {
+      expect(error.message).toContain("Unknown opcode: unknown_op");
     }
   });
 
@@ -181,6 +182,9 @@ describe("Interpreter", () => {
   });
 
   test("var retrieval", () => {
+    // If we do not test length-1 identifiers, it is possible, however unlikely,
+    // for length-1 identifiers to fail to be retrieved.
+    // oxlint-disable-next-line id-length
     const localCtx = { ...ctx, vars: { x: 10 } };
     expect(evaluate(StdLib.var("x"), localCtx)).toBe(10);
     expect(evaluate(StdLib.var("missing"), localCtx)).toBe(null); // Variable not found
@@ -188,14 +192,14 @@ describe("Interpreter", () => {
 });
 
 describe("Interpreter Errors and Warnings", () => {
-  const ctx = createScriptContext({ caller: { id: 1 }, this: { id: 2 }, ops: TEST_OPS });
+  const ctx = createScriptContext({ caller: { id: 1 }, ops: TEST_OPS, this: { id: 2 } });
 
   test("throw", () => {
     try {
       evaluate(StdLib.throw("Something went wrong"), ctx);
       expect(true).toBe(false); // Should not reach here
-    } catch (e: any) {
-      expect(e.message).toBe("Something went wrong");
+    } catch (error: any) {
+      expect(error.message).toBe("Something went wrong");
     }
   });
 
@@ -244,7 +248,7 @@ describe("Interpreter Errors and Warnings", () => {
 });
 
 describe("Interpreter Libraries", () => {
-  const ctx = createScriptContext({ caller: { id: 1 }, this: { id: 2 }, ops: TEST_OPS });
+  const ctx = createScriptContext({ caller: { id: 1 }, ops: TEST_OPS, this: { id: 2 } });
 
   describe("Lambda & HOF", () => {
     test("lambda & apply", () => {
@@ -270,7 +274,7 @@ describe("Interpreter Libraries", () => {
 });
 
 describe("Interpreter Stack Traces", () => {
-  const ctx = createScriptContext({ caller: { id: 1 }, this: { id: 2 }, ops: TEST_OPS });
+  const ctx = createScriptContext({ caller: { id: 1 }, ops: TEST_OPS, this: { id: 2 } });
 
   test("stack trace in lambda", () => {
     // (let fail (lambda () (throw "boom")))
@@ -283,11 +287,11 @@ describe("Interpreter Stack Traces", () => {
     try {
       evaluate(script, ctx);
       expect(true).toBe(false);
-    } catch (e: any) {
-      expect(e).toBeInstanceOf(ScriptError);
-      expect(e.message).toBe("boom");
-      expect(e.stackTrace).toHaveLength(1);
-      expect(e.stackTrace[0].name).toBe("<lambda>");
+    } catch (error: any) {
+      expect(error).toBeInstanceOf(ScriptError);
+      expect(error.message).toBe("boom");
+      expect(error.stackTrace).toHaveLength(1);
+      expect(error.stackTrace[0].name).toBe("<lambda>");
     }
   });
 
@@ -304,12 +308,12 @@ describe("Interpreter Stack Traces", () => {
     try {
       evaluate(script, ctx);
       expect(true).toBe(false);
-    } catch (e: any) {
-      expect(e).toBeInstanceOf(ScriptError);
-      expect(e.message).toBe("boom");
-      expect(e.stackTrace).toHaveLength(2);
-      expect(e.stackTrace[0].name).toBe("<lambda>"); // outer
-      expect(e.stackTrace[1].name).toBe("<lambda>"); // inner
+    } catch (error: any) {
+      expect(error).toBeInstanceOf(ScriptError);
+      expect(error.message).toBe("boom");
+      expect(error.stackTrace).toHaveLength(2);
+      expect(error.stackTrace[0].name).toBe("<lambda>"); // outer
+      expect(error.stackTrace[1].name).toBe("<lambda>"); // inner
     }
   });
 
@@ -320,17 +324,17 @@ describe("Interpreter Stack Traces", () => {
     try {
       evaluate(script, ctx);
       expect(true).toBe(false);
-    } catch (e: any) {
-      expect(e).toBeInstanceOf(ScriptError);
+    } catch (error: any) {
+      expect(error).toBeInstanceOf(ScriptError);
       // The error comes from the opcode itself, but since it's a primitive call
       // without call/apply, it might not have a stack frame unless we wrapped it.
       // In my implementation, I only push stack frames in call/apply.
       // However, evaluate() catches errors and appends the current stack.
       // Since the stack is empty, it should be empty.
-      expect(e.stackTrace).toHaveLength(0);
-      expect(e.context).toBeDefined();
-      expect(e.context.op).toBe("+");
-      expect(e.context.args).toEqual([1, "string"]);
+      expect(error.stackTrace).toHaveLength(0);
+      expect(error.context).toBeDefined();
+      expect(error.context.op).toBe("+");
+      expect(error.context.args).toEqual([1, "string"]);
     }
   });
 });

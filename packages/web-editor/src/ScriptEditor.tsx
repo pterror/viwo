@@ -1,9 +1,9 @@
-import { Component } from "solid-js";
-import { BlockPalette } from "./BlockPalette";
-import { BlockNode } from "./BlockNode";
-import { BlockDefinition } from "./types";
-import { MonacoEditor } from "./MonacoEditor";
 import { decompile, transpile } from "@viwo/scripting";
+import type { BlockDefinition } from "./types";
+import { BlockNode } from "./BlockNode";
+import { BlockPalette } from "./BlockPalette";
+import type { Component } from "solid-js";
+import { MonacoEditor } from "./MonacoEditor";
 
 interface ScriptEditorProps {
   opcodes: BlockDefinition[];
@@ -14,6 +14,10 @@ interface ScriptEditorProps {
     position: { lineNumber: number; column: number },
   ) => Promise<string | null>;
 }
+
+const onDragOver = (event: DragEvent) => {
+  event.preventDefault();
+};
 
 export const ScriptEditor: Component<ScriptEditorProps> = (props) => {
   const updateNode = (path: number[], newNode: any) => {
@@ -26,7 +30,7 @@ export const ScriptEditor: Component<ScriptEditorProps> = (props) => {
     }
 
     // Update child
-    current[path[path.length - 1]!] = newNode;
+    current[path.at(-1)!] = newNode;
     props.onChange(newScript);
   };
 
@@ -39,7 +43,7 @@ export const ScriptEditor: Component<ScriptEditorProps> = (props) => {
       current = current[segment];
     }
 
-    const index = path[path.length - 1]!;
+    const index = path.at(-1)!;
 
     // Check if parent is a sequence (array starting with "seq") or root.
     // In "seq" blocks, children start at index 1.
@@ -52,38 +56,35 @@ export const ScriptEditor: Component<ScriptEditorProps> = (props) => {
       current.splice(index, 1);
     } else {
       // It's a slot argument, set to null
-      current[index] = null;
+      current[index] = undefined;
     }
 
     props.onChange(newScript);
   };
 
-  const onDrop = (e: DragEvent) => {
-    e.preventDefault();
-    const data = e.dataTransfer?.getData("application/json");
-    if (!data) return;
-
+  const onDrop = (event: DragEvent) => {
+    event.preventDefault();
+    const data = event.dataTransfer?.getData("application/json");
+    if (!data) {
+      return;
+    }
     const { opcode } = JSON.parse(data);
     const opcodes = props.opcodes || [];
-    const def = opcodes.find((d) => d.opcode === opcode);
-    if (!def) return;
-
+    const def = opcodes.find((definition) => definition.opcode === opcode);
+    if (!def) {
+      return;
+    }
     // Create new node structure based on definition
     let newNode: any = [opcode];
     if (def.slots) {
       def.slots.forEach((slot) => {
-        newNode.push(slot.default !== undefined ? slot.default : null);
+        newNode.push(slot.default !== undefined ? slot.default : undefined);
       });
     }
-
     // For now, just append to root seq
     const newScript = structuredClone(props.value) as any;
     newScript.push(newNode);
     props.onChange(newScript);
-  };
-
-  const onDragOver = (e: DragEvent) => {
-    e.preventDefault();
   };
 
   const handleCodeChange = (newCode: string) => {
@@ -112,7 +113,7 @@ export const ScriptEditor: Component<ScriptEditorProps> = (props) => {
         >
           <div
             class="script-editor__canvas"
-            style={{ flex: 1, "border-right": "1px solid var(--border-color)" }}
+            style={{ "border-right": "1px solid var(--border-color)", flex: 1 }}
           >
             <BlockNode
               node={props.value}

@@ -1,5 +1,5 @@
+import { type Entity, gameStore } from "../store/game";
 import { For, Show, createSignal } from "solid-js";
-import { gameStore, Entity } from "../store/game";
 
 const ItemView = (props: { item: Entity }) => {
   const [isExpanded, setIsExpanded] = createSignal(false);
@@ -7,10 +7,13 @@ const ItemView = (props: { item: Entity }) => {
     props.item["contents"] && (props.item["contents"] as readonly number[]).length > 0;
 
   const children = () => {
-    if (!hasContents()) return [];
-    return (props.item["contents"] as number[])
-      .map((id) => gameStore.state.entities.get(id))
-      .filter((e): e is Entity => !!e);
+    if (!hasContents()) {
+      return [];
+    }
+    return (props.item["contents"] as number[]).flatMap((id) => {
+      const entity = gameStore.state.entities.get(id);
+      return entity ? [entity] : [];
+    });
   };
 
   return (
@@ -25,7 +28,9 @@ const ItemView = (props: { item: Entity }) => {
           onClick={() => gameStore.execute("look", [props.item.id])}
           class={`inventory-panel__item-link ${
             (props.item["adjectives"] as readonly string[])
-              ?.map((a) => `attribute-${a.replace(/:/g, "-").replace(/ /g, "-")}`)
+              ?.map(
+                (adjective) => `attribute-${adjective.replaceAll(":", "-").replaceAll(" ", "-")}`,
+              )
               .join(" ") || ""
           }`}
           style={{ "margin-left": hasContents() ? "0" : "20px" }}
@@ -64,15 +69,18 @@ const ItemView = (props: { item: Entity }) => {
 export default function InventoryPanel() {
   const player = () => {
     const id = gameStore.state.playerId;
-    return id ? gameStore.state.entities.get(id) : null;
+    return id ? gameStore.state.entities.get(id) : undefined;
   };
 
   const items = () => {
-    const p = player();
-    if (!p || !Array.isArray(p["contents"])) return [];
-    return (p["contents"] as number[])
-      .map((id) => gameStore.state.entities.get(id))
-      .filter((e): e is Entity => !!e);
+    const playerValue = player();
+    if (!playerValue || !Array.isArray(playerValue["contents"])) {
+      return [];
+    }
+    return (playerValue["contents"] as number[]).flatMap((id) => {
+      const entity = gameStore.state.entities.get(id);
+      return entity ? [entity] : [];
+    });
   };
 
   return (

@@ -2,101 +2,91 @@ import { defineFullOpcode } from "../types";
 
 /** Returns the current time as an ISO 8601 string. */
 export const timeNow = defineFullOpcode<[], string>("time.now", {
+  handler: (_args, _ctx) => new Date().toISOString(),
   metadata: {
-    label: "Now",
     category: "time",
     description: "Returns the current time as an ISO 8601 string.",
-    slots: [],
+    label: "Now",
     parameters: [],
     returnType: "string",
-  },
-  handler: (_args, _ctx) => {
-    return new Date().toISOString();
+    slots: [],
   },
 });
 
 /** Formats a timestamp string. */
 export const timeFormat = defineFullOpcode<[string, string?], string>("time.format", {
+  handler: ([timestamp], _ctx) => new Date(timestamp).toISOString(),
   metadata: {
-    label: "Format Time",
     category: "time",
     description: "Formats a timestamp string.",
-    slots: [
-      { name: "Time", type: "string" },
-      { name: "Format", type: "string", default: null }, // Format string not really used yet?
-    ],
+    label: "Format Time",
     parameters: [
-      { name: "time", type: "string", description: "The timestamp to format." },
+      { description: "The timestamp to format.", name: "time", type: "string" },
       {
-        name: "format",
-        type: "string",
-        optional: true,
         description: "The format string (currently unused).",
+        name: "format",
+        optional: true,
+        type: "string",
       },
     ],
     returnType: "string",
-  },
-  handler: ([timestamp], _ctx) => {
-    return new Date(timestamp).toISOString();
+    slots: [
+      { name: "Time", type: "string" },
+      { default: null, name: "Format", type: "string" }, // Format string not really used yet?
+    ],
   },
 });
 
 /** Parses a datetime string and returns it in ISO 8601 format. */
 export const timeParse = defineFullOpcode<[string], string>("time.parse", {
+  handler: ([datetime], _ctx) => new Date(datetime).toISOString(),
   metadata: {
-    label: "Add Time",
     category: "time",
     description: "Parses a datetime string and returns it in ISO 8601 format.",
-    slots: [{ name: "Time", type: "string" }],
+    label: "Add Time",
     parameters: [
       {
-        name: "time",
-        type: "string",
-        optional: false,
         description: "The datetime string to parse.",
+        name: "time",
+        optional: false,
+        type: "string",
       },
     ],
     returnType: "string",
-  },
-  handler: ([datetime], _ctx) => {
-    return new Date(datetime).toISOString();
+    slots: [{ name: "Time", type: "string" }],
   },
 });
 
 /** Converts a numeric timestamp (ms since epoch) to an ISO 8601 string. */
 export const timeFromTimestamp = defineFullOpcode<[number], string>("time.from_timestamp", {
+  handler: ([timestamp], _ctx) => new Date(timestamp).toISOString(),
   metadata: {
-    label: "From Timestamp",
     category: "time",
     description: "Converts a numeric timestamp (ms since epoch) to an ISO 8601 string.",
-    slots: [{ name: "Timestamp", type: "number" }],
+    label: "From Timestamp",
     parameters: [
       {
-        name: "timestamp",
-        type: "number",
-        optional: false,
         description: "The timestamp in milliseconds.",
+        name: "timestamp",
+        optional: false,
+        type: "number",
       },
     ],
     returnType: "string",
-  },
-  handler: ([timestamp], _ctx) => {
-    return new Date(timestamp).toISOString();
+    slots: [{ name: "Timestamp", type: "number" }],
   },
 });
 
 /** Converts an ISO 8601 string to a numeric timestamp (ms since epoch). */
 export const timeToTimestamp = defineFullOpcode<[string], number>("time.to_timestamp", {
+  handler: ([datetime], _ctx) => new Date(datetime).getTime(),
   metadata: {
-    label: "Time Difference",
     category: "time",
     description: "Converts an ISO 8601 string to a numeric timestamp (ms since epoch).",
-    slots: [{ name: "Time", type: "string" }],
-    parameters: [{ name: "time", type: "string", description: "The ISO 8601 string." }],
+    label: "Time Difference",
+    parameters: [{ description: "The ISO 8601 string.", name: "time", type: "string" }],
     returnType: "number",
-  },
-  handler: ([datetime], _ctx) => {
-    return new Date(datetime).getTime();
+    slots: [{ name: "Time", type: "string" }],
   },
 });
 
@@ -122,32 +112,6 @@ export const timeOffset = defineFullOpcode<
   ],
   string
 >("time.offset", {
-  metadata: {
-    label: "Offset Time",
-    category: "time",
-    description: "Adds an offset to a timestamp.",
-    slots: [
-      { name: "Amount", type: "number" },
-      { name: "Unit", type: "string" },
-      { name: "Base", type: "string", default: null },
-    ],
-    parameters: [
-      { name: "amount", type: "number", description: "The amount to add." },
-      {
-        name: "unit",
-        type: "string",
-        optional: false,
-        description: "The unit of time (e.g., 'days', 'hours').",
-      },
-      {
-        name: "base",
-        type: "string",
-        optional: true,
-        description: "The base timestamp (defaults to now).",
-      },
-    ],
-    returnType: "string",
-  },
   handler: ([amount, unit, baseExpr], _ctx) => {
     const base = baseExpr !== undefined ? baseExpr : new Date().toISOString();
 
@@ -189,5 +153,31 @@ export const timeOffset = defineFullOpcode<
       }
     }
     return date.toISOString();
+  },
+  metadata: {
+    category: "time",
+    description: "Adds an offset to a timestamp.",
+    label: "Offset Time",
+    parameters: [
+      { description: "The amount to add.", name: "amount", type: "number" },
+      {
+        description: "The unit of time (e.g., 'days', 'hours').",
+        name: "unit",
+        optional: false,
+        type: "string",
+      },
+      {
+        description: "The base timestamp (defaults to now).",
+        name: "base",
+        optional: true,
+        type: "string",
+      },
+    ],
+    returnType: "string",
+    slots: [
+      { name: "Amount", type: "number" },
+      { name: "Unit", type: "string" },
+      { default: null, name: "Base", type: "string" },
+    ],
   },
 });

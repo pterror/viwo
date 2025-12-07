@@ -18,13 +18,15 @@ export function createLibraryTester(
       // If the test name matches an opcode (or is an opcode name), mark it as covered
 
       // Find the opcode object for this test name
-      let opcodeObj: any = null;
+      let opcodeObj: any;
       if (name in library) {
         opcodeObj = library[name];
       } else {
         // Maybe name is the opcode string itself, find it in library
-        const key = Object.keys(library).find((k) => library[k].opcode === name);
-        if (key) opcodeObj = library[key];
+        const key = Object.keys(library).find((key) => library[key].opcode === name);
+        if (key) {
+          opcodeObj = library[key];
+        }
       }
 
       if (opcodeObj) {

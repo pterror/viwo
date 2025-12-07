@@ -1,6 +1,12 @@
-import { getVerbs } from "../repo";
-import { Entity } from "@viwo/shared/jsonrpc";
-import { createScriptContext, evaluate, ScriptContext } from "@viwo/scripting";
+import {
+  type Capability,
+  type ScriptContext,
+  ScriptError,
+  createScriptContext,
+  evaluate,
+} from "@viwo/scripting";
+import { getCapability, getVerbs } from "../repo";
+import type { Entity } from "@viwo/shared/jsonrpc";
 
 /**
  * Resolves dynamic properties on an entity by executing 'get_*' verbs.
@@ -13,27 +19,28 @@ export function resolveProps(entity: Entity, ctx: ScriptContext): Entity {
   // We need to clone the props so we don't mutate the actual entity in the repo
   // entity is already a bag of props, so we clone it entirely
   const resolved = { ...entity };
-
   const verbs = getVerbs(entity.id);
   for (const verb of verbs) {
     const match = verb.name.match(/^get_(.+)/);
-    if (!match?.[1]) continue;
-    const propName = match[1];
+    if (!match?.[1]) {
+      continue;
+    }
+    const [, propName] = match;
     try {
       const result = evaluate(
         verb.code,
         createScriptContext({
           caller: entity, // The entity itself is the caller for its own getter?
-          this: entity,
           get gas() {
             return ctx.gas ?? 1000;
           },
           set gas(value) {
             ctx.gas = value;
           },
-          send: ctx.send ?? (() => {}),
-          warnings: ctx.warnings,
           ops: ctx.ops,
+          send: ctx.send ?? (() => {}),
+          this: entity,
+          warnings: ctx.warnings,
         }),
       );
 
@@ -45,12 +52,8 @@ export function resolveProps(entity: Entity, ctx: ScriptContext): Entity {
       ctx.warnings.push(`Error resolving property ${propName} for ${entity.id}: ${error}`);
     }
   }
-
   return resolved;
 }
-
-import { getCapability } from "../repo";
-import { ScriptError, Capability } from "@viwo/scripting";
 
 export function checkCapability(
   cap: Capability | undefined,

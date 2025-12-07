@@ -1,11 +1,10 @@
-import { describe, it, expect, beforeAll } from "bun:test";
-import { scheduler } from "./scheduler";
-import { createEntity, addVerb, getEntity, createCapability } from "./repo";
-import { StdLib, ObjectLib, MathLib } from "@viwo/scripting";
-import { CoreLib, db } from ".";
 import * as KernelLib from "./runtime/lib/kernel";
-
+import { CoreLib, db } from ".";
+import { MathLib, ObjectLib, StdLib } from "@viwo/scripting";
+import { addVerb, createCapability, createEntity, getEntity } from "./repo";
+import { beforeAll, describe, expect, it } from "bun:test";
 import { GameOpcodes } from "./runtime/opcodes";
+import { scheduler } from "./scheduler";
 
 describe("Scheduler Verification", () => {
   // Start Scheduler
@@ -20,7 +19,7 @@ describe("Scheduler Verification", () => {
 
   beforeAll(() => {
     // Create a test entity
-    entityId = createEntity({ name: "SchedulerTestEntity", count: 0 });
+    entityId = createEntity({ count: 0, name: "SchedulerTestEntity" });
     createCapability(entityId, "entity.control", { target_id: entityId });
 
     // Add a verb that increments the count

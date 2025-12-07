@@ -1,5 +1,5 @@
-import { describe, test, expect } from "bun:test";
 import { ADJECTIVE_REGISTRY, ALL_ADJECTIVES } from "./adjectives";
+import { describe, expect, test } from "bun:test";
 
 describe("Adjectives", () => {
   test("Registry Structure", () => {

@@ -1,9 +1,10 @@
 /* @refresh reload */
-import { render } from "solid-js/web";
+// oxlint-disable-next-line no-unassigned-import
 import "@viwo/shared/index.css";
 import App from "./App";
+import { render } from "solid-js/web";
 
-const root = document.getElementById("root");
+const root = document.querySelector("#root");
 
 if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
   throw new Error(

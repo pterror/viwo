@@ -3,9 +3,9 @@ import { spawn } from "child_process";
 // Helper to spawn a process and pipe its output
 function spawnProcess(command: string, args: string[], env: Record<string, string> = {}) {
   const proc = spawn(command, args, {
-    stdio: ["ignore", "pipe", "pipe"],
     env: { ...process.env, ...env },
     shell: true,
+    stdio: ["ignore", "pipe", "pipe"],
   });
 
   proc.stdout.on("data", (data) => {
@@ -19,7 +19,7 @@ function spawnProcess(command: string, args: string[], env: Record<string, strin
   return proc;
 }
 
-async function main() {
+function main() {
   console.log("Starting Playground...");
 
   // Start the playground
@@ -27,7 +27,7 @@ async function main() {
     stdio: ["ignore", "pipe", "inherit"],
   });
 
-  let playgroundPort: string | null = null;
+  let playgroundPort: string | null;
 
   // Listen for the port in stdout
   playground.stdout.on("data", (data) => {
@@ -38,7 +38,7 @@ async function main() {
       // Look for "Local: http://localhost:3001/" or similar
       const match = output.match(/Local:\s+http:\/\/localhost:(\d+)/);
       if (match) {
-        playgroundPort = match[1];
+        [, playgroundPort] = match;
         console.log(`\nDetected Playground on port: ${playgroundPort}`);
         startDocs(playgroundPort!);
       }

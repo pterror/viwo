@@ -1,6 +1,11 @@
-import { expect, beforeEach } from "bun:test";
-import { evaluate, ScriptContext, createOpcodeRegistry, createScriptContext } from "../interpreter";
-import * as MathOps from "./math";
+import * as MathOps from "../lib/math";
+import {
+  type ScriptContext,
+  createOpcodeRegistry,
+  createScriptContext,
+  evaluate,
+} from "../interpreter";
+import { beforeEach, expect } from "bun:test";
 import { createLibraryTester } from "./test-utils";
 
 createLibraryTester(MathOps, "Math Library", (test) => {
@@ -10,12 +15,12 @@ createLibraryTester(MathOps, "Math Library", (test) => {
 
   beforeEach(() => {
     ctx = createScriptContext({
-      caller: { id: 1 } as any,
-      this: { id: 2 } as any,
       args: [],
-      send: () => {},
-      warnings: [],
+      caller: { id: 1 } as any,
       ops: TEST_OPS,
+      send: () => {},
+      this: { id: 2 } as any,
+      warnings: [],
     });
   });
 

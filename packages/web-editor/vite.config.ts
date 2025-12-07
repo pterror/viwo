@@ -1,17 +1,17 @@
 import { defineConfig } from "vite";
+import { resolve } from "node:path";
 import solidPlugin from "vite-plugin-solid";
-import path from "path";
 
 export default defineConfig({
-  plugins: [solidPlugin()],
   build: {
     lib: {
-      entry: path.resolve(__dirname, "src/index.ts"),
-      name: "ViwoEditor",
+      entry: resolve(__dirname, "src/index.ts"),
       fileName: (format) => `index.${format}.js`,
+      name: "ViwoEditor",
     },
     rollupOptions: {
       external: ["solid-js", "monaco-editor", "@viwo/scripting", "@viwo/shared"],
     },
   },
+  plugins: [solidPlugin()],
 });

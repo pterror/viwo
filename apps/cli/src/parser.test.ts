@@ -1,23 +1,23 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { parseCommand } from "./parser";
 
 describe("CLI Parser", () => {
   test("Basic command", () => {
-    expect(parseCommand("look")).toEqual({ command: "look", args: [] });
+    expect(parseCommand("look")).toEqual({ args: [], command: "look" });
     expect(parseCommand("go north")).toEqual({
-      command: "go",
       args: ["north"],
+      command: "go",
     });
   });
 
   test("Quoted arguments", () => {
     expect(parseCommand('say "hello world"')).toEqual({
-      command: "say",
       args: ["hello world"],
+      command: "say",
     });
     expect(parseCommand('create "iron sword" weapon')).toEqual({
-      command: "create",
       args: ["iron sword", "weapon"],
+      command: "create",
     });
   });
 

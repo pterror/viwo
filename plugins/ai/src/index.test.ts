@@ -1,41 +1,45 @@
-import { describe, it, expect, beforeEach, mock, spyOn } from "bun:test";
+import type { CommandContext, PluginContext } from "@viwo/core";
+import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import { AiPlugin } from "./index";
-import { PluginContext, CommandContext } from "@viwo/core";
 
 // Mock dependencies
 
 const mockMemoryManager = {
-  search: mock(async () => [
-    { content: "Memory 1", distance: 0.1 },
-    { content: "Memory 2", distance: 0.2 },
-  ]),
+  search: mock(() =>
+    Promise.resolve([
+      { content: "Memory 1", distance: 0.1 },
+      { content: "Memory 2", distance: 0.2 },
+    ]),
+  ),
 };
 
 const mockMemoryPlugin = {
-  name: "memory",
   memoryManager: mockMemoryManager,
+  name: "memory",
 };
 
 const mockContext = {
+  core: {
+    getEntity: () => ({ id: 1, location: 2 }),
+    registerLibrary: () => {},
+  } as never,
+  getPlugin: (name: string) => {
+    if (name === "memory") {
+      return mockMemoryPlugin;
+    }
+    return;
+  },
   registerCommand: () => {},
   registerRpcMethod: () => {},
-  getPlugin: (name: string) => {
-    if (name === "memory") return mockMemoryPlugin;
-    return undefined;
-  },
-  core: {
-    registerLibrary: () => {},
-    getEntity: () => ({ id: 1, location: 2 }),
-  } as never,
 } as PluginContext;
 
 // Mock 'ai' module
 mock.module("ai", () => ({
-  generateText: mock(async ({ system, prompt }: any) => {
-    return { text: `Response to: ${prompt} with system: ${system}` };
-  }),
-  generateObject: mock(async () => ({ object: { completion: "mock" } })),
-  embed: mock(async () => ({ embedding: [] })),
+  embed: mock(() => Promise.resolve({ embedding: [] })),
+  generateObject: mock(() => Promise.resolve({ object: { completion: "mock" } })),
+  generateText: mock(({ system, prompt }: any) =>
+    Promise.resolve({ text: `Response to: ${prompt} with system: ${system}` }),
+  ),
 }));
 
 describe("AiPlugin", () => {
@@ -48,23 +52,23 @@ describe("AiPlugin", () => {
 
   it("should inject memories into system prompt", async () => {
     const ctx: CommandContext = {
-      player: { id: 1, ws: null! },
-      command: "talk",
       args: ["NPC", "Hello"],
+      command: "talk",
+      player: { id: 1, ws: null! },
       send: () => {},
     };
 
     // Mock room resolution
     spyOn(aiPlugin, "getResolvedRoom").mockReturnValue({
-      id: 2,
       contents: [
         {
+          adjectives: ["friendly"],
+          description: "A friendly NPC",
           id: 3,
           name: "NPC",
-          description: "A friendly NPC",
-          adjectives: ["friendly"],
         },
       ],
+      id: 2,
     } as any);
 
     await aiPlugin.handleTalk(ctx);
@@ -75,9 +79,9 @@ describe("AiPlugin", () => {
     });
 
     // Verify generateText was called with memories in system prompt
-    const generateText = (await import("ai")).generateText;
+    const { generateText } = await import("ai");
     expect(generateText).toHaveBeenCalled();
-    const callArgs = (generateText as any).mock.calls[0][0];
+    const [[callArgs]] = (generateText as any).mock.calls;
     expect(callArgs.system).toContain("Relevant Memories:");
     expect(callArgs.system).toContain("- Memory 1");
     expect(callArgs.system).toContain("- Memory 2");
@@ -86,40 +90,43 @@ describe("AiPlugin", () => {
   it("should stream response using stream_talk", async () => {
     const send = mock(() => {});
     const ctx: CommandContext = {
-      player: { id: 1, ws: null! },
-      command: "talk",
       args: [],
+      command: "talk",
+      player: { id: 1, ws: null! },
       send,
     };
 
     // Mock room resolution
     spyOn(aiPlugin, "getResolvedRoom").mockReturnValue({
-      id: 2,
       contents: [
         {
+          adjectives: ["friendly"],
+          description: "A friendly NPC",
           id: 3,
           name: "NPC",
-          description: "A friendly NPC",
-          adjectives: ["friendly"],
         },
       ],
+      id: 2,
     } as any);
 
     // Mock streamText
-    const mockStreamText = mock(async () => ({
-      textStream: (async function* () {
-        yield "Hello";
-        yield " world";
-      })(),
-    }));
+    const mockStreamText = mock(() =>
+      Promise.resolve({
+        // oxlint-disable-next-line consistent-function-scoping
+        textStream: (async function* textStream() {
+          yield "Hello";
+          yield " world";
+        })(),
+      }),
+    );
     mock.module("ai", () => ({
-      generateText: mock(async () => ({ text: "mock" })),
-      generateObject: mock(async () => ({ object: { completion: "mock" } })),
-      embed: mock(async () => ({ embedding: [] })),
+      embed: mock(() => Promise.resolve({ embedding: [] })),
+      generateObject: mock(() => Promise.resolve({ object: { completion: "mock" } })),
+      generateText: mock(() => Promise.resolve({ text: "mock" })),
       streamText: mockStreamText,
     }));
 
-    await aiPlugin.handleStreamTalk({ targetName: "NPC", message: "Hi" }, ctx);
+    await aiPlugin.handleStreamTalk({ message: "Hi", targetName: "NPC" }, ctx);
 
     // Verify streamText was called
     expect(mockStreamText).toHaveBeenCalled();

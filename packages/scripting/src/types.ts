@@ -1,4 +1,4 @@
-import { Entity } from "@viwo/shared/jsonrpc";
+import type { Entity } from "@viwo/shared/jsonrpc";
 
 /**
  * Execution context for a script.
@@ -9,28 +9,28 @@ export interface StackFrame {
   args: unknown[];
 }
 
-export type ScriptContext = {
+export interface ScriptContext {
   /** The entity that initiated the script execution. */
-  caller: Entity;
+  readonly caller: Entity;
   /** The entity the script is currently attached to/executing on. */
-  this: Entity;
+  readonly this: Entity;
   /** Arguments passed to the script. */
-  args: readonly unknown[];
+  readonly args: readonly unknown[];
   /** Gas limit to prevent infinite loops. */
   gas: number;
   /** Function to send messages back to the caller. */
-  send?: (type: string, payload: unknown) => void;
+  readonly send?: (type: string, payload: unknown) => void;
   /** List of warnings generated during execution. */
-  warnings: string[];
+  readonly warnings: string[];
   /** Copy-On-Write flag for scope forking. */
   cow: boolean;
   /** Local variables in the current scope. */
   vars: Record<string, unknown>;
   /** Call stack for error reporting. */
-  stack: StackFrame[];
+  readonly stack: StackFrame[];
   /** Opcode registry for this context. */
-  ops: Record<string, OpcodeBuilder<any[], any>>;
-};
+  readonly ops: Record<string, OpcodeBuilder<any[], any>>;
+}
 
 export type ScriptLibraryDefinition = Record<
   string,
@@ -55,12 +55,12 @@ export class ScriptError extends Error {
     }
     if (this.stackTrace.length > 0) {
       str += "\nStack trace:\n";
-      for (let i = this.stackTrace.length - 1; i >= 0; i--) {
-        const frame = this.stackTrace[i];
+      for (let idx = this.stackTrace.length - 1; idx >= 0; idx -= 1) {
+        const frame = this.stackTrace[idx];
         if (!frame) {
           continue;
         }
-        str += `  at ${frame.name} (${frame.args.map((a) => JSON.stringify(a)).join(", ")})\n`;
+        str += `  at ${frame.name} (${frame.args.map((arg) => JSON.stringify(arg)).join(", ")})\n`;
       }
     }
     return str;
@@ -112,17 +112,19 @@ export interface FullOpcodeMetadata<Lazy extends boolean = boolean>
 
 export type OpcodeHandler<Args extends readonly unknown[], Ret, Lazy extends boolean = boolean> = (
   args: {
-    [K in keyof Args]: Args[K] extends ScriptRaw<infer T>
-      ? T
+    [Key in keyof Args]: Args[Key] extends ScriptRaw<infer Type>
+      ? Type
       : Lazy extends true
-        ? ScriptValue<Args[K]>
-        : Args[K];
+        ? ScriptValue<Args[Key]>
+        : Args[Key];
   },
   ctx: ScriptContext,
 ) => Ret | Promise<Ret>;
 
 declare const RAW_MARKER: unique symbol;
-export type ScriptRaw<T> = { [RAW_MARKER]: T };
+export interface ScriptRaw<Type> {
+  [RAW_MARKER]: Type;
+}
 
 export interface Capability {
   readonly __brand: "Capability";
@@ -139,19 +141,19 @@ type UnknownUnion =
   | (Record<string, unknown> & { readonly length?: never })
   | (Record<string, unknown> & { readonly slice?: never });
 
-export type ScriptValue_<T> = Exclude<T, readonly unknown[]>;
+export type ScriptValue_<Type> = Exclude<Type, readonly unknown[]>;
 
 /**
  * Represents a value in the scripting language.
  * Can be a primitive, an object, or a nested S-expression (array).
  */
-export type ScriptValue<T> =
-  | (unknown extends T
+export type ScriptValue<Type> =
+  | (unknown extends Type
       ? ScriptValue_<UnknownUnion>
-      : object extends T
+      : object extends Type
         ? Extract<ScriptValue_<UnknownUnion>, object>
-        : ScriptValue_<T>)
-  | ScriptExpression<any[], T>;
+        : ScriptValue_<Type>)
+  | ScriptExpression<any[], Type>;
 
 // Phantom type for return type safety
 export type ScriptExpression<Args extends (string | ScriptValue_<unknown>)[], Ret> = [
@@ -161,7 +163,10 @@ export type ScriptExpression<Args extends (string | ScriptValue_<unknown>)[], Re
   __returnType: Ret;
 };
 
-export type UnwrapScriptExpression<T> = T extends ScriptExpression<any, infer Ret> ? Ret : T;
+export type UnwrapScriptExpression<Type> =
+  Type extends ScriptExpression<any, infer Ret> ? Ret : Type;
+
+type IsAny<Type> = 0 extends 1 & Type ? true : false;
 
 export interface OpcodeBuilder<
   Args extends (string | ScriptValue_<unknown>)[],
@@ -169,18 +174,20 @@ export interface OpcodeBuilder<
   Lazy extends boolean = boolean,
 > {
   (
-    ...args: {
-      [K in keyof Args]: Args[K] extends ScriptRaw<infer T> ? T : ScriptValue<Args[K]>;
-    }
+    ...args: IsAny<Args> extends true
+      ? any
+      : {
+          [Key in keyof Args]: Args[Key] extends ScriptRaw<infer Type>
+            ? Type
+            : ScriptValue<Args[Key]>;
+        }
   ): ScriptExpression<Args, Ret>;
   opcode: string;
   handler: OpcodeHandler<Args, Ret, Lazy>;
   metadata: OpcodeMetadata<Lazy>;
 }
 
-export interface ScriptOps {
-  [opcode: string]: OpcodeBuilder<any, any>;
-}
+export type ScriptOps = Record<string, OpcodeBuilder<any, any>>;
 
 /**
  * Defines a new opcode.

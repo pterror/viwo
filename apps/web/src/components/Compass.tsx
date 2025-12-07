@@ -1,13 +1,17 @@
-import { gameStore } from "../store/game";
 import DigPanel from "./DigPanel";
 import Popover from "./Popover";
+import { gameStore } from "../store/game";
 
 export default function Compass() {
   const getExit = (dir: string) => {
-    const roomId = gameStore.state.roomId;
-    if (!roomId) return null;
+    const { roomId } = gameStore.state;
+    if (!roomId) {
+      return null;
+    }
     const room = gameStore.state.entities.get(roomId);
-    if (!room || !Array.isArray(room["exits"])) return null;
+    if (!room || !Array.isArray(room["exits"])) {
+      return null;
+    }
 
     return (room["exits"] as number[])
       .map((id) => gameStore.state.entities.get(id))
@@ -26,14 +30,14 @@ export default function Compass() {
     return (
       <Popover
         contentClass="compass__popover"
-        triggerWrapperStyle={{ width: "100%", height: "100%" }}
+        triggerWrapperStyle={{ height: "100%", width: "100%" }}
         trigger={(triggerProps) => (
           <button
-            onClick={(e) => {
+            onClick={(event) => {
               if (exit()) {
                 handleDir(props.dir);
               } else {
-                triggerProps.onClick(e);
+                triggerProps.onClick(event);
               }
             }}
             classList={{

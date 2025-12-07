@@ -8,32 +8,32 @@ export class Xoroshiro128Plus {
 
   seed(seed: number | bigint) {
     // Split 64-bit seed into two 64-bit state parts using SplitMix64
-    let s = BigInt(seed);
-    this.state[0] = this.splitMix64(s);
-    this.state[1] = this.splitMix64(s + 0x9e3779b97f4a7c15n);
+    let seedBigint = BigInt(seed);
+    this.state[0] = this.splitMix64(seedBigint);
+    this.state[1] = this.splitMix64(seedBigint + 0x9e_37_79_b9_7f_4a_7c_15n);
   }
 
-  private splitMix64(x: bigint): bigint {
-    let z = (x + 0x9e3779b97f4a7c15n) & 0xffffffffffffffffn;
-    z = ((z ^ (z >> 30n)) * 0xbf58476d1ce4e5b9n) & 0xffffffffffffffffn;
-    z = ((z ^ (z >> 27n)) * 0x94d049bb133111ebn) & 0xffffffffffffffffn;
-    return (z ^ (z >> 31n)) & 0xffffffffffffffffn;
+  private splitMix64(num: bigint): bigint {
+    let res = (num + 0x9e_37_79_b9_7f_4a_7c_15n) & 0xff_ff_ff_ff_ff_ff_ff_ffn;
+    res = ((res ^ (res >> 30n)) * 0xbf_58_47_6d_1c_e4_e5_b9n) & 0xff_ff_ff_ff_ff_ff_ff_ffn;
+    res = ((res ^ (res >> 27n)) * 0x94_d0_49_bb_13_31_11_ebn) & 0xff_ff_ff_ff_ff_ff_ff_ffn;
+    return (res ^ (res >> 31n)) & 0xff_ff_ff_ff_ff_ff_ff_ffn;
   }
 
   next(): bigint {
-    const s0 = this.state[0];
-    let s1 = this.state[1];
-    const result = (s0 + s1) & 0xffffffffffffffffn;
+    const [s0] = this.state;
+    let [, s1] = this.state;
+    const result = (s0 + s1) & 0xff_ff_ff_ff_ff_ff_ff_ffn;
 
     s1 ^= s0;
-    this.state[0] = (this.rotl(s0, 24n) ^ s1 ^ (s1 << 16n)) & 0xffffffffffffffffn; // a, b
-    this.state[1] = this.rotl(s1, 37n) & 0xffffffffffffffffn; // c
+    this.state[0] = (this.rotl(s0, 24n) ^ s1 ^ (s1 << 16n)) & 0xff_ff_ff_ff_ff_ff_ff_ffn; // a, b
+    this.state[1] = this.rotl(s1, 37n) & 0xff_ff_ff_ff_ff_ff_ff_ffn; // c
 
     return result;
   }
 
-  private rotl(x: bigint, k: bigint): bigint {
-    return ((x << k) | (x >> (64n - k))) & 0xffffffffffffffffn;
+  private rotl(num: bigint, shift: bigint): bigint {
+    return ((num << shift) | (num >> (64n - shift))) & 0xff_ff_ff_ff_ff_ff_ff_ffn;
   }
 
   /**
@@ -43,19 +43,16 @@ export class Xoroshiro128Plus {
   float(): number {
     const next = this.next();
     // Use upper 53 bits for double precision float
-    return Number(next >> 11n) * 1.1102230246251565e-16; // 2^-53
+    return Number(next >> 11n) * 1.110_223_024_625_156_5e-16; // 2^-53
   }
 
-  /**
-   * Returns a random number between min (inclusive) and max (inclusive).
-   */
+  /** Returns a random number between min (inclusive) and max (inclusive). */
   range(min: number, max: number): number {
     if (min > max) {
       throw new Error("min must be less than or equal to max");
     }
     const val = this.float();
     const result = val * (max - min) + min;
-
     // If inputs are integers, round the result (simulating integer range if close)
     if (Number.isInteger(min) && Number.isInteger(max)) {
       return Math.floor(result); // Using floor logic similar to previous random() behavior

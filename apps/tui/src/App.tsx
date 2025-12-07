@@ -1,18 +1,18 @@
-import { useState, useEffect, useRef } from "react";
 import { Box, Text, useApp, useStdout } from "ink";
-import TextInput from "ink-text-input";
-import { ViwoClient, GameState } from "@viwo/client";
-import { Entity } from "@viwo/shared/jsonrpc";
+import { type GameState, ViwoClient } from "@viwo/client";
+import { useEffect, useRef, useState } from "react";
 import Editor from "./components/Editor";
+import type { Entity } from "@viwo/shared/jsonrpc";
+import TextInput from "ink-text-input";
 
 // Types
 type Mode = "GAME" | "EDITOR";
 
-type LogEntry = {
+interface LogEntry {
   id: string;
   message: string | object;
   type: "info" | "error" | "other";
-};
+}
 
 const App = () => {
   const { exit } = useApp();
@@ -20,23 +20,23 @@ const App = () => {
   const [rows, setRows] = useState(stdout.rows || 24);
   const [query, setQuery] = useState("");
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [room, setRoom] = useState<Entity | null>(null);
+  const [room, setRoom] = useState<Entity | null>();
   const [inventory, setInventory] = useState<Entity[]>([]);
   const [mode, setMode] = useState<Mode>("GAME");
   const [editingScript, setEditingScript] = useState<{
     id: number;
     verb: string;
     content: string;
-  } | null>(null);
+  } | null>();
 
   // Client state
   const [clientState, setClientState] = useState<GameState>({
+    entities: new Map(),
     isConnected: false,
     messages: [],
-    entities: new Map(),
-    roomId: null,
-    playerId: null,
     opcodes: null,
+    playerId: null,
+    roomId: null,
   });
 
   const clientRef = useRef<ViwoClient | null>(null);
@@ -60,7 +60,10 @@ const App = () => {
       const player = entities.get(playerId);
       const contents = player?.["contents"] as number[] | undefined;
       if (contents && Array.isArray(contents)) {
-        const items = contents.map((id) => entities.get(id)).filter((e): e is Entity => !!e);
+        const items = contents.flatMap((id) => {
+          const entity = entities.get(id);
+          return entity ? [entity] : [];
+        });
         setInventory(items);
       }
     }
@@ -88,7 +91,7 @@ const App = () => {
   }, []);
 
   const addLog = (message: string | object, type: "info" | "error" | "other" = "info") => {
-    setLogs((prev) => [...prev, { id: Math.random().toString(36).substr(2, 9), message, type }]);
+    setLogs((prev) => [...prev, { id: Math.random().toString(36).slice(2, 9), message, type }]);
   };
 
   const handleSubmit = (input: string) => {
@@ -107,15 +110,15 @@ const App = () => {
 
     const parts = input.match(/(?:[^\s"]+|"[^"]*")+/g);
     if (parts) {
-      const command = parts[0];
+      const [command] = parts;
       const args = parts.slice(1).map((arg) => arg.replace(/^"(.*)"$/, "$1"));
 
       if (command === "edit" && args.length >= 2) {
-        const scriptId = parseInt(args[0]!);
+        const scriptId = parseInt(args[0]!, 10);
         const verbName = args[1]!;
 
         const openEditor = (initialContent: string) => {
-          setEditingScript({ id: scriptId, verb: verbName, content: initialContent });
+          setEditingScript({ content: initialContent, id: scriptId, verb: verbName });
           setMode("EDITOR");
           setQuery("");
         };
@@ -126,8 +129,8 @@ const App = () => {
           .then((source) => {
             openEditor(source);
           })
-          .catch((e) => {
-            addLog(`Failed to fetch verb: ${e.message}. Starting empty.`, "error");
+          .catch((error) => {
+            addLog(`Failed to fetch verb: ${error.message}. Starting empty.`, "error");
             openEditor("");
           });
         return;
@@ -145,10 +148,10 @@ const App = () => {
         .then(() => {
           addLog(`Saved verb '${editingScript.verb}' on ${editingScript.id}`, "info");
           setMode("GAME");
-          setEditingScript(null);
+          setEditingScript(undefined);
         })
-        .catch((e) => {
-          addLog(`Failed to save: ${e.message}`, "error");
+        .catch((error) => {
+          addLog(`Failed to save: ${error.message}`, "error");
           // Don't exit editor on error?
           // For now, let's just log and keep editor open or close?
           // User might lose work if we close.
@@ -165,9 +168,10 @@ const App = () => {
 
   const handleExitEditor = () => {
     setMode("GAME");
-    setEditingScript(null);
+    setEditingScript(undefined);
   };
 
+  // oxlint-disable-next-line require-await
   const handleLocalCompletion = async (
     code: string,
     position: { lineNumber: number; column: number },
@@ -182,7 +186,7 @@ const App = () => {
       // We look for the last sequence of non-whitespace characters.
       const match = textBeforeCursor.match(/[\S]+$/);
       if (match) {
-        const prefix = match[0];
+        const [prefix] = match;
         // Filter opcodes
         // We cast opcodes to any[] because we don't have the type imported,
         // but we know it has an 'opcode' field.
@@ -195,32 +199,36 @@ const App = () => {
         }
       }
     }
-    return null;
+    return;
   };
 
   const handleAiCompletion = async (
     code: string,
     position: { lineNumber: number; column: number },
   ) => {
-    if (!clientRef.current) return null;
+    if (!clientRef.current) {
+      return null;
+    }
     try {
       const completion = await clientRef.current.callPluginMethod("ai_completion", {
         code,
         position,
       });
       return typeof completion === "string" ? completion : null;
-    } catch (e) {
-      addLog(`AI Error: ${e}`, "error");
+    } catch (error) {
+      addLog(`AI Error: ${error}`, "error");
       return null;
     }
   };
 
   // Helper to get room contents
   const getRoomContents = () => {
-    if (!room || !room["contents"] || !Array.isArray(room["contents"])) return [];
+    if (!room || !room["contents"] || !Array.isArray(room["contents"])) {
+      return [];
+    }
     return room["contents"]
       .map((id: number) => clientState.entities.get(id))
-      .filter((e: Entity | undefined): e is Entity => !!e);
+      .filter((entity) => !!entity);
   };
 
   return (

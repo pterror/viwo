@@ -1,8 +1,8 @@
-import { startServer, pluginManager, seed, scheduler } from "@viwo/core";
+import { pluginManager, scheduler, seed, startServer } from "@viwo/core";
 import { AiPlugin } from "@viwo/plugin-ai";
+import { FsPlugin } from "@viwo/plugin-fs";
 import { MemoryPlugin } from "@viwo/plugin-memory";
 import { NetPlugin } from "@viwo/plugin-net";
-import { FsPlugin } from "@viwo/plugin-fs";
 import { ProcGenPlugin } from "@viwo/plugin-procgen";
 
 async function main() {
@@ -23,4 +23,8 @@ async function main() {
   startServer(8080);
 }
 
-main().catch(console.error);
+try {
+  await main();
+} catch (error) {
+  console.error(error);
+}

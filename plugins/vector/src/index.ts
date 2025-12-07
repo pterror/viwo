@@ -1,17 +1,17 @@
-import { Database } from "bun:sqlite";
-import * as sqliteVec from "sqlite-vec";
+import type { Database } from "bun:sqlite";
+import { load } from "sqlite-vec";
 
-export type VectorSearchResult = {
+export interface VectorSearchResult {
   rowid: number;
   distance: number;
-};
+}
 
 export class VectorDatabase {
   private db: Database;
 
   constructor(db: Database) {
     this.db = db;
-    sqliteVec.load(db);
+    load(db);
   }
 
   createTable(name: string, dimensions: number) {
@@ -40,11 +40,7 @@ export class VectorDatabase {
     transaction(items);
   }
 
-  search(
-    tableName: string,
-    embedding: Float32Array | number[],
-    limit: number = 5,
-  ): VectorSearchResult[] {
+  search(tableName: string, embedding: Float32Array | number[], limit = 5): VectorSearchResult[] {
     const vector = embedding instanceof Float32Array ? embedding : new Float32Array(embedding);
 
     const query = this.db.prepare(`

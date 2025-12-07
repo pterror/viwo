@@ -1,5 +1,5 @@
-import { Database } from "bun:sqlite";
 import { CONFIG } from "./config";
+import { Database } from "bun:sqlite";
 
 export class DatabaseManager {
   private db: Database;

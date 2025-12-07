@@ -1,28 +1,28 @@
-import { expect, beforeEach } from "bun:test";
+import * as BooleanLib from "../lib/boolean";
+import * as ListLib from "../lib/list";
+import * as MathLib from "../lib/math";
+import * as StdLib from "../lib/std";
+import * as StringLib from "../lib/string";
 import {
-  evaluate,
-  ScriptContext,
-  createOpcodeRegistry,
+  type ScriptContext,
   ScriptError,
+  createOpcodeRegistry,
   createScriptContext,
+  evaluate,
 } from "../interpreter";
-import * as Core from "./std";
-import * as StringLib from "./string";
-import * as List from "./list";
-import * as MathLib from "./math";
-import * as BooleanLib from "./boolean";
+import { beforeEach, expect } from "bun:test";
 import { createLibraryTester } from "./test-utils";
 
 createLibraryTester(StringLib, "String Library", (test) => {
-  const TEST_OPS = createOpcodeRegistry(Core, StringLib, List, MathLib, BooleanLib);
+  const TEST_OPS = createOpcodeRegistry(StdLib, StringLib, ListLib, MathLib, BooleanLib);
 
   let ctx: ScriptContext;
 
   beforeEach(() => {
     ctx = createScriptContext({
       caller: { id: 1 } as any,
-      this: { id: 2 } as any,
       ops: TEST_OPS,
+      this: { id: 2 } as any,
     });
   });
 
@@ -32,7 +32,7 @@ createLibraryTester(StringLib, "String Library", (test) => {
     expect(
       (() => {
         try {
-          // @ts-expect-error
+          // @ts-expect-error We are testing invalid input
           return evaluate(StringLib.strLen(123), ctx);
         } catch (error) {
           return error;
@@ -47,8 +47,8 @@ createLibraryTester(StringLib, "String Library", (test) => {
   });
 
   test("str.join", () => {
-    expect(evaluate(StringLib.strJoin(List.listNew("a", "b", "c"), ","), ctx)).toBe("a,b,c");
-    expect(evaluate(StringLib.strJoin(List.listNew(), ","), ctx)).toBe("");
+    expect(evaluate(StringLib.strJoin(ListLib.listNew("a", "b", "c"), ","), ctx)).toBe("a,b,c");
+    expect(evaluate(StringLib.strJoin(ListLib.listNew(), ","), ctx)).toBe("");
   });
 
   test("str.concat", () => {

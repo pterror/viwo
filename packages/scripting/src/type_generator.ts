@@ -1,4 +1,4 @@
-import { OpcodeMetadata } from "./types";
+import type { OpcodeMetadata } from "./types";
 
 export const RESERVED_TYPESCRIPT_KEYWORDS = new Set([
   "if",
@@ -37,21 +37,83 @@ export const RESERVED_TYPESCRIPT_KEYWORDS = new Set([
 ]);
 
 const OPERATOR_MAP: Record<string, string> = {
+  "!=": "neq",
+  "%": "mod",
+  "*": "mul",
   "+": "add",
   "-": "sub",
-  "*": "mul",
   "/": "div",
-  "%": "mod",
-  "^": "pow",
-  "==": "eq",
-  "!=": "neq",
-  ">": "gt",
   "<": "lt",
-  ">=": "gte",
   "<=": "lte",
+  "==": "eq",
+  ">": "gt",
+  ">=": "gte",
+  "^": "pow",
 };
 
-export function generateTypeDefinitions(opcodes: OpcodeMetadata[]): string {
+function generateJSDoc(op: OpcodeMetadata): string {
+  if (
+    !op.description &&
+    (!op.parameters || op.parameters.every((parameter) => !parameter.description))
+  ) {
+    return "";
+  }
+  let jsdoc = "/**\n";
+  if (op.description) {
+    jsdoc += ` * ${op.description}\n`;
+  }
+  if (op.parameters && op.parameters.some((parameter) => parameter.description)) {
+    if (op.description) {
+      jsdoc += " *\n";
+    }
+    for (const parameter of op.parameters) {
+      if (parameter.description) {
+        jsdoc += ` * @param ${parameter.name.replace(/^[.][.][.]/, "")} ${parameter.description}\n`;
+      }
+    }
+  }
+  jsdoc += " */\n";
+  return jsdoc;
+}
+
+function renderNamespaceContent(name: string, content: any, indent: string): string {
+  let output = `${indent}namespace ${name} {\n`;
+  const innerIndent = `${indent}  `;
+  if (content._funcs) {
+    for (const func of content._funcs) {
+      output += `${innerIndent}${func}\n`;
+    }
+  }
+  for (const key of Object.keys(content)) {
+    if (key === "_funcs") {
+      continue;
+    }
+    output += renderNamespaceContent(key, content[key], innerIndent);
+  }
+  output += `${indent}}\n`;
+  return output;
+}
+
+function renderNamespace(name: string, content: any, indent: string): string {
+  let output = `${indent}namespace ${name} {\n`;
+  const innerIndent = `${indent}  `;
+  if (content._funcs) {
+    for (const func of content._funcs) {
+      output += `${innerIndent}${func}\n`;
+    }
+  }
+  for (const key of Object.keys(content)) {
+    if (key === "_funcs") {
+      continue;
+    }
+    // Recursive render for sub-namespaces, but we don't need 'declare' inside
+    output += renderNamespaceContent(key, content[key], innerIndent);
+  }
+  output += `${indent}}\n`;
+  return output;
+}
+
+export function generateTypeDefinitions(opcodes: readonly OpcodeMetadata[]): string {
   let definitions = `\
 interface Entity {
   /** Unique ID of the entity */
@@ -61,11 +123,9 @@ interface Entity {
    * Contains arbitrary game data like description, adjectives, custom_css.
    */
   [key: string]: unknown;
-};
+}
 
-/**
- * Represents a scriptable action (verb) attached to an entity.
- */
+/** Represents a scriptable action (verb) attached to an entity. */
 interface Verb {
   id: number;
   entity_id: number;
@@ -80,9 +140,11 @@ interface Capability {
   readonly id: string;
 }
 
-type UnionToIntersection<T> = (
-  T extends T ? (t: T) => 0 : never
-) extends (i: infer I) => 0 ? Extract<I, T> : never;
+type UnionToIntersection<Type> = (Type extends Type ? (type: Type) => 0 : never) extends (
+  intersection: infer Intersection,
+) => 0
+  ? Extract<Intersection, Type>
+  : never;
 
 type UnknownUnion =
   | string
@@ -94,50 +156,30 @@ type UnknownUnion =
   | (Record<string, unknown> & { readonly length?: never })
   | (Record<string, unknown> & { readonly slice?: never });
 
-type ScriptValue_<T> = Exclude<T, readonly unknown[]>;
+type ScriptValue_<Type> = Exclude<Type, readonly unknown[]>;
 
 /**
  * Represents a value in the scripting language.
  * Can be a primitive, an object, or a nested S-expression (array).
  */
-type ScriptValue<T> =
-  | (unknown extends T
+type ScriptValue<Type> =
+  | (unknown extends Type
       ? ScriptValue_<UnknownUnion>
-      : object extends T
-        ? Extract<ScriptValue_<UnknownUnion>, object>
-        : ScriptValue_<T>)
-  | ScriptExpression<any[], T>;
+      : object extends Type
+      ? Extract<ScriptValue_<UnknownUnion>, object>
+      : ScriptValue_<Type>)
+  | ScriptExpression<any[], Type>;
 
 // Phantom type for return type safety
-type ScriptExpression<Args extends (string | ScriptValue_<unknown>)[], Ret> = [
+type ScriptExpression<Args extends (string | ScriptValue_<unknown>)[], Result> = [
   string,
   ...Args,
 ] & {
-  __returnType: Ret;
+  __returnType: Result;
 };
 
 // Standard library functions
 `;
-
-  function generateJSDoc(op: OpcodeMetadata): string {
-    if (!op.description && (!op.parameters || op.parameters.every((p) => !p.description))) {
-      return "";
-    }
-    let jsdoc = "/**\n";
-    if (op.description) {
-      jsdoc += ` * ${op.description}\n`;
-    }
-    if (op.parameters && op.parameters.some((p) => p.description)) {
-      if (op.description) jsdoc += " *\n";
-      for (const param of op.parameters) {
-        if (param.description) {
-          jsdoc += ` * @param ${param.name.replace(/^[.][.][.]/, "")} ${param.description}\n`;
-        }
-      }
-    }
-    jsdoc += " */\n";
-    return jsdoc;
-  }
 
   const rootNamespace: Record<string, any> = {};
 
@@ -145,23 +187,27 @@ type ScriptExpression<Args extends (string | ScriptValue_<unknown>)[], Ret> = [
     const parts = op.opcode.split(".");
     if (parts.length > 1) {
       let current = rootNamespace;
-      for (let i = 0; i < parts.length - 1; i++) {
-        const part = parts[i];
+      for (let idx = 0; idx < parts.length - 1; idx += 1) {
+        const part = parts[idx];
         if (!part) {
           continue;
         }
-        if (!current[part]) current[part] = {};
+        if (!current[part]) {
+          current[part] = {};
+        }
         current = current[part];
       }
-      const name = parts[parts.length - 1];
+      const name = parts.at(-1);
       current["_funcs"] ??= [];
 
       const params =
         op.parameters
-          ?.map((p) => {
-            const paramName = RESERVED_TYPESCRIPT_KEYWORDS.has(p.name) ? `${p.name}_` : p.name;
-            const question = p.optional ? "?" : "";
-            return `${paramName}${question}: ${p.type}`;
+          ?.map((parameter) => {
+            const paramName = RESERVED_TYPESCRIPT_KEYWORDS.has(parameter.name)
+              ? `${parameter.name}_`
+              : parameter.name;
+            const question = parameter.optional ? "?" : "";
+            return `${paramName}${question}: ${parameter.type}`;
           })
           .join(", ") ?? "";
       const ret = op.returnType ?? "any";
@@ -174,10 +220,12 @@ type ScriptExpression<Args extends (string | ScriptValue_<unknown>)[], Ret> = [
       // Global function
       const params =
         op.parameters
-          ?.map((p) => {
-            const paramName = RESERVED_TYPESCRIPT_KEYWORDS.has(p.name) ? `${p.name}_` : p.name;
-            const question = p.optional ? "?" : "";
-            return `${paramName}${question}: ${p.type}`;
+          ?.map((parameter) => {
+            const paramName = RESERVED_TYPESCRIPT_KEYWORDS.has(parameter.name)
+              ? `${parameter.name}_`
+              : parameter.name;
+            const question = parameter.optional ? "?" : "";
+            return `${paramName}${question}: ${parameter.type}`;
           })
           .join(", ") ?? "";
       const ret = op.returnType ?? "any";
@@ -193,54 +241,15 @@ type ScriptExpression<Args extends (string | ScriptValue_<unknown>)[], Ret> = [
       definitions += `${jsdoc}function ${sanitizedOpcode}${generics}(${params}): ${ret};\n`;
     }
   }
-
-  function renderNamespace(name: string, content: any, indent: string): string {
-    let output = `${indent}namespace ${name} {\n`;
-    const innerIndent = indent + "  ";
-
-    if (content._funcs) {
-      for (const func of content._funcs) {
-        output += `${innerIndent}${func}\n`;
-      }
-    }
-
-    for (const key of Object.keys(content)) {
-      if (key === "_funcs") continue;
-      // Recursive render for sub-namespaces, but we don't need 'declare' inside
-      output += renderNamespaceContent(key, content[key], innerIndent);
-    }
-
-    output += `${indent}}\n`;
-    return output;
-  }
-
-  function renderNamespaceContent(name: string, content: any, indent: string): string {
-    let output = `${indent}namespace ${name} {\n`;
-    const innerIndent = indent + "  ";
-
-    if (content._funcs) {
-      for (const func of content._funcs) {
-        output += `${innerIndent}${func}\n`;
-      }
-    }
-
-    for (const key of Object.keys(content)) {
-      if (key === "_funcs") continue;
-      output += renderNamespaceContent(key, content[key], innerIndent);
-    }
-
-    output += `${indent}}\n`;
-    return output;
-  }
-
   for (const key of Object.keys(rootNamespace)) {
     definitions += renderNamespace(key, rootNamespace[key], "");
   }
-
   return `\
+// oxlint-disable max-params, ban-types
 declare global {
-${definitions.replace(/^/gm, "  ")}
+${definitions.replaceAll(/^/gm, "  ")}
 }
 
+// oxlint-disable-next-line require-module-specifiers
 export {};`;
 }

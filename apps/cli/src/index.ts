@@ -1,8 +1,8 @@
-import minimist from "minimist";
+import { type GameMessage, type GameState, ViwoClient } from "@viwo/client";
 import chalk from "chalk";
-import readline from "readline";
-import { ViwoClient, GameState, GameMessage } from "@viwo/client";
+import minimist from "minimist";
 import { parseCommand } from "./parser";
+import readline from "readline";
 
 const args = minimist(process.argv.slice(2));
 

@@ -1,12 +1,10 @@
-import { describe, it, expect, beforeEach } from "bun:test";
-import { db } from "../db";
-import { evaluate, createScriptContext, StdLib } from "@viwo/scripting";
-
-import { createEntity, getEntity, updateEntity, getVerb, addVerb, createCapability } from "../repo";
-import { Entity } from "@viwo/shared/jsonrpc";
-import { seed } from "../seed";
-
+import { StdLib, createScriptContext, evaluate } from "@viwo/scripting";
+import { addVerb, createCapability, createEntity, getEntity, getVerb, updateEntity } from "../repo";
+import { beforeEach, describe, expect, it } from "bun:test";
+import type { Entity } from "@viwo/shared/jsonrpc";
 import { GameOpcodes } from "./opcodes";
+import { db } from "../db";
+import { seed } from "../seed";
 
 describe("Player Commands", () => {
   let player: Entity;
@@ -24,18 +22,17 @@ describe("Player Commands", () => {
 
     // Setup Sys Context
     // Setup Send
-    send = (type: string, payload: unknown) => {
+    send = (type: string, payload: any) => {
       if (type === "update") {
         // 'look' sends { entities: [room, ...contents] }.
-        const p = payload as any;
-        if (p.entities && p.entities.length > 0) {
-          sentMessages.push(p.entities);
+        if (payload.entities && payload.entities.length > 0) {
+          sentMessages.push(payload.entities);
         } else {
           sentMessages.push(payload);
         }
       } else if (type === "message") {
         // 'inspect' can send 'update' or 'message' depending on implementation.
-        sentMessages.push({ type, payload });
+        sentMessages.push({ payload, type });
       } else {
         sentMessages.push(payload);
       }
@@ -63,15 +60,17 @@ describe("Player Commands", () => {
   const runCommand = async (command: string, args: readonly unknown[]) => {
     const freshPlayer = getEntity(player.id)!;
     const verb = getVerb(freshPlayer.id, command);
-    if (!verb) throw new Error(`Verb ${command} not found on player`);
+    if (!verb) {
+      throw new Error(`Verb ${command} not found on player`);
+    }
     return await evaluate(
       verb.code,
       createScriptContext({
-        caller: freshPlayer,
-        this: freshPlayer,
         args,
-        send,
+        caller: freshPlayer,
         ops: GameOpcodes,
+        send,
+        this: freshPlayer,
       }),
     );
   };
@@ -84,7 +83,7 @@ describe("Player Commands", () => {
   it("should inspect item", async () => {
     // Create item in room
     console.log("Creating Box...");
-    const boxId = createEntity({ name: "Box", location: room.id });
+    const boxId = createEntity({ location: room.id, name: "Box" });
     console.log(`Created Box with ID ${boxId}`);
 
     // Update room contents
@@ -103,8 +102,8 @@ describe("Player Commands", () => {
 
   it("should check inventory", async () => {
     const backpackId = createEntity({
-      name: "Leather Backpack",
       location: player.id,
+      name: "Leather Backpack",
     });
     const freshPlayer = getEntity(player.id)!;
     // 'inventory' verb uses 'contents' property.
@@ -136,10 +135,10 @@ describe("Player Commands", () => {
     // Create exit
     const exitId = createEntity(
       {
-        name: "north",
-        location: startRoomId,
-        direction: "north",
         destination: otherRoomId,
+        direction: "north",
+        location: startRoomId,
+        name: "north",
       },
       entityBase.id,
     );
@@ -180,14 +179,14 @@ describe("Player Commands", () => {
     expect(id, "create should return item id").toBeDefined();
     const createdRock = getEntity(id as number);
     expect(createdRock, "created item should exist").toBeDefined();
-    const roomUpdate = sentMessages.flat().find((m) => m.name === room["name"]);
+    const roomUpdate = sentMessages.flat().find((message) => message.name === room["name"]);
     expect(roomUpdate, "created item should send room update").toBeDefined();
   });
 
   it("should set property", async () => {
     const itemId = createEntity({
-      name: "Stone",
       location: room.id,
+      name: "Stone",
       weight: 10,
     });
     // Update room contents
@@ -240,7 +239,7 @@ describe("Recursive Move Check", () => {
       )
       .get()!;
 
-    const callerId = createEntity({ name: "Player", location: voidEntity.id }, playerBase.id);
+    const callerId = createEntity({ location: voidEntity.id, name: "Player" }, playerBase.id);
     caller = getEntity(callerId)!;
   });
 
@@ -252,13 +251,13 @@ describe("Recursive Move Check", () => {
       )
       .get()!;
 
-    const boxId = createEntity({ name: "Box", location: caller["location"] }, entityBase.id);
+    const boxId = createEntity({ location: caller["location"], name: "Box" }, entityBase.id);
     // Add dummy look verb to Box since move calls it
     addVerb(boxId, "look", StdLib.let("dummy", 1));
     const box = getEntity(boxId)!;
 
     // 2. Create an Item inside the Box
-    const itemId = createEntity({ name: "Item", location: boxId }, entityBase.id);
+    const itemId = createEntity({ location: boxId, name: "Item" }, entityBase.id);
 
     // 3. Attempt to move Box into Item
     // 'move' verb on Entity Base moves the CALLER.
@@ -266,11 +265,11 @@ describe("Recursive Move Check", () => {
 
     // Let's simulate the Box acting as the caller.
     const ctx = createScriptContext({
-      caller: box,
-      this: box, // The verb is on Entity Base, which Box inherits
       args: [getEntity(itemId)!], // Move to Item
-      send,
+      caller: box,
       ops: GameOpcodes,
+      send,
+      this: box, // The verb is on Entity Base, which Box inherits
     });
 
     const moveVerb = getVerb(entityBase.id, "teleport");

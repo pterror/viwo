@@ -1,6 +1,6 @@
-import { Component, createEffect, onCleanup, onMount, createSignal } from "solid-js";
+import { type Component, createEffect, createSignal, onCleanup, onMount } from "solid-js";
+import { type OpcodeMetadata, generateTypeDefinitions } from "@viwo/scripting";
 import loader from "@monaco-editor/loader";
-import { generateTypeDefinitions, OpcodeMetadata } from "@viwo/scripting";
 
 interface MonacoEditorProps {
   value?: string;
@@ -19,21 +19,23 @@ export const MonacoEditor: Component<MonacoEditorProps> = (props) => {
 
   onMount(() => {
     loader.init().then((monaco) => {
-      if (!containerRef) return;
+      if (!containerRef) {
+        return;
+      }
 
       // Set up compiler options
       monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
-        target: monaco.languages.typescript.ScriptTarget.ES2020,
         allowNonTsExtensions: true,
-        moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
         module: monaco.languages.typescript.ModuleKind.CommonJS,
+        moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
         noEmit: true,
+        target: monaco.languages.typescript.ScriptTarget.ES2020,
         // typeRoots: ["node_modules/@types"],
       });
 
       // Generate and add types
       createEffect(() => {
-        const opcodes = props.opcodes;
+        const { opcodes } = props;
         if (opcodes) {
           const typeDefs = generateTypeDefinitions(opcodes);
           monaco.languages.typescript.javascriptDefaults.addExtraLib(
@@ -45,9 +47,10 @@ export const MonacoEditor: Component<MonacoEditorProps> = (props) => {
 
       // Register AI Completion Provider
       monaco.languages.registerCompletionItemProvider("javascript", {
-        triggerCharacters: [" "], // Trigger on space to help with arguments
         provideCompletionItems: async (model: any, position: any) => {
-          if (!props.onAICompletion) return { suggestions: [] };
+          if (!props.onAICompletion) {
+            return { suggestions: [] };
+          }
 
           const code = model.getValue();
           const { lineNumber, column } = position;
@@ -55,8 +58,8 @@ export const MonacoEditor: Component<MonacoEditorProps> = (props) => {
           try {
             // Call AI plugin via callback
             const completion = await props.onAICompletion(code, {
-              lineNumber,
               column,
+              lineNumber,
             });
 
             if (!completion || typeof completion !== "string") {
@@ -66,56 +69,57 @@ export const MonacoEditor: Component<MonacoEditorProps> = (props) => {
             return {
               suggestions: [
                 {
-                  label: "AI Completion",
-                  kind: monaco.languages.CompletionItemKind.Snippet,
-                  insertText: completion,
                   detail: "AI Generated Code",
                   documentation: "AI Generated Code",
+                  insertText: completion,
                   insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                  kind: monaco.languages.CompletionItemKind.Snippet,
+                  label: "AI Completion",
                 },
               ],
             };
-          } catch (e) {
-            console.error("AI Completion Failed:", e);
+          } catch (error) {
+            console.error("AI Completion Failed:", error);
             return { suggestions: [] };
           }
         },
+        triggerCharacters: [" "], // Trigger on space to help with arguments
       });
 
       const editorInstance = monaco.editor.create(containerRef, {
-        value: props.value ?? "// Start typing your script here...\n\n",
-        language: "javascript",
-        theme: "vs-dark",
         automaticLayout: true,
-        minimap: { enabled: false },
         fontSize: 14,
+        language: "javascript",
+        minimap: { enabled: false },
         suggest: {
-          showMethods: true,
-          showFunctions: true,
-          showConstructors: true,
-          showFields: true,
-          showVariables: true,
           showClasses: true,
-          showStructs: true,
-          showInterfaces: true,
-          showModules: true,
-          showProperties: true,
+          showColors: true,
+          showConstants: true,
+          showConstructors: true,
+          showEnumMembers: true,
+          showEnums: true,
           showEvents: true,
+          showFields: true,
+          showFiles: true,
+          showFolders: true,
+          showFunctions: true,
+          showInterfaces: true,
+          showKeywords: true,
+          showMethods: true,
+          showModules: true,
           showOperators: true,
+          showProperties: true,
+          showReferences: true,
+          showSnippets: true,
+          showStructs: true,
+          showTypeParameters: true,
           showUnits: true,
           showValues: true,
-          showConstants: true,
-          showEnums: true,
-          showEnumMembers: true,
-          showKeywords: true,
+          showVariables: true,
           showWords: true,
-          showColors: true,
-          showFiles: true,
-          showReferences: true,
-          showFolders: true,
-          showTypeParameters: true,
-          showSnippets: true,
         },
+        theme: "vs-dark",
+        value: props.value ?? "// Start typing your script here...\n\n",
       });
       setEditorInstance(editorInstance);
 
@@ -139,6 +143,6 @@ export const MonacoEditor: Component<MonacoEditorProps> = (props) => {
   });
 
   return (
-    <div ref={containerRef} style={{ width: "100%", height: "100%", "min-height": "400px" }} />
+    <div ref={containerRef} style={{ height: "100%", "min-height": "400px", width: "100%" }} />
   );
 };

@@ -1,49 +1,49 @@
-import { expect, test, describe } from "bun:test";
 import {
-  evaluate,
-  createScriptContext,
-  createOpcodeRegistry,
-  StdLib,
-  MathLib,
   BooleanLib,
   ListLib,
+  MathLib,
   ObjectLib,
-  compile,
-  ScriptContext,
+  type ScriptContext,
+  StdLib,
   StringLib,
+  compile,
+  createOpcodeRegistry,
+  createScriptContext,
+  evaluate,
 } from "./index";
+import { describe, expect, test } from "bun:test";
 
 // Register libraries once
 const TEST_OPS = createOpcodeRegistry(StdLib, MathLib, BooleanLib, ListLib, ObjectLib, StringLib);
 
 function createTestContext(): ScriptContext {
   return createScriptContext({
-    this: { id: 100 } as any,
-    caller: { id: 200 } as any,
     args: [],
-    gas: 10000,
+    caller: { id: 200 } as any,
+    gas: 10_000,
     ops: TEST_OPS,
+    this: { id: 100 } as any,
   });
 }
 
-async function checkParity(name: string, ast: any, ctxOverride?: Partial<ScriptContext>) {
+function checkParity(name: string, ast: any, ctxOverride?: Partial<ScriptContext>) {
   test(name, async () => {
     const ctx1 = { ...createTestContext(), ...ctxOverride };
     const ctx2 = { ...createTestContext(), ...ctxOverride };
 
-    let resInterp, errInterp;
+    let errInterp, resInterp;
     try {
       resInterp = await evaluate(ast, ctx1);
-    } catch (e: any) {
-      errInterp = e;
+    } catch (error) {
+      errInterp = error;
     }
 
-    let resCompile, errCompile;
+    let errCompile, resCompile;
     try {
       const compiledFn = compile(ast, TEST_OPS);
       resCompile = await compiledFn(ctx2);
-    } catch (e: any) {
-      errCompile = e;
+    } catch (error) {
+      errCompile = error;
     }
 
     if (errInterp) {

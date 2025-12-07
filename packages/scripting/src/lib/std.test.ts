@@ -1,20 +1,20 @@
-import { expect } from "bun:test";
+// oxlint-disable id-length
+import * as BooleanLib from "../lib/boolean";
+import * as ListLib from "../lib/list";
+import * as MathLib from "../lib/math";
+import * as StdLib from "../lib/std";
+import { createOpcodeRegistry, createScriptContext, evaluate } from "../interpreter";
 import { createLibraryTester } from "./test-utils";
-import { createScriptContext, createOpcodeRegistry } from "../interpreter";
-import { evaluate } from "../interpreter";
-import * as StdLib from "./std";
-import * as ListLib from "./list";
-import * as BooleanLib from "./boolean";
-import * as MathLib from "./math";
+import { expect } from "bun:test";
 
 const TEST_OPS = createOpcodeRegistry(StdLib, ListLib, MathLib, BooleanLib);
 
 createLibraryTester(StdLib, "Standard Library", (test) => {
   const ctx = createScriptContext({
-    caller: { id: 1 },
-    this: { id: 2 },
     args: [10, "a"],
+    caller: { id: 1 },
     ops: TEST_OPS,
+    this: { id: 2 },
   });
 
   // Values
@@ -86,7 +86,7 @@ createLibraryTester(StdLib, "Standard Library", (test) => {
         BooleanLib.lt(StdLib.var("i"), 5),
         StdLib.seq(
           StdLib.set("i", MathLib.add(StdLib.var("i"), 1)),
-          StdLib.if(BooleanLib.eq(MathLib.mod(StdLib.var("i"), 2), 0), StdLib.continue(), null),
+          StdLib.if(BooleanLib.eq(MathLib.mod(StdLib.var("i"), 2), 0), StdLib.continue()),
           StdLib.set("sum", MathLib.add(StdLib.var("sum"), 1)),
         ),
       ),
@@ -141,7 +141,7 @@ createLibraryTester(StdLib, "Standard Library", (test) => {
     expect(evaluate(StdLib.jsonParse('{"a":1}'), ctx)).toEqual({
       a: 1,
     });
-    expect(evaluate(StdLib.jsonParse("invalid"), ctx)).toBe(null);
+    expect(() => evaluate(StdLib.jsonParse("invalid"), ctx)).toThrow();
   });
 
   // Variables

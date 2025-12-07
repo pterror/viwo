@@ -1,7 +1,7 @@
-import { Plugin, PluginContext, CommandContext } from "@viwo/core";
-import { VectorDatabase } from "@viwo/plugin-vector";
+import type { CommandContext, Plugin, PluginContext } from "@viwo/core";
 import type { AiPlugin } from "@viwo/plugin-ai";
 import { Database } from "bun:sqlite";
+import { VectorDatabase } from "@viwo/plugin-vector";
 
 export class MemoryManager {
   private vectorDb: VectorDatabase;
@@ -56,13 +56,17 @@ export class MemoryManager {
     // 3. Retrieve content and filter
     const memories = [];
     for (const res of results) {
-      if (memories.length >= limit) break;
+      if (memories.length >= limit) {
+        break;
+      }
 
       const row = this.db
         .query("SELECT * FROM memories_content WHERE id = ?")
         .get(res.rowid) as any;
 
-      if (!row) continue;
+      if (!row) {
+        continue;
+      }
 
       const metadata = JSON.parse(row.metadata ?? "{}");
 
@@ -76,7 +80,7 @@ export class MemoryManager {
       }
 
       if (match) {
-        memories.push({ ...row, metadata, distance: res.distance });
+        memories.push({ ...row, distance: res.distance, metadata });
       }
     }
 
@@ -107,7 +111,7 @@ export class MemoryPlugin implements Plugin {
   }
 
   async handleMemoryCommand(ctx: CommandContext) {
-    const subcommand = ctx.args[0];
+    const [subcommand, ...args] = ctx.args;
     let content = "";
     let metadata: Record<string, any> = {};
 
@@ -116,15 +120,15 @@ export class MemoryPlugin implements Plugin {
     // memory search "query" { filter }
 
     // Check if last arg is an object (metadata/filter)
-    const lastArg = ctx.args[ctx.args.length - 1];
+    const lastArg = args.at(-1);
     const hasMetadata = typeof lastArg === "object" && lastArg !== null && !Array.isArray(lastArg);
 
     if (hasMetadata) {
       metadata = lastArg;
       // Content is everything between subcommand and metadata
-      content = ctx.args.slice(1, -1).join(" ");
+      content = args.slice(1, -1).join(" ");
     } else {
-      content = ctx.args.slice(1).join(" ");
+      content = args.slice(1).join(" ");
     }
 
     if (!this.memoryManager) {
@@ -140,8 +144,8 @@ export class MemoryPlugin implements Plugin {
       try {
         const id = await this.memoryManager.add(content, metadata);
         ctx.send("message", `Memory added with ID: ${id}`);
-      } catch (e: any) {
-        ctx.send("error", `Failed to add memory: ${e.message}`);
+      } catch (error: any) {
+        ctx.send("error", `Failed to add memory: ${error.message}`);
       }
     } else if (subcommand === "search") {
       if (!content) {
@@ -156,12 +160,12 @@ export class MemoryPlugin implements Plugin {
           ctx.send("message", "No memories found.");
         } else {
           const response = results
-            .map((m: any) => `[${m.id}] (${m.distance.toFixed(4)}) ${m.content}`)
+            .map((message) => `[${message.id}] (${message.distance.toFixed(4)}) ${message.content}`)
             .join("\n");
           ctx.send("message", `Found memories:\n${response}`);
         }
-      } catch (e: any) {
-        ctx.send("error", `Failed to search memories: ${e.message}`);
+      } catch (error: any) {
+        ctx.send("error", `Failed to search memories: ${error.message}`);
       }
     } else {
       ctx.send("message", "Usage: memory <add|search> <content> [metadata]");

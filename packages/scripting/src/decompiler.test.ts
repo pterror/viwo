@@ -1,10 +1,10 @@
-import { describe, test, expect } from "bun:test";
-import { decompile } from "./decompiler";
-import * as Std from "./lib/std";
-import * as MathLib from "./lib/math";
-import * as List from "./lib/list";
-import * as ObjectLib from "./lib/object";
 import * as BooleanLib from "./lib/boolean";
+import * as ListLib from "./lib/list";
+import * as MathLib from "./lib/math";
+import * as ObjectLib from "./lib/object";
+import * as StdLib from "./lib/std";
+import { describe, expect, test } from "bun:test";
+import { decompile } from "./decompiler";
 
 describe("Decompiler", () => {
   test("literals", () => {
@@ -15,14 +15,14 @@ describe("Decompiler", () => {
   });
 
   test("simple sequence (statement)", () => {
-    const script = Std.seq(Std.let("x", 1), Std.var("x"));
+    const script = StdLib.seq(StdLib.let("x", 1), StdLib.var("x"));
 
     const expected = "let x = 1;\nx;";
     expect(decompile(script, 0, true)).toBe(expected);
   });
 
   test("nested sequence", () => {
-    const script = Std.seq(Std.if(true, Std.seq(Std.let("y", 2)), null));
+    const script = StdLib.seq(StdLib.if(true, StdLib.seq(StdLib.let("y", 2))));
 
     const expected = `if (true) {
   let y = 2;
@@ -43,14 +43,14 @@ describe("Decompiler", () => {
   });
 
   test("lambda", () => {
-    const script = Std.lambda(["x"], MathLib.add(Std.var("x"), 1));
+    const script = StdLib.lambda(["x"], MathLib.add(StdLib.var("x"), 1));
     expect(decompile(script)).toBe("(x) => (x + 1)");
   });
 
   test("lambda with block", () => {
-    const script = Std.lambda(
+    const script = StdLib.lambda(
       ["x"],
-      Std.seq(Std.let("y", 1), MathLib.add(Std.var("x"), Std.var("y"))),
+      StdLib.seq(StdLib.let("y", 1), MathLib.add(StdLib.var("x"), StdLib.var("y"))),
     );
     const expected = `(x) => {
   let y = 1;
@@ -60,20 +60,20 @@ describe("Decompiler", () => {
   });
 
   test("function call", () => {
-    const script = Std.apply(Std.var("f"), 1, 2);
+    const script = StdLib.apply(StdLib.var("f"), 1, 2);
     expect(decompile(script)).toBe("f(1, 2)");
   });
 
   test("loops", () => {
     // while (true) { log("loop") }
-    const whileScript = Std.while(true, Std.log("loop"));
+    const whileScript = StdLib.while(true, StdLib.log("loop"));
     const expectedWhile = `while (true) {
   console.log("loop");
 }`;
     expect(decompile(whileScript, 0, true)).toBe(expectedWhile);
 
     // for (x of list) { log(x) }
-    const forScript = Std.for("x", List.listNew(1, 2), Std.log(Std.var("x")));
+    const forScript = StdLib.for("x", ListLib.listNew(1, 2), StdLib.log(StdLib.var("x")));
     const expectedFor = `for (const x of [1, 2]) {
   console.log(x);
 }`;
@@ -81,24 +81,24 @@ describe("Decompiler", () => {
   });
 
   test("data structures", () => {
-    const list = List.listNew(1, 2, 3);
+    const list = ListLib.listNew(1, 2, 3);
     expect(decompile(list)).toBe("[1, 2, 3]");
 
     const obj = ObjectLib.objNew(["a", 1], ["b", 2]);
     expect(decompile(obj)).toBe('{ "a": 1, "b": 2 }');
 
     // obj.get
-    expect(decompile(ObjectLib.objGet(Std.var("o"), "k"))).toBe("o.k");
-    expect(decompile(ObjectLib.objGet(Std.var("o"), "invalid-key"))).toBe('o["invalid-key"]');
-    expect(decompile(ObjectLib.objGet(Std.var("o"), "k", "default"))).toBe('(o.k ?? "default")');
+    expect(decompile(ObjectLib.objGet(StdLib.var("o"), "k"))).toBe("o.k");
+    expect(decompile(ObjectLib.objGet(StdLib.var("o"), "invalid-key"))).toBe('o["invalid-key"]');
+    expect(decompile(ObjectLib.objGet(StdLib.var("o"), "k", "default"))).toBe('(o.k ?? "default")');
 
     // obj.set
-    expect(decompile(ObjectLib.objSet(Std.var("o"), "k", 3))).toBe("o.k = 3");
+    expect(decompile(ObjectLib.objSet(StdLib.var("o"), "k", 3))).toBe("o.k = 3");
 
     // obj.has
-    expect(decompile(ObjectLib.objHas(Std.var("o"), "k"))).toBe('"k" in o');
+    expect(decompile(ObjectLib.objHas(StdLib.var("o"), "k"))).toBe('"k" in o');
 
     // obj.del
-    expect(decompile(ObjectLib.objDel(Std.var("o"), "k"))).toBe("delete o.k");
+    expect(decompile(ObjectLib.objDel(StdLib.var("o"), "k"))).toBe("delete o.k");
   });
 });

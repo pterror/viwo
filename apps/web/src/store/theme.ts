@@ -1,5 +1,5 @@
-import { createStore } from "solid-js/store";
 import { createEffect } from "solid-js";
+import { createStore } from "solid-js/store";
 
 export interface ThemeColors {
   "--bg-app": string;
@@ -42,39 +42,39 @@ interface Theme {
 }
 
 const defaultThemeColors: ThemeColors = {
-  "--bg-app": "oklch(100% 0 0 / 0.03)",
-  "--bg-panel": "oklch(100% 0 0 / 0.03)",
-  "--bg-element": "oklch(100% 0 0 / 0.08)",
-  "--bg-element-hover": "oklch(100% 0 0 / 0.12)",
-  "--bg-element-active": "oklch(100% 0 0 / 0.16)",
-  "--bg-input": "oklch(100% 0 0 / 0.1)",
-  "--border-color": "oklch(100% 0 0 / 0.15)",
-  "--text-primary": "#e0e0e0",
-  "--text-secondary": "#aaaaaa",
-  "--text-muted": "#666666",
-  "--text-inverse": "#000000",
   "--accent-base": "oklch(100% 0 0)",
   "--accent-color": "oklch(100% 0 0 / 0.15)",
-  "--accent-hover": "oklch(100% 0 0 / 0.25)",
   "--accent-fg": "#e0e0e0",
-  "--status-online": "#4f4",
-  "--status-offline": "#f44",
-  "--link-color": "#aaddff",
+  "--accent-hover": "oklch(100% 0 0 / 0.25)",
+  "--bg-app": "oklch(100% 0 0 / 0.03)",
+  "--bg-element": "oklch(100% 0 0 / 0.08)",
+  "--bg-element-active": "oklch(100% 0 0 / 0.16)",
+  "--bg-element-hover": "oklch(100% 0 0 / 0.12)",
+  "--bg-input": "oklch(100% 0 0 / 0.1)",
+  "--bg-panel": "oklch(100% 0 0 / 0.03)",
+  "--border-color": "oklch(100% 0 0 / 0.15)",
   "--error-color": "#ff6b6b",
+  "--link-color": "#aaddff",
   "--overlay-bg": "rgba(0, 0, 0, 0.5)",
+  "--status-offline": "#f44",
+  "--status-online": "#4f4",
+  "--text-inverse": "#000000",
+  "--text-muted": "#666666",
+  "--text-primary": "#e0e0e0",
+  "--text-secondary": "#aaaaaa",
 };
 
 const defaultTheme: Theme = {
+  colors: defaultThemeColors,
   id: "default",
+  isBuiltin: true,
   manifest: {
-    kind: "viwo-theme",
-    version: "1.0.0",
-    name: "Default Dark",
     author: "Viwo",
     description: "The default dark theme.",
+    kind: "viwo-theme",
+    name: "Default Dark",
+    version: "1.0.0",
   },
-  colors: defaultThemeColors,
-  isBuiltin: true,
 };
 
 interface ThemeState {
@@ -98,130 +98,95 @@ export const loadInitialState = (): ThemeState => {
       const parsed = JSON.parse(savedThemes);
       // Basic validation/migration for existing array
       if (Array.isArray(parsed)) {
-        themes = parsed.map((t: any) => {
+        themes = parsed.map((theme: any) => {
           // If missing kind/version, patch it
-          if (!t.manifest.kind) {
+          if (!theme.manifest.kind) {
             return {
-              ...t,
+              ...theme,
               manifest: {
-                ...t.manifest,
+                ...theme.manifest,
                 kind: "viwo-theme",
                 version: "1.0.0",
               },
             };
           }
-          return t;
+          return theme;
         });
         // Ensure default is always present and up to date
-        const defaultIndex = themes.findIndex((t) => t.id === "default");
+        const defaultIndex = themes.findIndex((theme) => theme.id === "default");
         if (defaultIndex !== -1) {
           themes[defaultIndex] = defaultTheme;
         } else {
           themes.unshift(defaultTheme);
         }
       }
-    } catch (e) {
-      console.error("Failed to parse saved themes", e);
+    } catch (error) {
+      console.error("Failed to parse saved themes", error);
     }
   } else if (oldSavedTheme) {
     // Migrate old single theme
     try {
       const oldColors = JSON.parse(oldSavedTheme);
       const migratedTheme: Theme = {
+        colors: oldColors,
         id: "migrated_custom",
         manifest: {
-          kind: "viwo-theme",
-          version: "1.0.0",
-          name: "My Custom Theme",
           author: "User",
           description: "Migrated from previous version.",
+          kind: "viwo-theme",
+          name: "My Custom Theme",
+          version: "1.0.0",
         },
-        colors: oldColors,
       };
       themes.push(migratedTheme);
       activeThemeId = "migrated_custom";
-    } catch (e) {
-      console.error("Failed to migrate old theme", e);
+    } catch (error) {
+      console.error("Failed to migrate old theme", error);
     }
   }
 
-  if (savedActiveId && themes.find((t) => t.id === savedActiveId)) {
+  if (savedActiveId && themes.some((theme) => theme.id === savedActiveId)) {
     activeThemeId = savedActiveId;
   }
 
   return {
-    themes,
     activeThemeId,
     allowCustomCss: savedCustomCssPref ? JSON.parse(savedCustomCssPref) : true,
+    themes,
   };
 };
 
 const [state, setState] = createStore<ThemeState>(loadInitialState());
 
 export const themeStore = {
-  state,
-
   get activeTheme() {
-    return state.themes.find((t) => t.id === state.activeThemeId) || defaultTheme;
-  },
-
-  setActiveTheme: (id: string) => {
-    setState("activeThemeId", id);
+    return state.themes.find((theme) => theme.id === state.activeThemeId) || defaultTheme;
   },
 
   createTheme: (name: string) => {
     const newTheme: Theme = {
+      colors: { ...themeStore.activeTheme.colors },
       id: crypto.randomUUID(),
       manifest: {
-        kind: "viwo-theme",
-        version: "1.0.0",
-        name,
         author: "User",
-      },
-      colors: { ...themeStore.activeTheme.colors }, // Clone current colors
+        kind: "viwo-theme",
+        name,
+        version: "1.0.0",
+      }, // Clone current colors
     };
     setState("themes", (themes) => [...themes, newTheme]);
     setState("activeThemeId", newTheme.id);
   },
 
   deleteTheme: (id: string) => {
-    const theme = state.themes.find((t) => t.id === id);
-    if (theme?.isBuiltin) return;
-
-    setState("themes", (themes) => themes.filter((t) => t.id !== id));
+    const theme = state.themes.find((theme) => theme.id === id);
+    if (theme?.isBuiltin) {
+      return;
+    }
+    setState("themes", (themes) => themes.filter((theme) => theme.id !== id));
     if (state.activeThemeId === id) {
       setState("activeThemeId", "default");
     }
-  },
-
-  updateColor: (key: keyof ThemeColors, value: string) => {
-    const activeId = state.activeThemeId;
-    const theme = state.themes.find((t) => t.id === activeId);
-    if (theme?.isBuiltin) {
-      // If trying to edit builtin, create a copy first?
-      if (confirm("Cannot edit default theme. Create a copy?")) {
-        themeStore.createTheme("Copy of " + theme.manifest.name);
-        // Then update the new one
-        setState("themes", (t) => t.id === state.activeThemeId, "colors", key, value);
-      }
-      return;
-    }
-
-    setState("themes", (t) => t.id === activeId, "colors", key, value);
-  },
-
-  updateManifest: (update: Partial<ThemeManifest>) => {
-    const activeId = state.activeThemeId;
-    if (state.themes.find((t) => t.id === activeId)?.isBuiltin) return;
-    setState(
-      "themes",
-      (t) => t.id === activeId,
-      "manifest",
-      (m) => ({
-        ...m,
-        ...update,
-      }),
-    );
   },
 
   importTheme: (theme: any) => {
@@ -246,13 +211,48 @@ export const themeStore = {
     setState("activeThemeId", newTheme.id);
   },
 
+  // For testing
+  reset: () => {
+    setState(loadInitialState());
+  },
+
+  setActiveTheme: (id: string) => {
+    setState("activeThemeId", id);
+  },
+
+  state,
+
   toggleCustomCss: () => {
     setState("allowCustomCss", (prev) => !prev);
   },
 
-  // For testing
-  reset: () => {
-    setState(loadInitialState());
+  updateColor: (key: keyof ThemeColors, value: string) => {
+    const activeId = state.activeThemeId;
+    const theme = state.themes.find((theme) => theme.id === activeId);
+    if (theme?.isBuiltin) {
+      // If trying to edit builtin, create a copy first?
+      if (confirm("Cannot edit default theme. Create a copy?")) {
+        themeStore.createTheme(`Copy of ${theme.manifest.name}`);
+        // Then update the new one
+        setState("themes", (theme) => theme.id === state.activeThemeId, "colors", key, value);
+      }
+      return;
+    }
+
+    setState("themes", (theme) => theme.id === activeId, "colors", key, value);
+  },
+
+  updateManifest: (update: Partial<ThemeManifest>) => {
+    const activeId = state.activeThemeId;
+    if (state.themes.find((theme) => theme.id === activeId)?.isBuiltin) {
+      return;
+    }
+    setState(
+      "themes",
+      (theme) => theme.id === activeId,
+      "manifest",
+      (manifest) => ({ ...manifest, ...update }),
+    );
   },
 };
 
@@ -265,7 +265,7 @@ createEffect(() => {
 
 // Apply theme to document root
 createEffect(() => {
-  const activeTheme = state.themes.find((t) => t.id === state.activeThemeId);
+  const activeTheme = state.themes.find((theme) => theme.id === state.activeThemeId);
   if (activeTheme) {
     const root = document.documentElement;
     for (const [key, value] of Object.entries(activeTheme.colors)) {

@@ -1,17 +1,17 @@
-import { describe, test, expect } from "bun:test";
 import {
-  createEntity,
   addVerb,
-  getVerbs,
-  updateEntity,
+  createEntity,
   deleteEntity,
+  getEntities,
   getEntity,
   getVerb,
+  getVerbs,
+  updateEntity,
   updateVerb,
-  getEntities,
 } from "./repo";
-import { StdLib } from "@viwo/scripting";
+import { describe, expect, test } from "bun:test";
 import { CoreLib } from ".";
+import { StdLib } from "@viwo/scripting";
 
 describe("Repo", () => {
   test("createEntity", () => {
@@ -30,7 +30,7 @@ describe("Repo", () => {
 
     // 3. Get Verbs
     const verbs = getVerbs(instanceId);
-    const names = verbs.map((v) => v.name);
+    const names = verbs.map((verb) => verb.name);
 
     expect(names).toContain("protoVerb");
     expect(names).toContain("instanceVerb");
@@ -47,7 +47,7 @@ describe("Repo", () => {
 
     // 3. Get Verbs
     const verbs = getVerbs(instanceId);
-    const common = verbs.find((v) => v.name === "common");
+    const common = verbs.find((verb) => verb.name === "common");
 
     expect(common).toBeDefined();
     // Should be the instance one
@@ -57,11 +57,11 @@ describe("Repo", () => {
   test("updateEntity", () => {
     const id = createEntity({ name: "Old Name" });
     updateEntity({
+      foo: "bar",
       id,
-      name: "New Name",
       location: 100,
       location_detail: "worn",
-      foo: "bar",
+      name: "New Name",
     });
     const updated = getEntity(id);
     expect(updated?.["name"]).toBe("New Name");
@@ -119,8 +119,8 @@ describe("Repo", () => {
     const results = getEntities([id1, id2]);
     expect(results.length).toBe(2);
 
-    const item1 = results.find((e) => e.id === id1);
-    const item2 = results.find((e) => e.id === id2);
+    const item1 = results.find((entity) => entity.id === id1);
+    const item2 = results.find((entity) => entity.id === id2);
 
     expect(item1).toBeDefined();
     expect(item2).toBeDefined();

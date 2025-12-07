@@ -162,4 +162,4 @@ sequenceDiagram
 ## Testing Strategy
 
 - **In-Memory Database**: Tests use an in-memory SQLite database (`:memory:`) seeded with initial data to ensure isolation and speed.
-- **Mocking**: We avoid `spyOn` for `global.localStorage` where possible, preferring dependency injection or cleaner mocks.
+- **Mocking**: We avoid `spyOn` for `globalThis.localStorage` where possible, preferring dependency injection or cleaner mocks.

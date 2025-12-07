@@ -1,86 +1,87 @@
-import { Component, For } from "solid-js";
-import { themeStore, ThemeColors } from "../store/theme";
+import { type Component, For } from "solid-js";
+import { type ThemeColors, themeStore } from "../store/theme";
 
 interface Props {
   onClose: () => void;
 }
 
 export const ThemeEditor: Component<Props> = (props) => {
-  const colorKeys = Object.keys(themeStore.activeTheme.colors) as Array<keyof ThemeColors>;
+  const colorKeys = Object.keys(themeStore.activeTheme.colors) as (keyof ThemeColors)[];
 
   const handleExport = () => {
     const theme = themeStore.activeTheme;
-    const dataStr =
-      "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(theme, null, 2));
+    const dataStr = `data:text/json;charset=utf-8,${encodeURIComponent(
+      JSON.stringify(theme, undefined, 2),
+    )}`;
     const downloadAnchorNode = document.createElement("a");
     downloadAnchorNode.setAttribute("href", dataStr);
     downloadAnchorNode.setAttribute(
       "download",
-      `${theme.manifest.name.replace(/\s+/g, "_").toLowerCase()}.json`,
+      `${theme.manifest.name.replaceAll(/\s+/g, "_").toLowerCase()}.json`,
     );
-    document.body.appendChild(downloadAnchorNode); // required for firefox
+    document.body.append(downloadAnchorNode); // required for firefox
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
   };
 
-  const handleImport = (e: Event) => {
-    const file = (e.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const theme = JSON.parse(event.target?.result as string);
-        themeStore.importTheme(theme);
-        alert("Theme imported successfully!");
-      } catch (err) {
-        console.error(err);
-        alert("Failed to import theme. Invalid JSON.");
-      }
-    };
-    reader.readAsText(file);
+  const handleImport = async (event: Event) => {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) {
+      return;
+    }
+    const content = await file.text();
+    try {
+      const theme = JSON.parse(content);
+      themeStore.importTheme(theme);
+      alert("Theme imported successfully!");
+    } catch (error) {
+      console.error(error);
+      alert("Failed to import theme. Invalid JSON.");
+    }
   };
 
   return (
     <div
       style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: "rgba(0,0,0,0.8)",
-        display: "flex",
         "align-items": "center",
+        background: "rgba(0,0,0,0.8)",
+        bottom: 0,
+        display: "flex",
         "justify-content": "center",
+        left: 0,
+        position: "fixed",
+        right: 0,
+        top: 0,
         "z-index": 1000,
       }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) props.onClose();
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          props.onClose();
+        }
       }}
     >
       <div
         style={{
           background: "var(--bg-panel)",
-          padding: "20px",
-          "border-radius": "8px",
           border: "1px solid var(--border-color)",
-          width: "600px",
-          "max-height": "85vh",
-          "overflow-y": "auto",
+          "border-radius": "8px",
           display: "flex",
           "flex-direction": "column",
           gap: "15px",
+          "max-height": "85vh",
+          "overflow-y": "auto",
+          padding: "20px",
+          width: "600px",
         }}
       >
         <div
           style={{
+            "align-items": "center",
             display: "flex",
             "justify-content": "space-between",
-            "align-items": "center",
           }}
         >
-          <h2 style={{ margin: 0, color: "var(--text-primary)" }}>Theme Editor</h2>
+          <h2 style={{ color: "var(--text-primary)", margin: 0 }}>Theme Editor</h2>
           <button
             onClick={props.onClose}
             style={{
@@ -96,17 +97,17 @@ export const ThemeEditor: Component<Props> = (props) => {
         </div>
 
         {/* Theme Selector & Actions */}
-        <div style={{ display: "flex", gap: "10px", "align-items": "center" }}>
+        <div style={{ "align-items": "center", display: "flex", gap: "10px" }}>
           <select
             value={themeStore.state.activeThemeId}
-            onChange={(e) => themeStore.setActiveTheme(e.currentTarget.value)}
+            onChange={(event) => themeStore.setActiveTheme(event.currentTarget.value)}
             style={{
-              flex: 1,
-              padding: "8px",
               background: "var(--bg-input)",
-              color: "var(--text-primary)",
               border: "1px solid var(--border-color)",
               "border-radius": "4px",
+              color: "var(--text-primary)",
+              flex: 1,
+              padding: "8px",
             }}
           >
             <For each={themeStore.state.themes}>
@@ -120,15 +121,17 @@ export const ThemeEditor: Component<Props> = (props) => {
           <button
             onClick={() => {
               const name = prompt("Enter new theme name:");
-              if (name) themeStore.createTheme(name);
+              if (name) {
+                themeStore.createTheme(name);
+              }
             }}
             style={{
-              padding: "8px",
               background: "var(--bg-element)",
-              color: "var(--text-primary)",
               border: "1px solid var(--border-color)",
               "border-radius": "4px",
+              color: "var(--text-primary)",
               cursor: "pointer",
+              padding: "8px",
             }}
             title="New Theme"
           >
@@ -142,12 +145,12 @@ export const ThemeEditor: Component<Props> = (props) => {
             }}
             disabled={themeStore.activeTheme.isBuiltin}
             style={{
-              padding: "8px",
               background: "var(--bg-element)",
-              color: themeStore.activeTheme.isBuiltin ? "var(--text-muted)" : "var(--error-color)",
               border: "1px solid var(--border-color)",
               "border-radius": "4px",
+              color: themeStore.activeTheme.isBuiltin ? "var(--text-muted)" : "var(--error-color)",
               cursor: themeStore.activeTheme.isBuiltin ? "not-allowed" : "pointer",
+              padding: "8px",
             }}
             title="Delete Theme"
           >
@@ -156,12 +159,12 @@ export const ThemeEditor: Component<Props> = (props) => {
           <button
             onClick={handleExport}
             style={{
-              padding: "8px",
               background: "var(--bg-element)",
-              color: "var(--text-primary)",
               border: "1px solid var(--border-color)",
               "border-radius": "4px",
+              color: "var(--text-primary)",
               cursor: "pointer",
+              padding: "8px",
             }}
             title="Export Theme"
           >
@@ -169,13 +172,13 @@ export const ThemeEditor: Component<Props> = (props) => {
           </button>
           <label
             style={{
-              padding: "8px",
               background: "var(--bg-element)",
-              color: "var(--text-primary)",
               border: "1px solid var(--border-color)",
               "border-radius": "4px",
+              color: "var(--text-primary)",
               cursor: "pointer",
               display: "inline-block",
+              padding: "8px",
             }}
             title="Import Theme"
           >
@@ -187,43 +190,43 @@ export const ThemeEditor: Component<Props> = (props) => {
         {/* Metadata Editor */}
         <div
           style={{
-            display: "grid",
-            "grid-template-columns": "1fr 1fr",
-            gap: "10px",
-            padding: "10px",
             background: "var(--bg-element)",
             "border-radius": "4px",
+            display: "grid",
+            gap: "10px",
+            "grid-template-columns": "1fr 1fr",
+            padding: "10px",
           }}
         >
           <div style={{ display: "flex", "flex-direction": "column", gap: "5px" }}>
-            <label style={{ "font-size": "0.8em", color: "var(--text-secondary)" }}>Name</label>
+            <label style={{ color: "var(--text-secondary)", "font-size": "0.8em" }}>Name</label>
             <input
               type="text"
               value={themeStore.activeTheme.manifest.name}
               disabled={themeStore.activeTheme.isBuiltin}
-              onChange={(e) => themeStore.updateManifest({ name: e.currentTarget.value })}
+              onChange={(event) => themeStore.updateManifest({ name: event.currentTarget.value })}
               style={{
-                padding: "5px",
                 background: "var(--bg-input)",
-                color: "var(--text-primary)",
                 border: "1px solid var(--border-color)",
                 "border-radius": "4px",
+                color: "var(--text-primary)",
+                padding: "5px",
               }}
             />
           </div>
           <div style={{ display: "flex", "flex-direction": "column", gap: "5px" }}>
-            <label style={{ "font-size": "0.8em", color: "var(--text-secondary)" }}>Author</label>
+            <label style={{ color: "var(--text-secondary)", "font-size": "0.8em" }}>Author</label>
             <input
               type="text"
               value={themeStore.activeTheme.manifest.author}
               disabled={themeStore.activeTheme.isBuiltin}
-              onChange={(e) => themeStore.updateManifest({ author: e.currentTarget.value })}
+              onChange={(event) => themeStore.updateManifest({ author: event.currentTarget.value })}
               style={{
-                padding: "5px",
                 background: "var(--bg-input)",
-                color: "var(--text-primary)",
                 border: "1px solid var(--border-color)",
                 "border-radius": "4px",
+                color: "var(--text-primary)",
+                padding: "5px",
               }}
             />
           </div>
@@ -231,12 +234,12 @@ export const ThemeEditor: Component<Props> = (props) => {
 
         <div
           style={{
-            display: "flex",
             "align-items": "center",
-            gap: "10px",
-            padding: "10px",
             background: "var(--bg-element)",
             "border-radius": "4px",
+            display: "flex",
+            gap: "10px",
+            padding: "10px",
           }}
         >
           <input
@@ -253,8 +256,8 @@ export const ThemeEditor: Component<Props> = (props) => {
         <div
           style={{
             display: "grid",
-            "grid-template-columns": "1fr 1fr",
             gap: "10px",
+            "grid-template-columns": "1fr 1fr",
           }}
         >
           <For each={colorKeys}>
@@ -268,8 +271,8 @@ export const ThemeEditor: Component<Props> = (props) => {
               >
                 <label
                   style={{
-                    "font-size": "0.8em",
                     color: "var(--text-secondary)",
+                    "font-size": "0.8em",
                   }}
                 >
                   {key}
@@ -282,29 +285,29 @@ export const ThemeEditor: Component<Props> = (props) => {
                         ? themeStore.activeTheme.colors[key]
                         : "#000000"
                     }
-                    onChange={(e) => themeStore.updateColor(key, e.currentTarget.value)}
+                    onChange={(event) => themeStore.updateColor(key, event.currentTarget.value)}
                     style={{
+                      background: "none",
                       border: "none",
+                      cursor: "pointer",
+                      height: "30px",
                       padding: 0,
                       width: "30px",
-                      height: "30px",
-                      cursor: "pointer",
-                      background: "none",
                     }}
                   />
                   <input
                     type="text"
                     value={themeStore.activeTheme.colors[key]}
-                    onChange={(e) => themeStore.updateColor(key, e.currentTarget.value)}
+                    onChange={(event) => themeStore.updateColor(key, event.currentTarget.value)}
                     style={{
-                      flex: 1,
                       background: "var(--bg-input)",
                       border: "1px solid var(--border-color)",
-                      color: "var(--text-primary)",
-                      padding: "4px 8px",
                       "border-radius": "4px",
+                      color: "var(--text-primary)",
+                      flex: 1,
                       "font-family": "monospace",
                       "font-size": "0.9em",
+                      padding: "4px 8px",
                     }}
                   />
                 </div>
@@ -315,11 +318,11 @@ export const ThemeEditor: Component<Props> = (props) => {
 
         <div
           style={{
-            display: "flex",
-            "justify-content": "flex-end",
-            gap: "10px",
-            "margin-top": "10px",
             "border-top": "1px solid var(--border-color)",
+            display: "flex",
+            gap: "10px",
+            "justify-content": "flex-end",
+            "margin-top": "10px",
             "padding-top": "10px",
           }}
         >
@@ -327,12 +330,12 @@ export const ThemeEditor: Component<Props> = (props) => {
             onClick={props.onClose}
             style={{
               background: "var(--accent-color)",
-              color: "var(--accent-fg)",
               border: "none",
-              padding: "8px 16px",
               "border-radius": "4px",
+              color: "var(--accent-fg)",
               cursor: "pointer",
               "font-weight": "bold",
+              padding: "8px 16px",
             }}
           >
             Done

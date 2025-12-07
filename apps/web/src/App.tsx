@@ -1,71 +1,86 @@
-import { createSignal, onCleanup, onMount, Show } from "solid-js";
-import { gameStore } from "./store/game";
-import { keybindsStore } from "./store/keybinds";
-import { themeStore } from "./store/theme";
-import GameLog from "./components/GameLog";
+// oxlint-disable-next-line no-unassigned-import
+import "@viwo/shared/index.css";
+import { Show, createSignal, onCleanup, onMount } from "solid-js";
 import Builder from "./components/Builder";
 import Compass from "./components/Compass";
 import CustomExits from "./components/CustomExits";
-import RoomPanel from "./components/RoomPanel";
-import InventoryPanel from "./components/InventoryPanel";
+import GameLog from "./components/GameLog";
 import InspectorPanel from "./components/InspectorPanel";
+import InventoryPanel from "./components/InventoryPanel";
+import RoomPanel from "./components/RoomPanel";
 import { SettingsModal } from "./components/SettingsModal";
 import { ThemeEditor } from "./components/ThemeEditor";
-import "@viwo/shared/index.css";
+import { gameStore } from "./store/game";
+import { keybindsStore } from "./store/keybinds";
+import { themeStore } from "./store/theme";
 
 function App() {
   const [showBuilder, setShowBuilder] = createSignal(false);
   const [showSettings, setShowSettings] = createSignal(false);
   const [showThemeEditor, setShowThemeEditor] = createSignal(false);
 
-  const handleKeyDown = (e: KeyboardEvent) => {
+  const handleKeyDown = (event: KeyboardEvent) => {
     // Ignore if typing in an input or textarea
-    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
       return;
     }
 
     const modifiers = [];
-    if (e.ctrlKey) modifiers.push("Ctrl");
-    if (e.altKey) modifiers.push("Alt");
-    if (e.shiftKey) modifiers.push("Shift");
-    if (e.metaKey) modifiers.push("Meta");
+    if (event.ctrlKey) {
+      modifiers.push("Ctrl");
+    }
+    if (event.altKey) {
+      modifiers.push("Alt");
+    }
+    if (event.shiftKey) {
+      modifiers.push("Shift");
+    }
+    if (event.metaKey) {
+      modifiers.push("Meta");
+    }
 
-    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
     const fullKey = [...modifiers, key].join("+");
 
     const action = keybindsStore.getActionForKey(fullKey);
     if (action) {
-      e.preventDefault();
+      event.preventDefault();
       switch (action) {
-        case "north":
+        case "north": {
           gameStore.execute("go", ["north"]);
           break;
-        case "south":
+        }
+        case "south": {
           gameStore.execute("go", ["south"]);
           break;
-        case "east":
+        }
+        case "east": {
           gameStore.execute("go", ["east"]);
           break;
-        case "west":
+        }
+        case "west": {
           gameStore.execute("go", ["west"]);
           break;
-        case "look":
+        }
+        case "look": {
           gameStore.execute("look", []);
           break;
-        case "inventory":
+        }
+        case "inventory": {
           gameStore.execute("inventory", []);
           break;
+        }
       }
     }
   };
 
   onMount(() => {
     gameStore.connect();
-    window.addEventListener("keydown", handleKeyDown);
+    globalThis.addEventListener("keydown", handleKeyDown);
   });
 
   onCleanup(() => {
-    window.removeEventListener("keydown", handleKeyDown);
+    globalThis.removeEventListener("keydown", handleKeyDown);
   });
 
   return (

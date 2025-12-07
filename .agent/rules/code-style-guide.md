@@ -4,7 +4,6 @@ description: General Guidelines
 ---
 
 # Core Tenets
-- 
 - Use `??`, not `||`, for fallbacks
 - Deliberate slowly and thoroughly on matters that require more care/attention.
 - Avoid `any` whenever possible. It is the equivalent of `NaN` for the type system - it is infectious.
@@ -14,6 +13,10 @@ description: General Guidelines
 - Always write tests whenever possible. Run with `bun test --coverage` and try to maximize coverage.
 - Always clean up long comments. Use `rg` with `//.+\n *//.+\n *//`.
 - Try to avoid `ts-expect-error`, but even that is preferable to `ts-ignore`.
+
+# Style
+- Avoid one-letter names. `i` -> `idx`; `e` -> `event`; `a, b` -> `left, right`; `parameters.map(p => p)` -> `parameters.map(parameter => parameter)`
+- Avoid `++` and `--`. Use `+= 1` and `-= 1` instead.
 
 # Stack
 - bun (`bun test`; `bun install <package>` etc)

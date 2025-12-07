@@ -5,7 +5,9 @@ export class SessionManager {
   async ensureSession(discordId: string, channelId: string, displayName: string): Promise<number> {
     // 1. Check active session
     let entityId = db.getActiveEntity(discordId, channelId);
-    if (entityId) return entityId;
+    if (entityId) {
+      return entityId;
+    }
 
     // 2. Check default entity
     entityId = db.getDefaultEntity(discordId);
@@ -27,7 +29,7 @@ export class SessionManager {
     throw new Error("Failed to create session");
   }
 
-  private async createPlayer(name: string): Promise<number> {
+  private createPlayer(name: string): Promise<number> {
     return new Promise((resolve, reject) => {
       const sys = socketManager.getSocket();
 

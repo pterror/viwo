@@ -1,5 +1,5 @@
-import { OpcodeMetadata } from "@viwo/scripting";
-import { Entity } from "@viwo/shared/jsonrpc";
+import type { Entity } from "@viwo/shared/jsonrpc";
+import type { OpcodeMetadata } from "@viwo/scripting";
 
 export interface CoreInterface {
   getEntity: (id: number) => Entity | null;

@@ -1,12 +1,19 @@
 import { defineConfig } from "vitepress";
-import { withMermaid } from "vitepress-plugin-mermaid";
 import fs from "node:fs";
 import path from "node:path";
+import { withMermaid } from "vitepress-plugin-mermaid";
+
+const SPECIAL_CASE_WORDS: Record<string, string> = {
+  cli: "CLI",
+  tui: "TUI",
+};
 
 // Helper to generate sidebar items dynamically
 function getSidebarItems(dir: string) {
   const fullPath = path.join(__dirname, "..", dir);
-  if (!fs.existsSync(fullPath)) return [];
+  if (!fs.existsSync(fullPath)) {
+    return [];
+  }
 
   return fs
     .readdirSync(fullPath)
@@ -14,25 +21,26 @@ function getSidebarItems(dir: string) {
     .map((file) => {
       const name = path.basename(file, ".md");
       // Convert snake_case or kebab-case to Title Case for display
-      const text = name.replace(/[-_]/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
-      return {
-        text,
-        link: `/${dir}/${name}`,
-      };
+      const text = name
+        .replaceAll(/[-_]/g, " ")
+        .replaceAll(
+          /\w+/g,
+          (word) => SPECIAL_CASE_WORDS[word] ?? word.replace(/^./, (char) => char.toUpperCase()),
+        );
+      return { link: `/${dir}/${name}`, text };
     });
 }
 
 export default withMermaid(
   defineConfig({
     base: "/viwo/",
-    title: "Viwo Docs",
     description: "Documentation for the Viwo project",
     themeConfig: {
       nav: [
-        { text: "Home", link: "/" },
-        { text: "Playground", link: "/playground/", target: "_blank" },
-        { text: "Architecture", link: "/core/architecture" },
-        { text: "Scripting", link: "/scripting/spec" },
+        { link: "/", text: "Home" },
+        { link: "/playground/", target: "_blank", text: "Playground" },
+        { link: "/core/architecture", text: "Architecture" },
+        { link: "/scripting/spec", text: "Scripting" },
       ],
 
       search: {
@@ -41,55 +49,56 @@ export default withMermaid(
 
       sidebar: [
         {
+          items: [
+            { link: "/vision", text: "Vision" },
+            { link: "/challenges", text: "Challenges" },
+            { link: "/automation", text: "Automation" },
+          ],
           text: "Introduction",
-          items: [
-            { text: "Vision", link: "/vision" },
-            { text: "Challenges", link: "/challenges" },
-            { text: "Automation", link: "/automation" },
-          ],
         },
         {
-          text: "Core",
           items: getSidebarItems("core"),
+          text: "Core",
         },
         {
-          text: "Components",
           items: getSidebarItems("components"),
+          text: "Components",
         },
         {
-          text: "Scripting",
           items: getSidebarItems("scripting"),
+          text: "Scripting",
         },
         {
-          text: "Reference",
           items: getSidebarItems("reference"),
+          text: "Reference",
         },
         {
-          text: "Applications",
           items: getSidebarItems("apps"),
+          text: "Applications",
         },
         {
-          text: "Plugins",
           items: getSidebarItems("plugins"),
+          text: "Plugins",
         },
         {
-          text: "Development",
           items: [
-            { text: "Building Docs", link: "/development" },
-            { text: "Type Generation", link: "/codegen" },
-            { text: "Quality Guide", link: "/quality" },
+            { link: "/development", text: "Building Docs" },
+            { link: "/codegen", text: "Type Generation" },
+            { link: "/quality", text: "Quality Guide" },
           ],
+          text: "Development",
         },
       ],
 
       socialLinks: [{ icon: "github", link: "https://github.com/pterror/viwo" }],
     },
+    title: "Viwo Docs",
     vite: {
       server: {
         proxy: {
           "/viwo/playground": {
-            target: `http://localhost:${process.env.PLAYGROUND_PORT ?? 3001}`,
             changeOrigin: true,
+            target: `http://localhost:${process.env.PLAYGROUND_PORT ?? 3001}`,
           },
         },
       },

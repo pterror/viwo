@@ -1,27 +1,27 @@
-import { Component, For, createSignal } from "solid-js";
-import { BlockDefinition } from "./types";
+import { type Component, For, createSignal } from "solid-js";
+import type { BlockDefinition } from "./types";
 
 interface BlockPaletteProps {
   opcodes: BlockDefinition[];
 }
 
+const onDragStart = (event: DragEvent, opcode: string) => {
+  event.dataTransfer?.setData("application/json", JSON.stringify({ opcode }));
+  event.dataTransfer!.effectAllowed = "copy";
+};
+
 export const BlockPalette: Component<BlockPaletteProps> = (props) => {
   const [search, setSearch] = createSignal("");
 
   const filteredBlocks = () => {
-    const s = search().toLowerCase();
+    const query = search().toLowerCase();
     const opcodes = props.opcodes || [];
     return opcodes.filter(
       (def) =>
-        def.label.toLowerCase().includes(s) ||
-        def.opcode.toLowerCase().includes(s) ||
-        def.category.toLowerCase().includes(s),
+        def.label.toLowerCase().includes(query) ||
+        def.opcode.toLowerCase().includes(query) ||
+        def.category.toLowerCase().includes(query),
     );
-  };
-
-  const onDragStart = (e: DragEvent, opcode: string) => {
-    e.dataTransfer?.setData("application/json", JSON.stringify({ opcode }));
-    e.dataTransfer!.effectAllowed = "copy";
   };
 
   return (
@@ -31,7 +31,7 @@ export const BlockPalette: Component<BlockPaletteProps> = (props) => {
           type="text"
           placeholder="Search blocks..."
           value={search()}
-          onInput={(e) => setSearch(e.currentTarget.value)}
+          onInput={(event) => setSearch(event.currentTarget.value)}
           class="block-palette__search-input"
         />
       </div>
@@ -41,7 +41,7 @@ export const BlockPalette: Component<BlockPaletteProps> = (props) => {
             <div
               class={`block-palette__item block-palette__item--${def.category}`}
               draggable={true}
-              onDragStart={(e) => onDragStart(e, def.opcode)}
+              onDragStart={(event) => onDragStart(event, def.opcode)}
             >
               {def.label}
             </div>

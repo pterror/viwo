@@ -1,5 +1,5 @@
-import { describe, test, expect, mock } from "bun:test";
-import { PluginManager, Plugin, CommandContext } from "./plugin";
+import { type CommandContext, type Plugin, PluginManager } from "./plugin";
+import { describe, expect, mock, test } from "bun:test";
 
 describe("PluginManager", () => {
   test("Load Plugin and Register Command", async () => {
@@ -8,17 +8,17 @@ describe("PluginManager", () => {
 
     const testPlugin: Plugin = {
       name: "TestPlugin",
-      version: "1.0.0",
       onLoad: (ctx) => {
         ctx.registerCommand("test", handler);
       },
+      version: "1.0.0",
     };
 
     await manager.loadPlugin(testPlugin);
 
     const cmdCtx: CommandContext = {
-      command: "test",
       args: [],
+      command: "test",
       player: { id: 1, ws: {} as any },
       send: () => {},
     };
@@ -31,8 +31,8 @@ describe("PluginManager", () => {
   test("Handle Unknown Command", async () => {
     const manager = new PluginManager({} as never);
     const cmdCtx: CommandContext = {
-      command: "unknown",
       args: [],
+      command: "unknown",
       player: { id: 1, ws: {} as any },
       send: () => {},
     };
@@ -43,23 +43,21 @@ describe("PluginManager", () => {
 
   test("Register and Handle RPC Method", async () => {
     const manager = new PluginManager({} as never);
-    const handler = mock(async (params: any) => {
-      return { result: params.value * 2 };
-    });
+    const handler = mock((params: any) => Promise.resolve({ result: params.value * 2 }));
 
     const testPlugin: Plugin = {
       name: "RpcPlugin",
-      version: "1.0.0",
       onLoad: (ctx) => {
         ctx.registerRpcMethod("double", handler);
       },
+      version: "1.0.0",
     };
 
     await manager.loadPlugin(testPlugin);
 
     const cmdCtx: CommandContext = {
-      command: "rpc",
       args: [],
+      command: "rpc",
       player: { id: 1, ws: {} as any },
       send: () => {},
     };

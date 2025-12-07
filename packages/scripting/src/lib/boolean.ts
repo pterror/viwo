@@ -1,30 +1,9 @@
-import { evaluate } from "../interpreter";
 import { defineFullOpcode } from "../types";
+import { evaluate } from "../interpreter";
 
 // Comparison
 /** Checks if all arguments are equal. */
 export const eq = defineFullOpcode<[unknown, unknown, ...unknown[]], boolean>("==", {
-  metadata: {
-    label: "Equals",
-    category: "logic",
-    layout: "infix",
-    description: "Checks if all arguments are equal.",
-    slots: [
-      { name: "A", type: "block" },
-      { name: "B", type: "block" },
-    ],
-    parameters: [
-      { name: "a", type: "unknown", description: "The first value to compare." },
-      { name: "b", type: "unknown", description: "The second value to compare." },
-      {
-        name: "...args",
-        type: "unknown[]",
-        optional: false,
-        description: "Additional values to compare.",
-      },
-    ],
-    returnType: "boolean",
-  },
   handler: ([first, ...rest], _ctx) => {
     let prev = first;
     for (const next of rest) {
@@ -35,31 +14,31 @@ export const eq = defineFullOpcode<[unknown, unknown, ...unknown[]], boolean>("=
     }
     return true;
   },
-});
-
-/** Checks if adjacent arguments are different. */
-export const neq = defineFullOpcode<[unknown, unknown, ...unknown[]], boolean>("!=", {
   metadata: {
-    label: "!=",
     category: "logic",
-    description: "Checks if adjacent arguments are different.",
+    description: "Checks if all arguments are equal.",
+    label: "Equals",
     layout: "infix",
+    parameters: [
+      { description: "The first value to compare.", name: "left", type: "unknown" },
+      { description: "The second value to compare.", name: "right", type: "unknown" },
+      {
+        description: "Additional values to compare.",
+        name: "...args",
+        optional: false,
+        type: "unknown[]",
+      },
+    ],
+    returnType: "boolean",
     slots: [
       { name: "A", type: "block" },
       { name: "B", type: "block" },
     ],
-    parameters: [
-      { name: "a", type: "unknown", description: "The first value to compare." },
-      { name: "b", type: "unknown", description: "The second value to compare." },
-      {
-        name: "...args",
-        type: "unknown[]",
-        optional: false,
-        description: "Additional values to compare.",
-      },
-    ],
-    returnType: "boolean",
   },
+});
+
+/** Checks if adjacent arguments are different. */
+export const neq = defineFullOpcode<[unknown, unknown, ...unknown[]], boolean>("!=", {
   handler: ([first, ...rest], _ctx) => {
     let prev = first;
     for (const next of rest) {
@@ -70,26 +49,31 @@ export const neq = defineFullOpcode<[unknown, unknown, ...unknown[]], boolean>("
     }
     return true;
   },
-});
-
-/** Checks if arguments are strictly increasing. */
-export const lt = defineFullOpcode<[number, number, ...number[]], boolean>("<", {
   metadata: {
-    label: "<",
     category: "logic",
-    description: "Checks if arguments are strictly increasing.",
+    description: "Checks if adjacent arguments are different.",
+    label: "!=",
     layout: "infix",
+    parameters: [
+      { description: "The first value to compare.", name: "left", type: "unknown" },
+      { description: "The second value to compare.", name: "right", type: "unknown" },
+      {
+        description: "Additional values to compare.",
+        name: "...args",
+        optional: false,
+        type: "unknown[]",
+      },
+    ],
+    returnType: "boolean",
     slots: [
       { name: "A", type: "block" },
       { name: "B", type: "block" },
     ],
-    parameters: [
-      { name: "a", type: "number", description: "The first number." },
-      { name: "b", type: "number", description: "The second number." },
-      { name: "...args", type: "number[]", description: "Additional numbers." },
-    ],
-    returnType: "boolean",
   },
+});
+
+/** Checks if arguments are strictly increasing. */
+export const lt = defineFullOpcode<[number, number, ...number[]], boolean>("<", {
   handler: ([first, ...rest], _ctx) => {
     let prev = first;
     for (const next of rest) {
@@ -100,26 +84,26 @@ export const lt = defineFullOpcode<[number, number, ...number[]], boolean>("<", 
     }
     return true;
   },
-});
-
-/** Checks if arguments are strictly decreasing. */
-export const gt = defineFullOpcode<[number, number, ...number[]], boolean>(">", {
   metadata: {
-    label: ">",
     category: "logic",
-    description: "Checks if arguments are strictly decreasing.",
+    description: "Checks if arguments are strictly increasing.",
+    label: "<",
     layout: "infix",
+    parameters: [
+      { description: "The first number.", name: "left", type: "number" },
+      { description: "The second number.", name: "right", type: "number" },
+      { description: "Additional numbers.", name: "...args", type: "number[]" },
+    ],
+    returnType: "boolean",
     slots: [
       { name: "A", type: "block" },
       { name: "B", type: "block" },
     ],
-    parameters: [
-      { name: "a", type: "number", description: "The first number." },
-      { name: "b", type: "number", description: "The second number." },
-      { name: "...args", type: "number[]", description: "Additional numbers." },
-    ],
-    returnType: "boolean",
   },
+});
+
+/** Checks if arguments are strictly decreasing. */
+export const gt = defineFullOpcode<[number, number, ...number[]], boolean>(">", {
   handler: ([first, ...rest], _ctx) => {
     let prev = first;
     for (const next of rest) {
@@ -130,26 +114,26 @@ export const gt = defineFullOpcode<[number, number, ...number[]], boolean>(">", 
     }
     return true;
   },
-});
-
-/** Checks if arguments are non-decreasing. */
-export const lte = defineFullOpcode<[number, number, ...number[]], boolean>("<=", {
   metadata: {
-    label: "<=",
     category: "logic",
-    description: "Checks if arguments are non-decreasing.",
+    description: "Checks if arguments are strictly decreasing.",
+    label: ">",
     layout: "infix",
+    parameters: [
+      { description: "The first number.", name: "left", type: "number" },
+      { description: "The second number.", name: "right", type: "number" },
+      { description: "Additional numbers.", name: "...args", type: "number[]" },
+    ],
+    returnType: "boolean",
     slots: [
       { name: "A", type: "block" },
       { name: "B", type: "block" },
     ],
-    parameters: [
-      { name: "a", type: "number", description: "The first number." },
-      { name: "b", type: "number", description: "The second number." },
-      { name: "...args", type: "number[]", description: "Additional numbers." },
-    ],
-    returnType: "boolean",
   },
+});
+
+/** Checks if arguments are non-decreasing. */
+export const lte = defineFullOpcode<[number, number, ...number[]], boolean>("<=", {
   handler: ([first, ...rest], _ctx) => {
     let prev = first;
     for (const next of rest) {
@@ -160,26 +144,26 @@ export const lte = defineFullOpcode<[number, number, ...number[]], boolean>("<="
     }
     return true;
   },
-});
-
-/** Checks if arguments are non-increasing. */
-export const gte = defineFullOpcode<[number, number, ...number[]], boolean>(">=", {
   metadata: {
-    label: ">=",
     category: "logic",
-    description: "Checks if arguments are non-increasing.",
+    description: "Checks if arguments are non-decreasing.",
+    label: "<=",
     layout: "infix",
+    parameters: [
+      { description: "The first number.", name: "left", type: "number" },
+      { description: "The second number.", name: "right", type: "number" },
+      { description: "Additional numbers.", name: "...args", type: "number[]" },
+    ],
+    returnType: "boolean",
     slots: [
       { name: "A", type: "block" },
       { name: "B", type: "block" },
     ],
-    parameters: [
-      { name: "a", type: "number", description: "The first number." },
-      { name: "b", type: "number", description: "The second number." },
-      { name: "...args", type: "number[]", description: "Additional numbers." },
-    ],
-    returnType: "boolean",
   },
+});
+
+/** Checks if arguments are non-increasing. */
+export const gte = defineFullOpcode<[number, number, ...number[]], boolean>(">=", {
   handler: ([first, ...rest], _ctx) => {
     let prev = first;
     for (const next of rest) {
@@ -190,115 +174,132 @@ export const gte = defineFullOpcode<[number, number, ...number[]], boolean>(">="
     }
     return true;
   },
+  metadata: {
+    category: "logic",
+    description: "Checks if arguments are non-increasing.",
+    label: ">=",
+    layout: "infix",
+    parameters: [
+      { description: "The first number.", name: "left", type: "number" },
+      { description: "The second number.", name: "right", type: "number" },
+      { description: "Additional numbers.", name: "...args", type: "number[]" },
+    ],
+    returnType: "boolean",
+    slots: [
+      { name: "A", type: "block" },
+      { name: "B", type: "block" },
+    ],
+  },
 });
 
 // Logic
 /** Logical AND. */
 export const and = defineFullOpcode<[boolean, boolean, ...boolean[]], boolean, true>("and", {
-  metadata: {
-    label: "And",
-    category: "logic",
-    layout: "infix",
-    description: "Logical AND. Returns true if all arguments are true.",
-    slots: [
-      { name: "A", type: "block" },
-      { name: "B", type: "block" },
-    ],
-    parameters: [
-      { name: "a", type: "unknown", description: "The first value." },
-      { name: "b", type: "unknown", description: "The second value." },
-      { name: "...args", type: "unknown[]", description: "Additional values." },
-    ],
-    returnType: "boolean",
-    lazy: true,
-  },
-  handler: ([a, b, ...rest], ctx) => {
-    let i = 0;
-    const args = [a, b, ...rest];
+  handler: (args, ctx) => {
+    let idx = 0;
     const next = (): any => {
-      if (i >= args.length) return true;
-
-      const arg = args[i++]!;
+      if (idx >= args.length) {
+        return true;
+      }
+      const arg = args[idx]!;
+      idx += 1;
       const result = evaluate(arg, ctx);
 
       if (result instanceof Promise) {
         return result.then((res) => {
-          if (!res) return false;
+          if (!res) {
+            return false;
+          }
           return next();
         });
       }
-
-      if (!result) return false;
+      if (!result) {
+        return false;
+      }
       return next();
     };
-
     return next();
+  },
+  metadata: {
+    category: "logic",
+    description: "Logical AND. Returns true if all arguments are true.",
+    label: "And",
+    layout: "infix",
+    lazy: true,
+    parameters: [
+      { description: "The first value.", name: "left", type: "unknown" },
+      { description: "The second value.", name: "right", type: "unknown" },
+      { description: "Additional values.", name: "...args", type: "unknown[]" },
+    ],
+    returnType: "boolean",
+    slots: [
+      { name: "A", type: "block" },
+      { name: "B", type: "block" },
+    ],
   },
 });
 
 /** Logical OR. */
 export const or = defineFullOpcode<[boolean, boolean, ...boolean[]], boolean, true>("or", {
+  handler: (args, ctx) => {
+    let idx = 0;
+    const next = (): any => {
+      if (idx >= args.length) {
+        return false;
+      }
+      const arg = args[idx]!;
+      idx += 1;
+      const result = evaluate(arg, ctx);
+      if (result instanceof Promise) {
+        return result.then((res) => {
+          if (res) {
+            return true;
+          }
+          return next();
+        });
+      }
+      if (result) {
+        return true;
+      }
+      return next();
+    };
+    return next();
+  },
   metadata: {
-    label: "Greater Than",
     category: "logic",
-    layout: "infix",
     description: "Logical OR. Returns true if at least one argument is true.",
+    label: "Greater Than",
+    layout: "infix",
+    lazy: true,
+    parameters: [
+      { description: "The first value.", name: "left", type: "unknown" },
+      { description: "The second value.", name: "right", type: "unknown" },
+      { description: "Additional values.", name: "...args", type: "unknown[]" },
+    ],
+    returnType: "boolean",
     slots: [
       { name: "A", type: "block" },
       { name: "B", type: "block" },
     ],
-    parameters: [
-      { name: "a", type: "unknown", description: "The first value." },
-      { name: "b", type: "unknown", description: "The second value." },
-      { name: "...args", type: "unknown[]", description: "Additional values." },
-    ],
-    returnType: "boolean",
-    lazy: true,
-  },
-  handler: ([a, b, ...rest], ctx) => {
-    let i = 0;
-    const args = [a, b, ...rest];
-    const next = (): any => {
-      if (i >= args.length) return false;
-
-      const arg = args[i++]!;
-      const result = evaluate(arg, ctx);
-
-      if (result instanceof Promise) {
-        return result.then((res) => {
-          if (res) return true;
-          return next();
-        });
-      }
-
-      if (result) return true;
-      return next();
-    };
-
-    return next();
   },
 });
 
-/**
- * Logical NOT.
- */
+/** Logical NOT. */
 export const not = defineFullOpcode<[boolean], boolean>("not", {
+  handler: ([val], _ctx) => !val,
   metadata: {
-    label: "Not",
     category: "logic",
     description: "Logical NOT. Returns the opposite boolean value.",
-    slots: [{ name: "Val", type: "block" }],
+    label: "Not",
     parameters: [
       {
-        name: "value",
-        type: "unknown",
-        optional: false,
         description: "The boolean value to negate.",
+        name: "value",
+        optional: false,
+        type: "unknown",
       },
     ],
     returnType: "boolean",
-  },
-  handler: ([val], _ctx) => {
-    return !val;
+    slots: [{ name: "Val", type: "block" }],
   },
 });

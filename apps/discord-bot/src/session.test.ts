@@ -1,29 +1,31 @@
-import { describe, test, expect, mock, beforeEach, spyOn, Mock } from "bun:test";
+import { type Mock, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
 // Mock dependencies
 const mockDb = {
+  get: mock(() => {}),
   getActiveEntity: mock((): unknown => null),
   getDefaultEntity: mock((): unknown => null),
-  setDefaultEntity: mock(() => {}),
-  setActiveEntity: mock(() => {}),
-  get: mock(() => {}),
   run: mock(() => {}),
+  setActiveEntity: mock(() => {}),
+  setDefaultEntity: mock(() => {}),
 };
 
 mock.module("./instances", () => ({ db: mockDb }));
 
 // Import real socketManager
+// oxlint-disable-next-line first
 import { socketManager } from "./socket";
-import { SessionManager } from "./session";
+// oxlint-disable-next-line first
+import type { SessionManager } from "./session";
 
 // Mock GameSockets
 
 const mockPlayerSocket = {
-  send: mock(() => {}),
-  execute: mock(() => {}),
-  on: mock(() => {}),
-  off: mock(() => {}),
   connect: mock(() => {}),
+  execute: mock(() => {}),
+  off: mock(() => {}),
+  on: mock(() => {}),
+  send: mock(() => {}),
 } as any;
 
 describe("Session Manager", () => {
@@ -50,35 +52,37 @@ describe("Session Manager", () => {
     (socketManager.getSocket as any).mockReturnValue(mockPlayerSocket);
 
     // Default behavior for socket
-    mockPlayerSocket.on.mockImplementation((event: string, _handler: Function) => {
-      if (event === "message") {
-        // no-op
-      }
-    });
+    mockPlayerSocket.on.mockImplementation(
+      (event: string, _handler: (...args: any[]) => unknown) => {
+        if (event === "message") {
+          // no-op
+        }
+      },
+    );
 
     // We need to trigger the message handler when execute is called.
     mockPlayerSocket.execute.mockImplementation((cmd: string, args: any[]) => {
       if (cmd === "create_player") {
-        const name = args[0];
+        const [name] = args;
         // Find the registered message handler
         // We need to capture it from the .on call
-        const call = mockPlayerSocket.on.mock.calls.find((c: any) => c[0] === "message");
+        const call = mockPlayerSocket.on.mock.calls.find((call: any) => call[0] === "message");
         if (call) {
-          const handler = call[1];
+          const [, handler] = call;
           // Simulate async response
           setTimeout(() => {
-            handler({ type: "player_created", name, id: 999 });
+            handler({ id: 999, name, type: "player_created" });
           }, 10);
         }
       }
     });
 
     const module = await import("./session");
-    sessionManager = module.sessionManager;
+    ({ sessionManager } = module);
   });
 
   test("Existing Session", async () => {
-    mockDb.getActiveEntity.mockReturnValue(123 as any);
+    mockDb.getActiveEntity.mockReturnValue(123);
     const id = await sessionManager.ensureSession("u1", "c1", "User");
     expect(id).toBe(123);
     expect(mockDb.getActiveEntity).toHaveBeenCalledWith("u1", "c1");
@@ -86,8 +90,7 @@ describe("Session Manager", () => {
 
   test("Default Entity", async () => {
     mockDb.getActiveEntity.mockReturnValue(null);
-    mockDb.getDefaultEntity.mockReturnValue(456 as any);
-
+    mockDb.getDefaultEntity.mockReturnValue(456);
     const id = await sessionManager.ensureSession("u1", "c1", "User");
     expect(id).toBe(456);
     expect(mockDb.setActiveEntity).toHaveBeenCalledWith("u1", "c1", 456);
@@ -96,7 +99,6 @@ describe("Session Manager", () => {
   test("Create New Player", async () => {
     mockDb.getActiveEntity.mockReturnValue(null);
     mockDb.getDefaultEntity.mockReturnValue(null);
-
     const id = await sessionManager.ensureSession("u1", "c1", "NewPlayer");
     expect(id).toBe(999);
     expect(mockDb.setDefaultEntity).toHaveBeenCalledWith("u1", 999);
@@ -106,14 +108,13 @@ describe("Session Manager", () => {
   test("Create New Player Timeout", async () => {
     mockDb.getActiveEntity.mockReturnValue(null);
     mockDb.getDefaultEntity.mockReturnValue(null);
-
     // Override execute to NOT trigger response
     mockPlayerSocket.execute.mockImplementation(() => {});
 
     // Mock setTimeout to trigger immediately
-    const originalSetTimeout = global.setTimeout;
-    // @ts-expect-error
-    global.setTimeout = (cb: Function, ms: number) => {
+    const originalSetTimeout = globalThis.setTimeout;
+    // @ts-expect-error We do not need __promisify__.
+    globalThis.setTimeout = (cb: (...args: any[]) => unknown, ms: number) => {
       if (ms > 1000) {
         cb();
         return 0;
@@ -124,10 +125,10 @@ describe("Session Manager", () => {
     try {
       await sessionManager.ensureSession("u1", "c1", "TimeoutPlayer");
       expect(true).toBe(false); // Should not reach here
-    } catch (e: any) {
-      expect(e.message).toBe("Timeout creating player");
+    } catch (error: any) {
+      expect(error.message).toBe("Timeout creating player");
     } finally {
-      global.setTimeout = originalSetTimeout;
+      globalThis.setTimeout = originalSetTimeout;
     }
   });
 });

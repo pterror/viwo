@@ -1,10 +1,10 @@
-import { transpile } from "@viwo/scripting";
+import { addVerb, createCapability, createEntity, getEntity, updateEntity } from "./repo";
 import { db } from "./db";
-import { createEntity, addVerb, createCapability, updateEntity, getEntity } from "./repo";
-import { seedItems } from "./seeds/items";
-import { seedHotel } from "./seeds/hotel";
 import { extractVerb } from "./verb_loader";
-import { resolve } from "path";
+import { resolve } from "node:path";
+import { seedHotel } from "./seeds/hotel";
+import { seedItems } from "./seeds/items";
+import { transpile } from "@viwo/scripting";
 
 const verbsPath = resolve(__dirname, "seeds/verbs.ts");
 
@@ -22,22 +22,22 @@ export function seed() {
 
   // 1. Create The Void (Root Zone)
   const voidId = createEntity({
-    name: "The Void",
     description: "An endless expanse of nothingness.",
+    name: "The Void",
   });
 
   // 2. Create Entity Base
   const entityBaseId = createEntity({
-    name: "Entity Base",
     description: "The base of all things.",
     location: voidId,
+    name: "Entity Base",
   });
 
   // 3. Create System Entity
   const systemId = createEntity({
-    name: "System",
     description: "The system root object.",
     location: voidId,
+    name: "System",
   });
 
   // Grant System capabilities
@@ -48,9 +48,9 @@ export function seed() {
 
   // 4. Create Discord Bot Entity
   const botId = createEntity({
-    name: "Discord Bot",
     description: "The bridge to Discord.",
     location: voidId,
+    name: "Discord Bot",
   });
 
   createCapability(botId, "sys.sudo", {});
@@ -96,9 +96,9 @@ export function seed() {
   // 3. Create Humanoid Base
   const humanoidBaseId = createEntity(
     {
-      name: "Humanoid Base",
-      description: "A humanoid creature.",
       body_type: "humanoid",
+      description: "A humanoid creature.",
+      name: "Humanoid Base",
       // Slots are just definitions of where things can go
       slots: [
         // Head & Neck
@@ -147,8 +147,8 @@ export function seed() {
   // 4. Create Player Prototype
   const playerBaseId = createEntity(
     {
-      name: "Player Base",
       description: "A generic adventurer.",
+      name: "Player Base",
     },
     humanoidBaseId,
   );
@@ -193,9 +193,9 @@ export function seed() {
   // 3. Create a Lobby Room
   const lobbyId = createEntity(
     {
-      name: "Lobby",
-      location: voidId,
       description: "A cozy lobby with a crackling fireplace.",
+      location: voidId,
+      name: "Lobby",
     },
     entityBaseId,
   );
@@ -203,58 +203,58 @@ export function seed() {
   // 4. Create a Test Player
   const playerId = createEntity(
     {
-      name: "Guest",
-      location: lobbyId,
       description: "A confused looking guest.",
+      location: lobbyId,
+      name: "Guest",
     },
     playerBaseId,
   );
 
   // 5. Create some furniture (Table)
   const tableId = createEntity({
-    name: "Oak Table",
-    location: lobbyId,
     description: "A sturdy oak table.",
+    location: lobbyId,
+    name: "Oak Table",
     slots: ["surface", "under"], // Generalizable slots!
   });
 
   // 6. Create a Cup ON the table
   createEntity({
-    name: "Ceramic Cup",
-    location: tableId,
     description: "A chipped ceramic cup.",
-    location_detail: "surface", // It's ON the table
+    location: tableId,
+    location_detail: "surface",
+    name: "Ceramic Cup", // It's ON the table
   });
 
   // 7. Create a Backpack
   const backpackId = createEntity({
-    name: "Leather Backpack",
-    location: playerId,
     description: "A worn leather backpack.",
-    slots: ["main", "front_pocket"],
-    location_detail: "back", // Worn on back
+    location: playerId,
+    location_detail: "back",
+    name: "Leather Backpack",
+    slots: ["main", "front_pocket"], // Worn on back
   });
 
   // 8. Create a Badge ON the Backpack
   createEntity({
-    name: "Scout Badge",
-    location: backpackId,
     description: "A merit badge.",
-    location_detail: "surface", // Attached to the outside? Or maybe we define a slot for it.
+    location: backpackId,
+    location_detail: "surface",
+    name: "Scout Badge", // Attached to the outside? Or maybe we define a slot for it.
   });
 
   // Create another room
   const gardenId = createEntity({
-    name: "Garden",
     description: "A lush garden with blooming flowers.",
+    name: "Garden",
   });
 
   // Link Lobby and Garden
   const northExitId = createEntity({
-    name: "north",
-    location: lobbyId,
-    direction: "north",
     destination: gardenId,
+    direction: "north",
+    location: lobbyId,
+    name: "north",
   });
   const lobby = getEntity(lobbyId)!;
   updateEntity({
@@ -263,10 +263,10 @@ export function seed() {
   });
 
   const southExitId = createEntity({
-    name: "south",
-    location: gardenId,
-    direction: "south",
     destination: lobbyId,
+    direction: "south",
+    location: gardenId,
+    name: "south",
   });
   const garden = getEntity(gardenId)!;
   updateEntity({
@@ -276,17 +276,17 @@ export function seed() {
 
   // 9. Create a Gemstore
   const gemstoreId = createEntity({
-    name: "Gemstore",
     description: "A glittering shop filled with rare stones and oddities.",
+    name: "Gemstore",
   });
 
   // Link Lobby and Gemstore
   // Link Lobby and Gemstore
   const eastExitId = createEntity({
-    name: "east",
-    location: lobbyId,
-    direction: "east",
     destination: gemstoreId,
+    direction: "east",
+    location: lobbyId,
+    name: "east",
   });
   // Note: We need to append to existing exits if any
   // But here we know Lobby only has north so far (actually we just added it above)
@@ -299,10 +299,10 @@ export function seed() {
   });
 
   const westExitId = createEntity({
-    name: "west",
-    location: gemstoreId,
-    direction: "west",
     destination: lobbyId,
+    direction: "west",
+    location: gemstoreId,
+    name: "west",
   });
   const gemstore = getEntity(gemstoreId)!;
   updateEntity({
@@ -312,91 +312,91 @@ export function seed() {
 
   // Items in Gemstore
   createEntity({
-    name: "Black Obsidian",
-    location: gemstoreId,
-    description: "A pitch black stone.",
     adjectives: ["color:black", "effect:shiny", "material:stone", "material:obsidian"],
+    description: "A pitch black stone.",
+    location: gemstoreId,
+    name: "Black Obsidian",
   });
 
   createEntity({
-    name: "Silver Dagger",
-    location: gemstoreId,
-    description: "A gleaming silver blade.",
     adjectives: ["color:silver", "material:metal", "material:silver"],
+    description: "A gleaming silver blade.",
+    location: gemstoreId,
+    name: "Silver Dagger",
   });
 
   createEntity({
-    name: "Gold Coin",
-    location: gemstoreId,
-    description: "A heavy gold coin.",
     adjectives: ["color:gold", "weight:heavy", "material:metal", "material:gold"],
+    description: "A heavy gold coin.",
+    location: gemstoreId,
+    name: "Gold Coin",
   });
 
   createEntity({
-    name: "Platinum Ring",
-    location: gemstoreId,
-    description: "A precious platinum ring.",
     adjectives: ["color:platinum", "value:precious", "material:metal", "material:platinum"],
+    description: "A precious platinum ring.",
+    location: gemstoreId,
+    name: "Platinum Ring",
   });
 
   createEntity({
-    name: "Radioactive Isotope",
-    location: gemstoreId,
-    description: "It glows with a sickly light.",
     adjectives: ["effect:radioactive", "effect:glowing"],
+    description: "It glows with a sickly light.",
+    location: gemstoreId,
+    name: "Radioactive Isotope",
   });
 
   createEntity({
-    name: "Electric Blue Potion",
-    location: gemstoreId,
-    description: "A crackling blue liquid.",
     adjectives: ["color:electric blue", "effect:glowing"],
+    description: "A crackling blue liquid.",
+    location: gemstoreId,
+    name: "Electric Blue Potion",
   });
 
   createEntity({
-    name: "Ethereal Mist",
-    location: gemstoreId,
-    description: "A swirling white mist.",
     adjectives: ["color:white", "effect:ethereal"],
+    description: "A swirling white mist.",
+    location: gemstoreId,
+    name: "Ethereal Mist",
   });
 
   createEntity({
-    name: "Transparent Cube",
-    location: gemstoreId,
-    description: "You can barely see it.",
     adjectives: ["effect:transparent", "material:glass"],
+    description: "You can barely see it.",
+    location: gemstoreId,
+    name: "Transparent Cube",
   });
 
   const wigStandId = createEntity({
-    name: "Wig Stand",
-    location: gemstoreId,
     description: "A stand holding various wigs.",
+    location: gemstoreId,
+    name: "Wig Stand",
     slots: ["surface"],
   });
 
   if (wigStandId) {
     createEntity({
-      name: "Auburn Wig",
-      location: wigStandId,
-      description: "A reddish-brown wig.",
       adjectives: ["color:auburn"],
+      description: "A reddish-brown wig.",
+      location: wigStandId,
       location_detail: "surface",
+      name: "Auburn Wig",
     });
 
     createEntity({
-      name: "Blonde Wig",
-      location: wigStandId,
-      description: "A bright yellow wig.",
       adjectives: ["color:blonde"],
+      description: "A bright yellow wig.",
+      location: wigStandId,
       location_detail: "surface",
+      name: "Blonde Wig",
     });
 
     createEntity({
-      name: "Brunette Wig",
-      location: wigStandId,
-      description: "A dark brown wig.",
       adjectives: ["color:brunette"],
+      description: "A dark brown wig.",
+      location: wigStandId,
       location_detail: "surface",
+      name: "Brunette Wig",
     });
   }
 
@@ -404,37 +404,31 @@ export function seed() {
 
   // Watch Item
   const watchId = createEntity({
-    name: "Golden Watch",
+    adjectives: ["color:gold", "material:gold"],
+    description: "A beautiful golden pocket watch.",
     location: lobbyId,
-    props: {
-      description: "A beautiful golden pocket watch.",
-      adjectives: ["color:gold", "material:gold"],
-    },
+    name: "Golden Watch",
   });
 
   addVerb(watchId, "tell", transpile(extractVerb(verbsPath, "watch_tell")));
 
   // Teleporter Item
   const teleporterId = createEntity({
-    name: "Teleporter Stone",
+    adjectives: ["effect:glowing", "material:stone"],
+    description: "A humming stone that vibrates with energy.",
+    destination: gardenId,
     location: lobbyId,
-    props: {
-      description: "A humming stone that vibrates with energy.",
-      destination: gardenId,
-      adjectives: ["effect:glowing", "material:stone"],
-    },
+    name: "Teleporter Stone",
   });
 
   addVerb(teleporterId, "teleport", transpile(extractVerb(verbsPath, "teleporter_teleport")));
 
   // Status Item
   const statusId = createEntity({
-    name: "Status Orb",
+    adjectives: ["effect:transparent", "material:crystal"],
+    description: "A crystal orb that shows world statistics.",
     location: lobbyId,
-    props: {
-      description: "A crystal orb that shows world statistics.",
-      adjectives: ["effect:transparent", "material:crystal"],
-    },
+    name: "Status Orb",
   });
 
   addVerb(
@@ -446,24 +440,20 @@ export function seed() {
 
   // Color Library
   const colorLibId = createEntity({
-    name: "Color Library", // Or a system object
+    colors: ["red", "green", "blue", "purple", "orange", "yellow", "cyan", "magenta"],
     location: voidId, // Hidden
-    props: {
-      colors: ["red", "green", "blue", "purple", "orange", "yellow", "cyan", "magenta"],
-    },
+    name: "Color Library", // Or a system object
   });
 
   addVerb(colorLibId, "random_color", transpile(extractVerb(verbsPath, "color_lib_random_color")));
 
   // Mood Ring
   const moodRingId = createEntity({
-    name: "Mood Ring",
+    adjectives: ["color:grey", "material:silver"],
+    color_lib: colorLibId,
+    description: "A ring that changes color based on... something.",
     location: lobbyId,
-    props: {
-      description: "A ring that changes color based on... something.",
-      adjectives: ["color:grey", "material:silver"],
-      color_lib: colorLibId,
-    },
+    name: "Mood Ring",
   });
 
   // Verb to update color
@@ -478,12 +468,10 @@ export function seed() {
 
   // 1. Dynamic Mood Ring (Getter)
   const dynamicRingId = createEntity({
-    name: "Dynamic Mood Ring",
+    // No static adjectives needed if we use getter
+    description: "A ring that shimmers with the current second.",
     location: lobbyId,
-    props: {
-      description: "A ring that shimmers with the current second.",
-      // No static adjectives needed if we use getter
-    },
+    name: "Dynamic Mood Ring",
   });
 
   // get_adjectives verb
@@ -497,9 +485,9 @@ export function seed() {
 
   // 2. Special Watch (Local Broadcast)
   const specialWatchId = createEntity({
-    name: "Broadcasting Watch",
+    description: "A watch that announces the time to you.",
     location: lobbyId,
-    props: { description: "A watch that announces the time to you." },
+    name: "Broadcasting Watch",
   });
 
   addVerb(specialWatchId, "tick", transpile(extractVerb(verbsPath, "special_watch_tick")));
@@ -509,9 +497,9 @@ export function seed() {
   // Watch broadcasts to holder (Player), Clock broadcasts to Room.
 
   const clockId = createEntity({
-    name: "Grandfather Clock",
+    description: "A loud clock.",
     location: lobbyId,
-    props: { description: "A loud clock." },
+    name: "Grandfather Clock",
   });
 
   addVerb(clockId, "tick", transpile(extractVerb(verbsPath, "clock_tick")));
@@ -519,9 +507,9 @@ export function seed() {
 
   // 4. Clock Tower (Global Broadcast)
   const towerId = createEntity({
-    name: "Clock Tower", // Or ROOM/BUILDING
+    description: "The source of time.",
     location: voidId, // Hidden, or visible somewhere
-    props: { description: "The source of time." },
+    name: "Clock Tower", // Or ROOM/BUILDING
   });
 
   addVerb(towerId, "toll", transpile(extractVerb(verbsPath, "clock_tower_toll")));
@@ -530,14 +518,8 @@ export function seed() {
   // 5. Mailbox
   // A prototype for mailboxes.
   const mailboxProtoId = createEntity({
+    description: "A secure mailbox.",
     name: "Mailbox Prototype",
-    props: {
-      description: "A secure mailbox.",
-      permissions: {
-        view: ["owner"], // Only owner can see contents
-        enter: [], // No one can manually put things in (must use deposit)
-      },
-    },
   });
 
   addVerb(mailboxProtoId, "deposit", transpile(extractVerb(verbsPath, "mailbox_deposit")));
@@ -545,8 +527,8 @@ export function seed() {
   // Give the player a mailbox
   createEntity(
     {
-      name: "My Mailbox",
       location: playerId, // Carried by player
+      name: "My Mailbox",
       owner_id: playerId,
     },
     mailboxProtoId,
@@ -559,9 +541,9 @@ export function seed() {
 
   // 7. Director AI
   const directorId = createEntity({
-    name: "Director",
-    location: voidId,
     description: "The AI Director.",
+    location: voidId,
+    name: "Director",
   });
 
   // Grant Director capabilities
@@ -573,9 +555,9 @@ export function seed() {
 
   // 8. Combat Manager
   const combatManagerId = createEntity({
-    name: "Combat Manager",
-    location: voidId,
     description: "Manages combat sessions.",
+    location: voidId,
+    name: "Combat Manager",
   });
 
   createCapability(combatManagerId, "sys.create", {});
@@ -595,8 +577,8 @@ export function seed() {
 
   // 9a. Status Effect Prototypes
   const effectBaseId = createEntity({
-    name: "Effect Base",
     description: "Base for status effects.",
+    name: "Effect Base",
   });
   addVerb(effectBaseId, "on_apply", transpile(extractVerb(verbsPath, "effect_base_on_apply")));
   addVerb(effectBaseId, "on_tick", transpile(extractVerb(verbsPath, "effect_base_on_tick")));
@@ -604,8 +586,8 @@ export function seed() {
 
   const poisonEffectId = createEntity(
     {
-      name: "Poison",
       description: "Deals damage over time.",
+      name: "Poison",
     },
     effectBaseId,
   );
@@ -613,8 +595,8 @@ export function seed() {
 
   const regenEffectId = createEntity(
     {
-      name: "Regen",
       description: "Heals over time.",
+      name: "Regen",
     },
     effectBaseId,
   );
@@ -628,38 +610,44 @@ export function seed() {
 
   // 9. Elemental Prototypes
   const fireElementalProtoId = createEntity({
-    name: "Fire Elemental Prototype",
     element: "fire",
     elemental_stats: {
-      water: { damage_taken: 2.0 },
-      fire: { damage_taken: 0.0, attack_scale: 1.5 },
+      fire: { attack_scale: 1.5, damage_taken: 0 },
+      water: { damage_taken: 2 },
     },
+    name: "Fire Elemental Prototype",
   });
 
   const waterElementalProtoId = createEntity({
-    name: "Water Elemental Prototype",
     element: "water",
     elemental_stats: {
-      fire: { damage_taken: 2.0 },
-      water: { damage_taken: 0.0, attack_scale: 1.5 },
+      fire: { damage_taken: 2 },
+      water: { attack_scale: 1.5, damage_taken: 0 },
     },
+    name: "Water Elemental Prototype",
   });
 
   // 10. Combat Verification
   createEntity(
     {
-      name: "Fire Warrior",
+      attack: 15,
+      defense: 5,
+      hp: 100,
       location: lobbyId,
-      props: { hp: 100, attack: 15, defense: 5, speed: 10 },
+      name: "Fire Warrior",
+      speed: 10,
     },
     fireElementalProtoId,
   );
 
   createEntity(
     {
-      name: "Water Orc",
+      attack: 12,
+      defense: 2,
+      hp: 80,
       location: lobbyId,
-      props: { hp: 80, attack: 12, defense: 2, speed: 8 },
+      name: "Water Orc",
+      speed: 8,
     },
     waterElementalProtoId,
   );
@@ -668,8 +656,8 @@ export function seed() {
 
   // 11. Quest Engine Seeds
   const questBaseId = createEntity({
-    name: "Quest Base",
     description: "A base definition for quests.",
+    name: "Quest Base",
   });
 
   addVerb(questBaseId, "get_structure", transpile(extractVerb(verbsPath, "quest_get_structure")));
@@ -677,46 +665,46 @@ export function seed() {
 
   createEntity(
     {
-      name: "Party Preparation",
       description: "Get ready for the big party!",
-      structure: {
-        id: "party_prep",
-        type: "sequence",
-        description: "Prepare for the party.",
-        children: ["gather_supplies", "invite_friends"],
-      },
+      name: "Party Preparation",
       nodes_map: {
-        party_prep: {
-          id: "party_prep",
-          type: "sequence",
-          description: "Prepare for the party.",
-          children: ["gather_supplies", "invite_friends"],
-        },
         gather_supplies: {
-          id: "gather_supplies",
-          type: "parallel_all",
-          description: "Gather Supplies",
           children: ["get_chips", "get_drinks"],
+          description: "Gather Supplies",
+          id: "gather_supplies",
           parent_id: "party_prep",
-        },
-        invite_friends: {
-          id: "invite_friends",
-          type: "leaf",
-          description: "Invite Friends",
-          parent_id: "party_prep",
+          type: "parallel_all",
         },
         get_chips: {
-          id: "get_chips",
-          type: "leaf",
           description: "Get Chips",
+          id: "get_chips",
           parent_id: "gather_supplies",
+          type: "leaf",
         },
         get_drinks: {
-          id: "get_drinks",
-          type: "leaf",
           description: "Get Drinks",
+          id: "get_drinks",
           parent_id: "gather_supplies",
+          type: "leaf",
         },
+        invite_friends: {
+          description: "Invite Friends",
+          id: "invite_friends",
+          parent_id: "party_prep",
+          type: "leaf",
+        },
+        party_prep: {
+          children: ["gather_supplies", "invite_friends"],
+          description: "Prepare for the party.",
+          id: "party_prep",
+          type: "sequence",
+        },
+      },
+      structure: {
+        children: ["gather_supplies", "invite_friends"],
+        description: "Prepare for the party.",
+        id: "party_prep",
+        type: "sequence",
       },
     },
     questBaseId,
@@ -724,17 +712,17 @@ export function seed() {
 
   // Create Chips and Drinks items in Gemstore so they exist
   createEntity({
-    name: "Bag of Chips",
-    location: gemstoreId,
-    description: "Salty and crunchy.",
     adjectives: ["food:chips"],
+    description: "Salty and crunchy.",
+    location: gemstoreId,
+    name: "Bag of Chips",
   });
 
   createEntity({
-    name: "Sode Pop",
-    location: gemstoreId,
-    description: "Fizzy drink.",
     adjectives: ["food:drink"],
+    description: "Fizzy drink.",
+    location: gemstoreId,
+    name: "Sode Pop",
   });
 
   if (process.env.NODE_ENV !== "test") {

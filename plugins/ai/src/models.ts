@@ -1,11 +1,12 @@
-import { bedrock } from "@ai-sdk/amazon-bedrock";
 import { anthropic } from "@ai-sdk/anthropic";
 import { assemblyai } from "@ai-sdk/assemblyai";
 import { azure } from "@ai-sdk/azure";
 import { baseten } from "@ai-sdk/baseten";
+import { bedrock } from "@ai-sdk/amazon-bedrock";
 import { blackForestLabs } from "@ai-sdk/black-forest-labs";
 import { cerebras } from "@ai-sdk/cerebras";
 import { cohere } from "@ai-sdk/cohere";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { deepgram } from "@ai-sdk/deepgram";
 import { deepinfra } from "@ai-sdk/deepinfra";
 import { deepseek } from "@ai-sdk/deepseek";
@@ -15,7 +16,6 @@ import { fireworks } from "@ai-sdk/fireworks";
 import { gateway } from "@ai-sdk/gateway";
 import { gladia } from "@ai-sdk/gladia";
 import { google } from "@ai-sdk/google";
-import { vertex } from "@ai-sdk/google-vertex";
 import { groq } from "@ai-sdk/groq";
 import { huggingface } from "@ai-sdk/huggingface";
 import { hume } from "@ai-sdk/hume";
@@ -23,12 +23,12 @@ import { lmnt } from "@ai-sdk/lmnt";
 import { luma } from "@ai-sdk/luma";
 import { mistral } from "@ai-sdk/mistral";
 import { openai } from "@ai-sdk/openai";
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { perplexity } from "@ai-sdk/perplexity";
 import { replicate } from "@ai-sdk/replicate";
 import { revai } from "@ai-sdk/revai";
 import { togetherai } from "@ai-sdk/togetherai";
 import { vercel } from "@ai-sdk/vercel";
+import { vertex } from "@ai-sdk/google-vertex";
 import { xai } from "@ai-sdk/xai";
 
 const providerMap = {
@@ -76,7 +76,6 @@ function getProvider(providerName: string | undefined) {
   const provider = providerMap[providerName];
   if (!provider) {
     try {
-      // TODO: Make this more proper
       const url = new URL(providerName);
       createOpenAICompatible({ baseURL: providerName, name: url.host });
     } catch {
@@ -102,7 +101,7 @@ function parseModelSpec(modelSpec: string) {
   if (!providerName || !modelName) {
     throw new Error(`Invalid model spec: ${modelSpec}`);
   }
-  return { providerName, modelName };
+  return { modelName, providerName };
 }
 
 export function getLanguageModel(modelSpec: string) {

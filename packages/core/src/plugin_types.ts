@@ -1,4 +1,3 @@
-// TODO: Autogenerate this without introducing dependency on @viwo/plugin-ai
 declare global {
   namespace ai {
     function text(modelSpec: string, prompt: string, system?: string): string;
@@ -6,4 +5,5 @@ declare global {
   }
 }
 
+// oxlint-disable-next-line require-module-specifiers
 export {};

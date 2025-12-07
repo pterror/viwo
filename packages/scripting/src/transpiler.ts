@@ -1,14 +1,14 @@
-import ts from "typescript";
-import * as StdLib from "./lib/std";
-import * as MathLib from "./lib/math";
-import * as ListLib from "./lib/list";
-import * as ObjectLib from "./lib/object";
 import * as BooleanLib from "./lib/boolean";
+import * as ListLib from "./lib/list";
+import * as MathLib from "./lib/math";
+import * as ObjectLib from "./lib/object";
+import * as StdLib from "./lib/std";
 import * as StringLib from "./lib/string";
 import { RESERVED_TYPESCRIPT_KEYWORDS } from "./type_generator";
+import ts from "typescript";
 
 const OPCODE_MAPPINGS: Record<string, string> = {
-  ["console.log"]: "log",
+  "console.log": "log",
 };
 
 export function registerOpcodeMapping(tsName: string, opcode: string) {
@@ -49,7 +49,10 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
     ts.isInterfaceDeclaration(node) ||
     ts.isTypeAliasDeclaration(node)
   ) {
-    if (node.modifiers && node.modifiers.some((m) => m.kind === ts.SyntaxKind.DeclareKeyword)) {
+    if (
+      node.modifiers &&
+      node.modifiers.some((modifier) => modifier.kind === ts.SyntaxKind.DeclareKeyword)
+    ) {
       return undefined;
     }
   }
@@ -101,7 +104,7 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
 
   if (ts.isVariableDeclarationList(node)) {
     if (node.declarations[0]) {
-      const decl = node.declarations[0];
+      const [decl] = node.declarations;
       if (ts.isVariableDeclaration(decl) && decl.initializer) {
         const name = decl.name.getText();
         scope.add(name);
@@ -109,18 +112,20 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
         return StdLib.let(name, value);
       }
     }
-    return null;
+    return;
   }
 
   if (ts.isFunctionDeclaration(node)) {
     if (node.name && node.body) {
       const name = node.name.text;
       scope.add(name);
-      const params = node.parameters.map((p) => p.name.getText()).filter((p) => p !== "this");
+      const parameters = node.parameters
+        .map((parameter) => parameter.name.getText())
+        .filter((parameter) => parameter !== "this");
       const fnScope = new Set(scope);
-      params.forEach((p) => fnScope.add(p));
+      parameters.forEach((parameter) => fnScope.add(parameter));
       const body = transpileNode(node.body, fnScope);
-      return StdLib.let(name, StdLib.lambda(params, body));
+      return StdLib.let(name, StdLib.lambda(parameters, body));
     }
   }
 
@@ -141,44 +146,60 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
     }
 
     switch (op) {
-      case ts.SyntaxKind.PlusToken:
+      case ts.SyntaxKind.PlusToken: {
         return MathLib.add(left, right);
-      case ts.SyntaxKind.MinusToken:
+      }
+      case ts.SyntaxKind.MinusToken: {
         return MathLib.sub(left, right);
-      case ts.SyntaxKind.AsteriskToken:
+      }
+      case ts.SyntaxKind.AsteriskToken: {
         return MathLib.mul(left, right);
-      case ts.SyntaxKind.SlashToken:
+      }
+      case ts.SyntaxKind.SlashToken: {
         return MathLib.div(left, right);
-      case ts.SyntaxKind.PercentToken:
+      }
+      case ts.SyntaxKind.PercentToken: {
         return MathLib.mod(left, right);
+      }
       case ts.SyntaxKind.EqualsEqualsEqualsToken:
-      case ts.SyntaxKind.EqualsEqualsToken:
+      case ts.SyntaxKind.EqualsEqualsToken: {
         return BooleanLib.eq(left, right);
+      }
       case ts.SyntaxKind.ExclamationEqualsEqualsToken:
-      case ts.SyntaxKind.ExclamationEqualsToken:
+      case ts.SyntaxKind.ExclamationEqualsToken: {
         return BooleanLib.neq(left, right);
-      case ts.SyntaxKind.LessThanToken:
+      }
+      case ts.SyntaxKind.LessThanToken: {
         return BooleanLib.lt(left, right);
-      case ts.SyntaxKind.GreaterThanToken:
+      }
+      case ts.SyntaxKind.GreaterThanToken: {
         return BooleanLib.gt(left, right);
-      case ts.SyntaxKind.LessThanEqualsToken:
+      }
+      case ts.SyntaxKind.LessThanEqualsToken: {
         return BooleanLib.lte(left, right);
-      case ts.SyntaxKind.GreaterThanEqualsToken:
+      }
+      case ts.SyntaxKind.GreaterThanEqualsToken: {
         return BooleanLib.gte(left, right);
-      case ts.SyntaxKind.AmpersandAmpersandToken:
+      }
+      case ts.SyntaxKind.AmpersandAmpersandToken: {
         return BooleanLib.and(left, right);
-      case ts.SyntaxKind.BarBarToken:
+      }
+      case ts.SyntaxKind.BarBarToken: {
         return BooleanLib.or(left, right);
-      case ts.SyntaxKind.QuestionQuestionToken:
+      }
+      case ts.SyntaxKind.QuestionQuestionToken: {
         // Fallback if not an obj.get optimization
         // We don't have a nullish coalescing opcode yet, so we can use a conditional
         // (left != null) ? left : right
         return StdLib.if(BooleanLib.neq(left, null), left, right);
-      case ts.SyntaxKind.InKeyword:
+      }
+      case ts.SyntaxKind.InKeyword: {
         return ObjectLib.objHas(right, left);
-      case ts.SyntaxKind.AsteriskAsteriskToken:
+      }
+      case ts.SyntaxKind.AsteriskAsteriskToken: {
         return MathLib.pow(left, right);
-      case ts.SyntaxKind.EqualsToken:
+      }
+      case ts.SyntaxKind.EqualsToken: {
         // Assignment
         if (Array.isArray(left) && left[0] === "var") {
           return StdLib.set(left[1], right);
@@ -188,17 +209,20 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
           return ObjectLib.objSet(left[1], left[2], right);
         }
         throw new Error("Invalid assignment target");
+      }
       case ts.SyntaxKind.PlusEqualsToken:
       case ts.SyntaxKind.MinusEqualsToken:
       case ts.SyntaxKind.AsteriskEqualsToken:
       case ts.SyntaxKind.SlashEqualsToken:
       case ts.SyntaxKind.PercentEqualsToken:
-      case ts.SyntaxKind.AsteriskAsteriskEqualsToken:
+      case ts.SyntaxKind.AsteriskAsteriskEqualsToken: {
         return transpileArithmeticAssignment(op, left, right);
+      }
       case ts.SyntaxKind.AmpersandAmpersandEqualsToken:
       case ts.SyntaxKind.BarBarEqualsToken:
-      case ts.SyntaxKind.QuestionQuestionEqualsToken:
+      case ts.SyntaxKind.QuestionQuestionEqualsToken: {
         return transpileLogicalAssignment(op, left, right);
+      }
     }
   }
 
@@ -278,11 +302,11 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
     // If it's just a property access that wasn't transpiled to obj.get yet?
     // transpileNode handles PropertyAccessExpression and ElementAccessExpression returning obj.get
     // So it should be fine.
-    return null;
+    return;
   }
 
   if (ts.isArrayLiteralExpression(node)) {
-    const elements = node.elements.map((e) => transpileNode(e, scope));
+    const elements = node.elements.map((element) => transpileNode(element, scope));
     return ListLib.listNew(...elements);
   }
 
@@ -327,7 +351,7 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
     }
 
     const expr = node.expression;
-    const args = node.arguments.map((a) => transpileNode(a, scope));
+    const args = node.arguments.map((argument) => transpileNode(argument, scope));
 
     let opcodeName: string | null = null;
 
@@ -341,7 +365,7 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
       opcodeName = resolveDottedName(expr);
       if (opcodeName) {
         // If the root of the namespace is a local variable, it's not an opcode
-        const root = opcodeName.split(".")[0];
+        const [root] = opcodeName.split(".");
         if (root && scope.has(root)) {
           opcodeName = null;
         }
@@ -366,27 +390,27 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
   }
 
   if (ts.isArrowFunction(node)) {
-    const params = node.parameters.map((p) => p.name.getText());
+    const parameters = node.parameters.map((parameter) => parameter.name.getText());
     const fnScope = new Set(scope);
-    params.forEach((p) => fnScope.add(p));
+    parameters.forEach((parameter) => fnScope.add(parameter));
     let body = transpileNode(node.body, fnScope);
 
     // If body is a block, it returns a "seq".
     // Lambda body in ViwoScript can be a seq.
 
-    return StdLib.lambda(params, body);
+    return StdLib.lambda(parameters, body);
   }
 
   if (ts.isBlock(node)) {
     const blockScope = new Set(scope);
-    const stmts = node.statements.map((s) => transpileNode(s, blockScope));
+    const stmts = node.statements.map((statement) => transpileNode(statement, blockScope));
     return StdLib.seq(...stmts);
   }
 
   if (ts.isIfStatement(node)) {
     const cond = transpileNode(node.expression, scope);
     const thenStmt = transpileNode(node.thenStatement, scope);
-    const elseStmt = node.elseStatement ? transpileNode(node.elseStatement, scope) : null;
+    const elseStmt = node.elseStatement ? transpileNode(node.elseStatement, scope) : undefined;
 
     if (elseStmt) {
       return StdLib.if(cond, thenStmt, elseStmt);
@@ -409,7 +433,7 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
 
   if (ts.isTryStatement(node)) {
     const tryBlock = transpileNode(node.tryBlock, scope);
-    const catchClause = node.catchClause;
+    const { catchClause } = node;
     if (catchClause) {
       const errVar = catchClause.variableDeclaration
         ? catchClause.variableDeclaration.name.getText()
@@ -424,11 +448,19 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
   }
 
   if (ts.isThrowStatement(node)) {
-    return StdLib.throw(transpileNode(node.expression, scope));
+    let { expression } = node;
+    if (
+      ts.isNewExpression(expression) &&
+      ts.isIdentifier(expression.expression) &&
+      expression.expression.text === "Error"
+    ) {
+      expression = expression.arguments![0]!;
+    }
+    return StdLib.throw(transpileNode(expression, scope));
   }
 
   if (ts.isForOfStatement(node)) {
-    const initializer = node.initializer;
+    const { initializer } = node;
     let varName = "";
     const loopScope = new Set(scope);
     if (ts.isVariableDeclarationList(initializer)) {
@@ -442,7 +474,7 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
   }
 
   if (ts.isForInStatement(node)) {
-    const initializer = node.initializer;
+    const { initializer } = node;
     let varName = "";
     const loopScope = new Set(scope);
     if (ts.isVariableDeclarationList(initializer)) {
@@ -459,9 +491,9 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
   if (ts.isForStatement(node)) {
     // for (init; cond; incr) body
     // -> seq(init, while(cond, seq(body, incr)))
-    const init = node.initializer ? transpileNode(node.initializer, scope) : null;
+    const init = node.initializer ? transpileNode(node.initializer, scope) : undefined;
     const cond = node.condition ? transpileNode(node.condition, scope) : true;
-    const incr = node.incrementor ? transpileNode(node.incrementor, scope) : null;
+    const incr = node.incrementor ? transpileNode(node.incrementor, scope) : undefined;
     const body = transpileNode(node.statement, scope);
 
     const loopBody = incr ? StdLib.seq(body, incr) : body;
@@ -478,7 +510,7 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
     if (node.expression) {
       return transpileNode(node.expression, scope);
     }
-    return null;
+    return;
   }
 
   if (ts.isBreakStatement(node)) {
@@ -511,37 +543,48 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
 }
 
 function resolveDottedName(node: ts.Expression): string | null {
-  if (ts.isIdentifier(node)) return node.text;
+  if (ts.isIdentifier(node)) {
+    return node.text;
+  }
   if (ts.isPropertyAccessExpression(node)) {
     const lhs = resolveDottedName(node.expression);
-    if (lhs) return `${lhs}.${node.name.text}`;
+    if (lhs) {
+      return `${lhs}.${node.name.text}`;
+    }
   }
   return null;
 }
 
 function transpileArithmeticAssignment(op: ts.BinaryOperator, left: any, right: any): any {
-  let valueOp: (a: any, b: any) => any;
+  let valueOp: (left: any, right: any) => any;
   switch (op) {
-    case ts.SyntaxKind.PlusEqualsToken:
+    case ts.SyntaxKind.PlusEqualsToken: {
       valueOp = MathLib.add;
       break;
-    case ts.SyntaxKind.MinusEqualsToken:
+    }
+    case ts.SyntaxKind.MinusEqualsToken: {
       valueOp = MathLib.sub;
       break;
-    case ts.SyntaxKind.AsteriskEqualsToken:
+    }
+    case ts.SyntaxKind.AsteriskEqualsToken: {
       valueOp = MathLib.mul;
       break;
-    case ts.SyntaxKind.SlashEqualsToken:
+    }
+    case ts.SyntaxKind.SlashEqualsToken: {
       valueOp = MathLib.div;
       break;
-    case ts.SyntaxKind.PercentEqualsToken:
+    }
+    case ts.SyntaxKind.PercentEqualsToken: {
       valueOp = MathLib.mod;
       break;
-    case ts.SyntaxKind.AsteriskAsteriskEqualsToken:
+    }
+    case ts.SyntaxKind.AsteriskAsteriskEqualsToken: {
       valueOp = MathLib.pow;
       break;
-    default:
+    }
+    default: {
       throw new Error("Unknown arithmetic assignment op");
+    }
   }
 
   if (Array.isArray(left) && left[0] === "var") {
@@ -549,8 +592,7 @@ function transpileArithmeticAssignment(op: ts.BinaryOperator, left: any, right: 
   }
 
   if (Array.isArray(left) && left[0] === "obj.get") {
-    const obj = left[1];
-    const key = left[2];
+    const [, obj, key] = left;
     if (isSimpleNode(obj)) {
       return ObjectLib.objSet(obj, key, valueOp(left, right));
     }
@@ -578,14 +620,18 @@ function transpileLogicalAssignment(op: ts.BinaryOperator, left: any, right: any
 
   const buildLogic = (get: any, set: any) => {
     switch (op) {
-      case ts.SyntaxKind.AmpersandAmpersandEqualsToken:
+      case ts.SyntaxKind.AmpersandAmpersandEqualsToken: {
         return StdLib.if(get, set, get);
-      case ts.SyntaxKind.BarBarEqualsToken:
+      }
+      case ts.SyntaxKind.BarBarEqualsToken: {
         return StdLib.if(get, get, set);
-      case ts.SyntaxKind.QuestionQuestionEqualsToken:
+      }
+      case ts.SyntaxKind.QuestionQuestionEqualsToken: {
         return StdLib.if(BooleanLib.neq(get, null), get, set);
-      default:
+      }
+      default: {
         throw new Error("Unknown logical assignment op");
+      }
     }
   };
 
@@ -594,8 +640,7 @@ function transpileLogicalAssignment(op: ts.BinaryOperator, left: any, right: any
   }
 
   if (Array.isArray(left) && left[0] === "obj.get") {
-    const obj = left[1];
-    const key = left[2];
+    const [, obj, key] = left;
     if (isSimpleNode(obj)) {
       return buildLogic(left, ObjectLib.objSet(obj, key, right));
     }
@@ -610,16 +655,22 @@ function transpileLogicalAssignment(op: ts.BinaryOperator, left: any, right: any
 }
 
 function isSimpleNode(node: any): boolean {
-  if (typeof node !== "object" || node === null) return true;
+  if (typeof node !== "object" || node === null) {
+    return true;
+  }
   if (Array.isArray(node)) {
-    if (node[0] === "var") return true;
-    if (node[0] === "this") return true;
+    if (node[0] === "var") {
+      return true;
+    }
+    if (node[0] === "this") {
+      return true;
+    }
   }
   return false;
 }
 
 function generateTempVar() {
-  return "__tmp_" + Math.random().toString(36).slice(2, 8);
+  return `__tmp_${Math.random().toString(36).slice(2, 8)}`;
 }
 
 interface ChainPart {
@@ -642,22 +693,22 @@ function transpileOptionalChain(node: ts.Node, scope: Set<string>): any {
   ) {
     if (ts.isPropertyAccessExpression(current)) {
       parts.unshift({
-        kind: "prop",
         key: current.name.text,
+        kind: "prop",
         optional: !!current.questionDotToken,
       });
       current = current.expression;
     } else if (ts.isElementAccessExpression(current)) {
       parts.unshift({
-        kind: "elem",
         key: transpileNode(current.argumentExpression, scope),
+        kind: "elem",
         optional: !!current.questionDotToken,
       });
       current = current.expression;
     } else if (ts.isCallExpression(current)) {
       parts.unshift({
+        args: current.arguments.map((argument) => transpileNode(argument, scope)),
         kind: "call",
-        args: current.arguments.map((a) => transpileNode(a, scope)),
         optional: !!current.questionDotToken,
       });
       current = current.expression;
@@ -691,28 +742,34 @@ function buildChain(base: any, parts: ChainPart[]): any {
         StdLib.let(tmp, base),
         StdLib.if(
           BooleanLib.neq(tmpVar, null),
-          buildChain(next, remaining),
-          null, // undefined/null
+          buildChain(next, remaining), // undefined/null
+          null,
         ),
       );
-    } else {
-      // Base is simple, use it directly
-      const next = applyPart(base, part);
-      return StdLib.if(BooleanLib.neq(base, null), buildChain(next, remaining), null);
     }
-  } else {
-    // Not optional, just apply and recurse
+    // Base is simple, use it directly
     const next = applyPart(base, part);
-    return buildChain(next, remaining);
+    return StdLib.if(BooleanLib.neq(base, null), buildChain(next, remaining), null);
   }
+  // Not optional, just apply and recurse
+  const next = applyPart(base, part);
+  return buildChain(next, remaining);
 }
 function isChainRoot(node: ts.Node): boolean {
-  if (!ts.isOptionalChain(node)) return false;
-  const parent = node.parent;
+  if (!ts.isOptionalChain(node)) {
+    return false;
+  }
+  const { parent } = node;
   if (ts.isOptionalChain(parent)) {
-    if (ts.isPropertyAccessExpression(parent) && parent.expression === node) return false;
-    if (ts.isElementAccessExpression(parent) && parent.expression === node) return false;
-    if (ts.isCallExpression(parent) && parent.expression === node) return false;
+    if (ts.isPropertyAccessExpression(parent) && parent.expression === node) {
+      return false;
+    }
+    if (ts.isElementAccessExpression(parent) && parent.expression === node) {
+      return false;
+    }
+    if (ts.isCallExpression(parent) && parent.expression === node) {
+      return false;
+    }
   }
   return true;
 }

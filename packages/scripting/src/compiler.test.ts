@@ -1,22 +1,23 @@
-import { describe, test, expect } from "bun:test";
-import { ScriptContext, createScriptContext, createOpcodeRegistry } from "./interpreter";
-import { compile } from "./compiler";
-import * as Std from "./lib/std";
-import * as ObjectLib from "./lib/object";
-import * as List from "./lib/list";
-import * as StringLib from "./lib/string";
-import * as MathLib from "./lib/math";
+// oxlint-disable id-length
 import * as BooleanLib from "./lib/boolean";
-import { Entity } from "@viwo/shared/jsonrpc";
+import * as ListLib from "./lib/list";
+import * as MathLib from "./lib/math";
+import * as ObjectLib from "./lib/object";
+import * as StdLib from "./lib/std";
+import * as StringLib from "./lib/string";
+import { type ScriptContext, createOpcodeRegistry, createScriptContext } from "./interpreter";
+import { describe, expect, test } from "bun:test";
+import type { Entity } from "@viwo/shared/jsonrpc";
+import { compile } from "./compiler";
 
 describe("Compiler", () => {
-  const TEST_OPS = createOpcodeRegistry(Std, ObjectLib, List, StringLib, MathLib, BooleanLib);
+  const TEST_OPS = createOpcodeRegistry(StdLib, ObjectLib, ListLib, StringLib, MathLib, BooleanLib);
 
   const caller: Entity = { id: 1 };
   const target: Entity = { id: 2 };
   target["owner"] = 1;
 
-  const ctx = createScriptContext({ caller, this: target, ops: TEST_OPS });
+  const ctx = createScriptContext({ caller, ops: TEST_OPS, this: target });
 
   function run(script: any, context: ScriptContext = ctx) {
     return compile(script, TEST_OPS)(context);
@@ -49,22 +50,22 @@ describe("Compiler", () => {
   });
 
   test("control flow", () => {
-    expect(run(Std.if(true, 1, 2))).toBe(1);
-    expect(run(Std.if(false, 1, 2))).toBe(2);
+    expect(run(StdLib.if(true, 1, 2))).toBe(1);
+    expect(run(StdLib.if(false, 1, 2))).toBe(2);
 
-    expect(run(Std.seq(1, 2, 3))).toBe(3);
+    expect(run(StdLib.seq(1, 2, 3))).toBe(3);
   });
 
   test("loops", () => {
     // sum = 0; for x in [1, 2, 3]: sum += x
-    const script = Std.seq(
-      Std.let("sum", 0),
-      Std.for(
+    const script = StdLib.seq(
+      StdLib.let("sum", 0),
+      StdLib.for(
         "x",
-        List.listNew(1, 2, 3),
-        Std.set("sum", MathLib.add(Std.var("sum"), Std.var("x"))),
+        ListLib.listNew(1, 2, 3),
+        StdLib.set("sum", MathLib.add(StdLib.var("sum"), StdLib.var("x"))),
       ),
-      Std.var("sum"),
+      StdLib.var("sum"),
     );
     expect(run(script)).toBe(6);
   });
@@ -74,8 +75,8 @@ describe("Compiler", () => {
     try {
       run(["unknown_op"]);
       expect(true).toBe(false);
-    } catch (e: any) {
-      expect(e.message).toContain("Unknown opcode: unknown_op");
+    } catch (error: any) {
+      expect(error.message).toContain("Unknown opcode: unknown_op");
     }
   });
 
@@ -87,24 +88,24 @@ describe("Compiler", () => {
   });
 
   test("if else", () => {
-    expect(run(Std.if(false, "then", "else"))).toBe("else");
-    expect(run(Std.if(false, "then"))).toBe(null); // No else branch
+    expect(run(StdLib.if(false, "then", "else"))).toBe("else");
+    expect(run(StdLib.if(false, "then"))).toBe(null); // No else branch
   });
 
   test("lambda & apply", () => {
     // (lambda (x) (+ x 1))
-    const inc = Std.lambda(["x"], MathLib.add(Std.var("x"), 1));
-    expect(run(Std.apply(inc, 1))).toBe(2);
+    const inc = StdLib.lambda(["x"], MathLib.add(StdLib.var("x"), 1));
+    expect(run(StdLib.apply(inc, 1))).toBe(2);
   });
 
   test("closure capture", () => {
     // (let x 10); (let addX (lambda (y) (+ x y))); (apply addX 5) -> 15
     expect(
       run(
-        Std.seq(
-          Std.let("x", 10),
-          Std.let("addX", Std.lambda(["y"], MathLib.add(Std.var("x"), Std.var("y")))),
-          Std.apply(Std.var("addX"), 5),
+        StdLib.seq(
+          StdLib.let("x", 10),
+          StdLib.let("addX", StdLib.lambda(["y"], MathLib.add(StdLib.var("x"), StdLib.var("y")))),
+          StdLib.apply(StdLib.var("addX"), 5),
         ),
       ),
     ).toBe(15);
@@ -114,11 +115,11 @@ describe("Compiler", () => {
     // (let x 1); (let f (lambda [] x)); (set x 2); (apply f) -> 2
     expect(
       run(
-        Std.seq(
-          Std.let("x", 1),
-          Std.let("f", Std.lambda([], Std.var("x"))),
-          Std.set("x", 2),
-          Std.apply(Std.var("f")),
+        StdLib.seq(
+          StdLib.let("x", 1),
+          StdLib.let("f", StdLib.lambda([], StdLib.var("x"))),
+          StdLib.set("x", 2),
+          StdLib.apply(StdLib.var("f")),
         ),
       ),
     ).toBe(2);
@@ -126,25 +127,25 @@ describe("Compiler", () => {
 
   test("try/catch", () => {
     // try { throw "error" } catch { return "caught" }
-    const script = Std.try(Std.throw("oops"), "_err", "caught");
+    const script = StdLib.try(StdLib.throw("oops"), "_err", "caught");
     expect(run(script)).toBe("caught");
   });
 
   test("try/catch with error variable", () => {
     // try { throw "error" } catch(e) { return e }
-    const script = Std.try(Std.throw("oops"), "err", Std.var("err"));
+    const script = StdLib.try(StdLib.throw("oops"), "err", StdLib.var("err"));
     expect(run(script)).toBe("oops");
   });
 
   test("object operations", () => {
-    const script = Std.seq(
-      Std.let("o", ObjectLib.objNew(["a", 1], ["b", 2])),
-      ObjectLib.objSet(Std.var("o"), "c", 3),
-      Std.let("res", ObjectLib.objGet(Std.var("o"), "c")),
-      Std.let("hasB", ObjectLib.objHas(Std.var("o"), "b")),
-      ObjectLib.objDel(Std.var("o"), "b"),
-      Std.let("hasBAfter", ObjectLib.objHas(Std.var("o"), "b")),
-      List.listNew(Std.var("res"), Std.var("hasB"), Std.var("hasBAfter")),
+    const script = StdLib.seq(
+      StdLib.let("o", ObjectLib.objNew(["a", 1], ["b", 2])),
+      ObjectLib.objSet(StdLib.var("o"), "c", 3),
+      StdLib.let("res", ObjectLib.objGet(StdLib.var("o"), "c")),
+      StdLib.let("hasB", ObjectLib.objHas(StdLib.var("o"), "b")),
+      ObjectLib.objDel(StdLib.var("o"), "b"),
+      StdLib.let("hasBAfter", ObjectLib.objHas(StdLib.var("o"), "b")),
+      ListLib.listNew(StdLib.var("res"), StdLib.var("hasB"), StdLib.var("hasBAfter")),
     );
 
     const res = run(script);
@@ -155,26 +156,26 @@ describe("Compiler", () => {
 
   test("break in loop", () => {
     // sum = 0; for x in [1, 2, 3, 4, 5]: if (x > 3) break; sum += x
-    const script = Std.seq(
-      Std.let("sum", 0),
-      Std.for(
+    const script = StdLib.seq(
+      StdLib.let("sum", 0),
+      StdLib.for(
         "x",
-        List.listNew(1, 2, 3, 4, 5),
-        Std.seq(
-          Std.if(BooleanLib.gt(Std.var("x"), 3), Std.break()),
-          Std.set("sum", MathLib.add(Std.var("sum"), Std.var("x"))),
+        ListLib.listNew(1, 2, 3, 4, 5),
+        StdLib.seq(
+          StdLib.if(BooleanLib.gt(StdLib.var("x"), 3), StdLib.break()),
+          StdLib.set("sum", MathLib.add(StdLib.var("sum"), StdLib.var("x"))),
         ),
       ),
-      Std.var("sum"),
+      StdLib.var("sum"),
     );
     expect(run(script)).toBe(6);
   });
 
   test("return from lambda", () => {
     // (let f (lambda [] (return "early") "late")) (apply f) -> "early"
-    const script = Std.seq(
-      Std.let("f", Std.lambda([], Std.seq(Std.return("early"), "late"))),
-      Std.apply(Std.var("f")),
+    const script = StdLib.seq(
+      StdLib.let("f", StdLib.lambda([], StdLib.seq(StdLib.return("early"), "late"))),
+      StdLib.apply(StdLib.var("f")),
     );
     expect(run(script)).toBe("early");
   });
@@ -186,57 +187,57 @@ describe("Compiler", () => {
     // i=1: j=1 (sum+=1), j=2 (break)
     // i=2: j=1 (sum+=1), j=2 (break)
     // sum = 2
-    const script = Std.seq(
-      Std.let("sum", 0),
-      Std.for(
+    const script = StdLib.seq(
+      StdLib.let("sum", 0),
+      StdLib.for(
         "i",
-        List.listNew(1, 2),
-        Std.for(
+        ListLib.listNew(1, 2),
+        StdLib.for(
           "j",
-          List.listNew(1, 2),
-          Std.seq(
-            Std.if(BooleanLib.eq(Std.var("j"), 2), Std.break()),
-            Std.set("sum", MathLib.add(Std.var("sum"), Std.var("j"))),
+          ListLib.listNew(1, 2),
+          StdLib.seq(
+            StdLib.if(BooleanLib.eq(StdLib.var("j"), 2), StdLib.break()),
+            StdLib.set("sum", MathLib.add(StdLib.var("sum"), StdLib.var("j"))),
           ),
         ),
       ),
-      Std.var("sum"),
+      StdLib.var("sum"),
     );
     expect(run(script)).toBe(2);
   });
 
   test("list.find", () => {
     // find element > 2: [1, 2, 3, 4] -> 3
-    const script = List.listFind(
-      List.listNew(1, 2, 3, 4),
-      Std.lambda(["x"], BooleanLib.gt(Std.var("x"), 2)),
+    const script = ListLib.listFind(
+      ListLib.listNew(1, 2, 3, 4),
+      StdLib.lambda(["x"], BooleanLib.gt(StdLib.var("x"), 2)),
     );
     expect(run(script)).toBe(3);
   });
 
   test("list.map", () => {
     // map x -> x * 2: [1, 2, 3] -> [2, 4, 6]
-    const script = List.listMap(
-      List.listNew(1, 2, 3),
-      Std.lambda(["x"], MathLib.mul(Std.var("x"), 2)),
+    const script = ListLib.listMap(
+      ListLib.listNew(1, 2, 3),
+      StdLib.lambda(["x"], MathLib.mul(StdLib.var("x"), 2)),
     );
     expect(run(script)).toEqual([2, 4, 6]);
   });
 
   test("list.filter", () => {
     // filter x > 1: [1, 2, 3] -> [2, 3]
-    const script = List.listFilter(
-      List.listNew(1, 2, 3),
-      Std.lambda(["x"], BooleanLib.gt(Std.var("x"), 1)),
+    const script = ListLib.listFilter(
+      ListLib.listNew(1, 2, 3),
+      StdLib.lambda(["x"], BooleanLib.gt(StdLib.var("x"), 1)),
     );
     expect(run(script)).toEqual([2, 3]);
   });
 
   test("list.reduce", () => {
     // reduce (acc, x) -> acc + x, 0: [1, 2, 3] -> 6
-    const script = List.listReduce(
-      List.listNew(1, 2, 3),
-      Std.lambda(["acc", "x"], MathLib.add(Std.var("acc"), Std.var("x"))),
+    const script = ListLib.listReduce(
+      ListLib.listNew(1, 2, 3),
+      StdLib.lambda(["acc", "x"], MathLib.add(StdLib.var("acc"), StdLib.var("x"))),
       0,
     );
     expect(run(script)).toBe(6);
@@ -244,9 +245,9 @@ describe("Compiler", () => {
 
   test("list.flatMap", () => {
     // flatMap x -> [x, x]: [1, 2] -> [1, 1, 2, 2]
-    const script = List.listFlatMap(
-      List.listNew(1, 2),
-      Std.lambda(["x"], List.listNew(Std.var("x"), Std.var("x"))),
+    const script = ListLib.listFlatMap(
+      ListLib.listNew(1, 2),
+      StdLib.lambda(["x"], ListLib.listNew(StdLib.var("x"), StdLib.var("x"))),
     );
     expect(run(script)).toEqual([1, 1, 2, 2]);
   });
@@ -277,7 +278,7 @@ describe("Compiler", () => {
     // map {a: 1, b: 2} x -> x * 2 -> {a: 2, b: 4}
     const script = ObjectLib.objMap(
       ObjectLib.objNew(["a", 1], ["b", 2]),
-      Std.lambda(["v", "k"], MathLib.mul(Std.var("v"), 2)),
+      StdLib.lambda(["v", "k"], MathLib.mul(StdLib.var("v"), 2)),
     );
     expect(run(script)).toEqual({ a: 2, b: 4 });
   });
@@ -286,7 +287,7 @@ describe("Compiler", () => {
     // filter {a: 1, b: 2} v > 1 -> {b: 2}
     const script = ObjectLib.objFilter(
       ObjectLib.objNew(["a", 1], ["b", 2]),
-      Std.lambda(["v", "k"], BooleanLib.gt(Std.var("v"), 1)),
+      StdLib.lambda(["v", "k"], BooleanLib.gt(StdLib.var("v"), 1)),
     );
     expect(run(script)).toEqual({ b: 2 });
   });
@@ -295,7 +296,7 @@ describe("Compiler", () => {
     // reduce {a: 1, b: 2} (acc, v) -> acc + v, 0 -> 3
     const script = ObjectLib.objReduce(
       ObjectLib.objNew(["a", 1], ["b", 2]),
-      Std.lambda(["acc", "v"], MathLib.add(Std.var("acc"), Std.var("v"))),
+      StdLib.lambda(["acc", "v"], MathLib.add(StdLib.var("acc"), StdLib.var("v"))),
       0,
     );
     expect(run(script)).toBe(3);
@@ -307,7 +308,10 @@ describe("Compiler", () => {
     // lambda(v, k) -> objNew(k, v*2)
     const script = ObjectLib.objFlatMap(
       ObjectLib.objNew(["a", 1]),
-      Std.lambda(["v", "k"], ObjectLib.objNew([Std.var("k"), MathLib.mul(Std.var("v"), 2)])),
+      StdLib.lambda(
+        ["v", "k"],
+        ObjectLib.objNew([StdLib.var("k"), MathLib.mul(StdLib.var("v"), 2)]),
+      ),
     );
     expect(run(script)).toEqual({ a: 2 });
   });
@@ -323,9 +327,9 @@ describe("Compiler", () => {
     expect(run(["typeof", 1])).toBe("number");
     expect(run(["typeof", "s"])).toBe("string");
     expect(run(["typeof", true])).toBe("boolean");
-    expect(run(["typeof", List.listNew()])).toBe("array");
-    expect(run(["typeof", null])).toBe("null");
+    expect(run(["typeof", ListLib.listNew()])).toBe("array");
     expect(run(["typeof", ObjectLib.objNew()])).toBe("object");
+    expect(run(["typeof", null])).toBe("null");
   });
 
   test("json", () => {
@@ -337,6 +341,6 @@ describe("Compiler", () => {
     expect(parsed).toEqual({ a: 1 });
 
     // Invalid json
-    expect(run(["json.parse", "{invalid"])).toBe(null);
+    expect(() => run(["json.parse", "{invalid"])).toThrow();
   });
 });

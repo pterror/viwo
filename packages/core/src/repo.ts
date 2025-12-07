@@ -1,8 +1,7 @@
-import { SQLQueryBindings } from "bun:sqlite";
+import type { Entity } from "@viwo/shared/jsonrpc";
+import type { SQLQueryBindings } from "bun:sqlite";
+import type { ScriptValue } from "@viwo/scripting";
 import { db } from "./db";
-
-import { Entity } from "@viwo/shared/jsonrpc";
-import { ScriptValue } from "@viwo/scripting";
 
 /**
  * Fetches an entity by ID, resolving its properties against its prototype.
@@ -49,7 +48,9 @@ export function getEntity(id: number): Entity | null {
  * @returns An array of resolved Entity objects.
  */
 export function getEntities(ids: number[]): Entity[] {
-  if (ids.length === 0) return [];
+  if (ids.length === 0) {
+    return [];
+  }
   const placeholders = ids.map(() => "?").join(", ");
   const rows = db
     .query(`SELECT * FROM entities WHERE id IN (${placeholders})`)
@@ -85,7 +86,9 @@ export function createEntity(props: object, prototypeId: number | null = null): 
  * @param props - The properties to update (merged with existing).
  */
 export function updateEntity(...entities: readonly Entity[]) {
-  if (entities.length === 0) return;
+  if (entities.length === 0) {
+    return;
+  }
   const params: (number | string)[] = [];
   for (const { id, ...props } of entities) {
     params.push(id, JSON.stringify(props));
@@ -118,34 +121,32 @@ export interface Verb {
 export function getVerbs(entityId: number): Verb[] {
   // Recursive function to collect verbs up the prototype chain
   const collectVerbs = (id: number, visited: Set<number>): Verb[] => {
-    if (visited.has(id)) return [];
+    if (visited.has(id)) {
+      return [];
+    }
     visited.add(id);
-
     const verbs = db
       .query<{ id: number; entity_id: number; name: string; code: string }, [id: number]>(
         "SELECT * FROM verbs WHERE entity_id = ?",
       )
       .all(id)
-      .map((r) => ({ ...r, code: JSON.parse(r.code) }));
-
+      .map((verb) => ({ ...verb, code: JSON.parse(verb.code) }));
     // Check prototype
     const entity = db
       .query<{ prototype_id: number | null }, [id: number]>(
         "SELECT prototype_id FROM entities WHERE id = ?",
       )
       .get(id);
-
     if (entity?.prototype_id) {
       const protoVerbs = collectVerbs(entity.prototype_id, visited);
       // Merge, keeping the child's verb if names collide
-      const verbNames = new Set(verbs.map((v) => v.name));
+      const verbNames = new Set(verbs.map((verb) => verb.name));
       for (const pv of protoVerbs) {
         if (!verbNames.has(pv.name)) {
           verbs.push(pv);
         }
       }
     }
-
     return verbs;
   };
 
@@ -154,9 +155,10 @@ export function getVerbs(entityId: number): Verb[] {
 
 // Recursive lookup
 function lookupVerb(id: number, name: string, visited: Set<number>): Verb | null {
-  if (visited.has(id)) return null;
+  if (visited.has(id)) {
+    return null;
+  }
   visited.add(id);
-
   const row = db
     .query<
       {
@@ -169,22 +171,18 @@ function lookupVerb(id: number, name: string, visited: Set<number>): Verb | null
       [id: number, name: string]
     >("SELECT * FROM verbs WHERE entity_id = ? AND name = ?")
     .get(id, name);
-
   if (row) {
     return { ...row, code: JSON.parse(row.code) };
   }
-
   // Check prototype
   const entity = db
     .query<{ prototype_id: number | null }, [id: number]>(
       "SELECT prototype_id FROM entities WHERE id = ?",
     )
     .get(id);
-
   if (entity?.prototype_id) {
     return lookupVerb(entity.prototype_id, name, visited);
   }
-
   return null;
 }
 
@@ -306,10 +304,7 @@ export function getCapabilities(ownerId: number): Capability[] {
       "SELECT id, owner_id, type, params FROM capabilities WHERE owner_id = ?",
     )
     .all(ownerId);
-  return rows.map((r) => ({
-    ...r,
-    params: JSON.parse(r.params),
-  }));
+  return rows.map((row) => ({ ...row, params: JSON.parse(row.params) }));
 }
 
 export function getCapability(id: string): Capability | null {
@@ -318,11 +313,10 @@ export function getCapability(id: string): Capability | null {
       "SELECT id, owner_id, type, params FROM capabilities WHERE id = ?",
     )
     .get(id);
-  if (!row) return null;
-  return {
-    ...row,
-    params: JSON.parse(row.params),
-  };
+  if (!row) {
+    return null;
+  }
+  return { ...row, params: JSON.parse(row.params) };
 }
 
 export function updateCapabilityOwner(id: string, newOwnerId: number) {

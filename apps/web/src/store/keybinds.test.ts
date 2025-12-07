@@ -1,29 +1,29 @@
 /// <reference types="bun" />
-import { describe, test, expect, beforeEach, mock } from "bun:test";
+import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { loadBindings } from "./keybinds";
 
 // Mock localStorage BEFORE import
 const localStorageMock = (() => {
   let store: Record<string, string> = {};
   return {
-    getItem: mock((key: string) => store[key] || null),
-    setItem: mock((key: string, value: string) => {
-      store[key] = value.toString();
-    }),
     clear: mock(() => {
       store = {};
     }),
+    getItem: mock((key: string) => store[key] || null),
     removeItem: mock((key: string) => {
       delete store[key];
+    }),
+    setItem: mock((key: string, value: string) => {
+      store[key] = value.toString();
     }),
   };
 })();
 
-if (!global.localStorage) {
-  Object.defineProperty(global, "localStorage", {
+if (!globalThis.localStorage) {
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
     value: localStorageMock,
     writable: true,
-    configurable: true,
   });
 }
 
@@ -34,12 +34,12 @@ let keybindsStore: any;
 
 describe("Keybinds Store", () => {
   beforeEach(async () => {
-    if (global.localStorage) {
-      global.localStorage.removeItem("viwo_keybinds");
+    if (globalThis.localStorage) {
+      globalThis.localStorage.removeItem("viwo_keybinds");
     }
     // Reset the store state by reloading the module or using a reset method if available.
     const module = await import("./keybinds");
-    keybindsStore = module.keybindsStore;
+    ({ keybindsStore } = module);
     keybindsStore.resetDefaults();
   });
 
@@ -61,8 +61,8 @@ describe("Keybinds Store", () => {
 
   test("loadBindings with existing data", () => {
     // Assuming `spyOn` is available globally or imported, e.g., from Jest or a similar test utility.
-    // If using Bun's `mock`, it would be `const getItemSpy = mock(global.localStorage, "getItem").mockReturnValue(...)`
-    global.localStorage.setItem("viwo_keybinds", JSON.stringify({ north: "up" }));
+    // If using Bun's `mock`, it would be `const getItemSpy = mock(globalThis.localStorage, "getItem").mockReturnValue(...)`
+    globalThis.localStorage.setItem("viwo_keybinds", JSON.stringify({ north: "up" }));
 
     const bindings = loadBindings();
     expect(bindings.north).toBe("up");

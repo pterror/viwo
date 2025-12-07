@@ -1,9 +1,9 @@
-import { createSignal, For, createEffect } from "solid-js";
-import { gameStore, Entity } from "../store/game";
+import { type Entity, gameStore } from "../store/game";
+import { For, createEffect, createSignal } from "solid-js";
 import { ALL_ADJECTIVES } from "@viwo/shared/constants/adjectives";
 
 export default function ItemEditor() {
-  const [selectedItemId, setSelectedItemId] = createSignal<number | null>(null);
+  const [selectedItemId, setSelectedItemId] = createSignal<number | null>();
   const [description, setDescription] = createSignal("");
   const [selectedAdjectives, setSelectedAdjectives] = createSignal<readonly string[]>([]);
   const [adjectiveInput, setAdjectiveInput] = createSignal("");
@@ -15,8 +15,10 @@ export default function ItemEditor() {
       if (item["contents"] && (item["contents"] as readonly number[]).length > 0) {
         result = result.concat(
           flattenItems(
-            // @ts-expect-error
-            item["contents"] as readonly number[],
+            (item["contents"] as readonly number[]).flatMap((id) => {
+              const entity = gameStore.state.entities.get(id);
+              return entity ? [entity] : [];
+            }),
             `${prefix}${item["name"]} > `,
           ),
         );
@@ -50,30 +52,36 @@ export default function ItemEditor() {
     }
 
     const roomItems =
-      (gameStore.state.entities.get(gameStore.state.roomId!)?.["contents"] as number[])
-        ?.map((id) => gameStore.state.entities.get(id))
-        .filter((x) => x !== undefined) ?? [];
+      (gameStore.state.entities.get(gameStore.state.roomId!)?.["contents"] as number[])?.flatMap(
+        (id) => {
+          const entity = gameStore.state.entities.get(id);
+          return entity ? [entity] : [];
+        },
+      ) ?? [];
 
     const inventoryItems =
-      (gameStore.state.entities.get(gameStore.state.playerId!)?.["contents"] as number[])
-        ?.map((id) => gameStore.state.entities.get(id))
-        .filter((x) => x !== undefined) ?? [];
+      (gameStore.state.entities.get(gameStore.state.playerId!)?.["contents"] as number[])?.flatMap(
+        (id) => {
+          const entity = gameStore.state.entities.get(id);
+          return entity ? [entity] : [];
+        },
+      ) ?? [];
 
     // We want to distinguish between room and inventory, but also flatten.
     // Let's flatten separately and tag them.
-    const flatRoom = flattenItems(roomItems).map((i) => ({
-      ...i,
+    const flatRoom = flattenItems(roomItems).map((item) => ({
+      ...item,
       source: "Room",
     }));
-    const flatInventory = flattenItems(inventoryItems).map((i) => ({
-      ...i,
+    const flatInventory = flattenItems(inventoryItems).map((item) => ({
+      ...item,
       source: "Inventory",
     }));
 
     return [...flatRoom, ...flatInventory];
   };
 
-  const selectedItem = () => items().find((i) => i.id === selectedItemId());
+  const selectedItem = () => items().find((item) => item.id === selectedItemId());
 
   createEffect(() => {
     const item = selectedItem();
@@ -85,30 +93,34 @@ export default function ItemEditor() {
 
   const filteredAdjectives = () => {
     const input = adjectiveInput().toLowerCase();
-    if (!input) return [];
+    if (!input) {
+      return [];
+    }
     return ALL_ADJECTIVES.filter(
       (adj) => adj.includes(input) && !selectedAdjectives().includes(adj),
     ).slice(0, 5);
   };
 
-  const addAdjective = (adj: string) => {
-    setSelectedAdjectives([...selectedAdjectives(), adj]);
+  const addAdjective = (adjective: string) => {
+    setSelectedAdjectives([...selectedAdjectives(), adjective]);
     setAdjectiveInput("");
   };
 
-  const removeAdjective = (adj: string) => {
-    setSelectedAdjectives(selectedAdjectives().filter((a) => a !== adj));
+  const removeAdjective = (adjective: string) => {
+    setSelectedAdjectives(
+      selectedAdjectives().filter((otherAdjective) => otherAdjective !== adjective),
+    );
   };
 
-  const handleSave = (e: Event) => {
-    e.preventDefault();
+  const handleSave = (event: Event) => {
+    event.preventDefault();
     const item = selectedItem();
-    if (!item) return;
-
+    if (!item) {
+      return;
+    }
     if (description()) {
       gameStore.execute("set", [item["name"] as string, "description", description()]);
     }
-
     gameStore.execute("set", [item["name"] as string, "adjectives", selectedAdjectives()]);
   };
 
@@ -118,7 +130,7 @@ export default function ItemEditor() {
       <div class="builder__form">
         <select
           class="builder__input"
-          onChange={(e) => setSelectedItemId(Number(e.currentTarget.value))}
+          onChange={(event) => setSelectedItemId(Number(event.currentTarget.value))}
           value={selectedItemId() || ""}
         >
           <option value="" disabled>
@@ -139,7 +151,7 @@ export default function ItemEditor() {
               type="text"
               placeholder="Description"
               value={description()}
-              onInput={(e) => setDescription(e.currentTarget.value)}
+              onInput={(event) => setDescription(event.currentTarget.value)}
               class="builder__input"
             />
 
@@ -152,7 +164,7 @@ export default function ItemEditor() {
                       onClick={() => removeAdjective(adj)}
                       title="Click to remove"
                     >
-                      {adj} ×
+                      {adj} &times;
                     </span>
                   )}
                 </For>
@@ -162,7 +174,7 @@ export default function ItemEditor() {
                   type="text"
                   placeholder="Add Adjective (e.g. color:red)"
                   value={adjectiveInput()}
-                  onInput={(e) => setAdjectiveInput(e.currentTarget.value)}
+                  onInput={(event) => setAdjectiveInput(event.currentTarget.value)}
                   class="builder__input"
                 />
                 {filteredAdjectives().length > 0 && (

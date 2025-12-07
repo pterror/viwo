@@ -1,7 +1,8 @@
-import { CommandArgument, ViwoClient } from "@viwo/client";
+import { type CommandArgument, ViwoClient } from "@viwo/client";
 import { CONFIG } from "./config";
-import { EventEmitter } from "events";
+import { EventEmitter } from "node:events";
 
+// oxlint-disable-next-line prefer-event-target
 export class GameSocket extends EventEmitter {
   private client: ViwoClient;
   private entityId: number | null = null;
@@ -9,7 +10,7 @@ export class GameSocket extends EventEmitter {
 
   constructor(entityId?: number) {
     super();
-    this.entityId = entityId || null;
+    this.entityId = entityId ?? null;
     this.client = new ViwoClient(CONFIG.CORE_URL);
 
     this.client.subscribe((state) => {
@@ -33,8 +34,8 @@ export class GameSocket extends EventEmitter {
       this.emit("message", {
         method: "message",
         params: {
-          type: msg.type === "message" ? "info" : "error",
           text: msg.text,
+          type: msg.type === "message" ? "info" : "error",
         },
       });
     });
@@ -53,6 +54,7 @@ export class GameSocket extends EventEmitter {
   }
 }
 
+// oxlint-disable-next-line prefer-event-target
 export class SocketManager extends EventEmitter {
   private socket: GameSocket;
 

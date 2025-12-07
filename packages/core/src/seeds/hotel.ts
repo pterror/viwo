@@ -1,7 +1,7 @@
-import { createEntity, addVerb, createCapability } from "../repo";
-import { transpile } from "@viwo/scripting";
+import { addVerb, createCapability, createEntity } from "../repo";
 import { extractVerb } from "../verb_loader";
 import { resolve } from "path";
+import { transpile } from "@viwo/scripting";
 
 const verbsPath = resolve(__dirname, "verbs.ts");
 
@@ -12,9 +12,9 @@ export function seedHotel(lobbyId: number, voidId: number, entityBaseId: number)
   // 1b. Room Prototype
   const roomProtoId = createEntity(
     {
-      name: "Room Prototype",
-      location: voidId,
       description: "A standard hotel room.",
+      location: voidId,
+      name: "Room Prototype",
     },
     entityBaseId,
   );
@@ -32,9 +32,9 @@ export function seedHotel(lobbyId: number, voidId: number, entityBaseId: number)
   // 1c. Wing Prototype
   const wingProtoId = createEntity(
     {
-      name: "Wing Prototype",
-      location: voidId,
       description: "A hotel wing.",
+      location: voidId,
+      name: "Wing Prototype",
     },
     entityBaseId,
   );
@@ -53,11 +53,11 @@ export function seedHotel(lobbyId: number, voidId: number, entityBaseId: number)
   // 2. Elevator
   const elevatorId = createEntity(
     {
-      name: "Glass Elevator",
-      location: lobbyId,
-      description: "A shiny glass elevator that can take you to any floor.",
       current_floor: 1,
+      description: "A shiny glass elevator that can take you to any floor.",
       floors: {},
+      location: lobbyId,
+      name: "Glass Elevator",
     },
     entityBaseId,
   );
@@ -92,9 +92,9 @@ export function seedHotel(lobbyId: number, voidId: number, entityBaseId: number)
   // 4. NPCs
   const receptionistId = createEntity(
     {
-      name: "Receptionist",
-      location: lobbyId,
       description: "A friendly receptionist standing behind the desk.",
+      location: lobbyId,
+      name: "Receptionist",
     },
     entityBaseId,
   );
@@ -102,9 +102,9 @@ export function seedHotel(lobbyId: number, voidId: number, entityBaseId: number)
 
   const golemId = createEntity(
     {
-      name: "Security Golem",
-      location: lobbyId,
       description: "A massive stone golem guarding the entrance.",
+      location: lobbyId,
+      name: "Security Golem",
     },
     entityBaseId,
   );

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { Database } from "bun:sqlite";
 import { VectorDatabase } from "./index";
 
@@ -35,8 +35,8 @@ describe("VectorDatabase", () => {
   it("should support batch insert", () => {
     vectorDb.createTable("batch_items", 4);
     const items = [
-      { rowId: 1, embedding: [0.1, 0.2, 0.3, 0.4] },
-      { rowId: 2, embedding: [0.5, 0.6, 0.7, 0.8] },
+      { embedding: [0.1, 0.2, 0.3, 0.4], rowId: 1 },
+      { embedding: [0.5, 0.6, 0.7, 0.8], rowId: 2 },
     ];
     vectorDb.insertBatch("batch_items", items);
 

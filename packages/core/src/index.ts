@@ -1,30 +1,36 @@
-import { serve } from "bun";
+import * as CoreLib from "./runtime/lib/core";
+import * as KernelLib from "./runtime/lib/kernel";
+import { type CommandContext, PluginManager } from "./plugin";
+import type {
+  Entity,
+  JsonRpcNotification,
+  JsonRpcRequest,
+  JsonRpcResponse,
+} from "@viwo/shared/jsonrpc";
+import { GameOpcodes, registerGameLibrary } from "./runtime/opcodes";
 import {
+  addVerb,
+  createCapability,
   createEntity,
   deleteEntity,
-  getEntity,
-  updateEntity,
-  createCapability,
   getEntities,
+  getEntity,
   getVerb,
-  addVerb,
+  updateEntity,
   updateVerb,
 } from "./repo";
 import {
+  compile,
   createScriptContext,
+  decompile,
   evaluate,
   getOpcodeMetadata,
-  compile,
   transpile,
-  decompile,
 } from "@viwo/scripting";
-import * as CoreLib from "./runtime/lib/core";
-import * as KernelLib from "./runtime/lib/kernel";
-import { GameOpcodes, registerGameLibrary } from "./runtime/opcodes";
-import { PluginManager, CommandContext } from "./plugin";
-import { scheduler } from "./scheduler";
-import { JsonRpcRequest, JsonRpcResponse, JsonRpcNotification, Entity } from "@viwo/shared/jsonrpc";
+import type { CoreInterface } from "./types";
 import { resolveProps } from "./runtime/utils";
+import { scheduler } from "./scheduler";
+import { serve } from "bun";
 
 export { PluginManager };
 export type { CommandContext };
@@ -49,27 +55,25 @@ export { scheduler } from "./scheduler";
 // Seed the database
 export { seed } from "./seed";
 
-import { CoreInterface } from "./types";
-
 const coreImpl: CoreInterface = {
-  getEntity,
   createEntity,
-  updateEntity,
   deleteEntity,
+  getEntity,
+  getOnlinePlayers: () => Array.from(clients.keys()),
+  getOpcodeMetadata: () => getOpcodeMetadata(GameOpcodes),
+  registerLibrary: (library) => registerGameLibrary(library),
   resolveProps: (entity) =>
     resolveProps(
       entity,
       createScriptContext({
-        caller: entity,
-        this: entity,
         args: [],
-        send: () => {}, // No-op send for internal resolution
+        caller: entity,
         ops: GameOpcodes,
+        send: () => {}, // No-op send for internal resolution
+        this: entity,
       }),
     ),
-  getOpcodeMetadata: () => getOpcodeMetadata(GameOpcodes),
-  getOnlinePlayers: () => Array.from(clients.keys()),
-  registerLibrary: (library) => registerGameLibrary(library),
+  updateEntity,
 };
 
 export const pluginManager = new PluginManager(coreImpl);
@@ -100,9 +104,9 @@ scheduler.setSendFactory((entityId: number) => {
         jsonrpc: "2.0",
         method: "forward",
         params: {
+          payload,
           target: entityId,
           type,
-          payload,
         },
       };
       botWs.send(JSON.stringify(notification));
@@ -121,10 +125,9 @@ scheduler.setSendFactory((entityId: number) => {
  *
  * @param port - The port to listen on (default: 8080).
  */
-export function startServer(port: number = 8080) {
+export function startServer(port = 8080) {
   const server = serve<{ userId: number }>({
-    port,
-    async fetch(req, server) {
+    fetch(req, server) {
       const url = new URL(req.url);
       if (url.pathname === "/" && req.headers.get("upgrade") === "websocket") {
         if (server.upgrade(req, { data: { userId: 0 } })) {
@@ -134,16 +137,42 @@ export function startServer(port: number = 8080) {
       }
       return new Response("Hello from Viwo Core!");
     },
+    port,
     websocket: {
-      async open(ws) {
+      close(ws) {
+        console.log("Client disconnected");
+        clients.delete(ws.data.userId);
+      },
+      async message(ws, message) {
+        try {
+          const data = JSON.parse(message as string);
+          // Basic JSON-RPC validation
+          if (data.jsonrpc !== "2.0") {
+            console.warn("Invalid JSON-RPC version");
+            return;
+          }
+
+          if ("method" in data && "id" in data) {
+            // It's a request
+            const response = await handleJsonRpcRequest(data as JsonRpcRequest, ws.data.userId, ws);
+            ws.send(JSON.stringify(response));
+          } else if ("method" in data) {
+            // It's a notification
+            console.log("Received notification:", data);
+          }
+        } catch (error) {
+          console.error("Failed to handle message", error);
+        }
+      },
+      open(ws) {
         console.log("Client connected");
         // Create a temporary player for this session
         // In a real game, we'd handle login/auth
         const playerId = createEntity(
           {
-            name: "Player",
-            location: 1, // Start in The Void (or Lobby if seeded)
             description: "A new player.",
+            location: 1, // Start in The Void (or Lobby if seeded)
+            name: "Player",
           },
           2, // Inherit from Player Base
         );
@@ -165,31 +194,6 @@ export function startServer(port: number = 8080) {
           };
           ws.send(JSON.stringify(msg));
         }
-      },
-      async message(ws, message) {
-        try {
-          const data = JSON.parse(message as string);
-          // Basic JSON-RPC validation
-          if (data.jsonrpc !== "2.0") {
-            console.warn("Invalid JSON-RPC version");
-            return;
-          }
-
-          if ("method" in data && "id" in data) {
-            // It's a request
-            const response = await handleJsonRpcRequest(data as JsonRpcRequest, ws.data.userId, ws);
-            ws.send(JSON.stringify(response));
-          } else if ("method" in data) {
-            // It's a notification
-            console.log("Received notification:", data);
-          }
-        } catch (e) {
-          console.error("Failed to handle message", e);
-        }
-      },
-      close(ws) {
-        console.log("Client disconnected");
-        clients.delete(ws.data.userId);
       },
     },
   });
@@ -220,9 +224,9 @@ export async function handleJsonRpcRequest(
     const player = getEntity(playerId);
     if (!player) {
       return {
-        jsonrpc: "2.0",
+        error: { code: -32_000, message: "Player not found" },
         id: req.id,
-        error: { code: -32000, message: "Player not found" },
+        jsonrpc: "2.0",
       };
     }
   }
@@ -232,9 +236,9 @@ export async function handleJsonRpcRequest(
       const params = req.params as { entityId: number };
       if (!params || typeof params.entityId !== "number") {
         return {
-          jsonrpc: "2.0",
+          error: { code: -32_602, message: "Invalid params: entityId required" },
           id: req.id,
-          error: { code: -32602, message: "Invalid params: entityId required" },
+          jsonrpc: "2.0",
         };
       }
 
@@ -243,9 +247,9 @@ export async function handleJsonRpcRequest(
 
       if (!target) {
         return {
-          jsonrpc: "2.0",
+          error: { code: -32_000, message: "Entity not found" },
           id: req.id,
-          error: { code: -32000, message: "Entity not found" },
+          jsonrpc: "2.0",
         };
       }
 
@@ -275,18 +279,18 @@ export async function handleJsonRpcRequest(
       // For now, let's just confirm success.
 
       return {
-        jsonrpc: "2.0",
         id: req.id,
-        result: { status: "ok", playerId: targetId },
+        jsonrpc: "2.0",
+        result: { playerId: targetId, status: "ok" },
       };
     }
     case "execute": {
       const params = req.params as string[];
       if (!Array.isArray(params) || params.length === 0) {
         return {
-          jsonrpc: "2.0",
+          error: { code: -32_602, message: "Invalid params" },
           id: req.id,
-          error: { code: -32602, message: "Invalid params" },
+          jsonrpc: "2.0",
         };
       }
       const [command, ...args] = params;
@@ -296,67 +300,67 @@ export async function handleJsonRpcRequest(
       const system = getEntity(3); // System ID is 3
       if (!system) {
         return {
-          jsonrpc: "2.0",
+          error: { code: -32_603, message: "System entity not found" },
           id: req.id,
-          error: { code: -32603, message: "System entity not found" },
+          jsonrpc: "2.0",
         };
       }
 
       // Call system.get_available_verbs(player)
       const verbs = evaluate(
         {
-          type: "call",
           args: [
-            { type: "entity", args: [{ type: "value", value: system.id }] },
+            { args: [{ type: "value", value: system.id }], type: "entity" },
             { type: "value", value: "get_available_verbs" },
-            { type: "entity", args: [{ type: "value", value: player.id }] },
+            { args: [{ type: "value", value: player.id }], type: "entity" },
           ],
+          type: "call",
         },
         createScriptContext({
-          caller: system,
-          this: system,
           args: [],
-          send: createSendFunction(ws),
+          caller: system,
           ops: GameOpcodes,
+          send: createSendFunction(ws),
+          this: system,
         }),
       );
 
       if (!Array.isArray(verbs)) {
         return {
-          jsonrpc: "2.0",
+          error: { code: -32_603, message: "Failed to retrieve verbs" },
           id: req.id,
-          error: { code: -32603, message: "Failed to retrieve verbs" },
+          jsonrpc: "2.0",
         };
       }
-      const verb = verbs.find((v) => v.name === command);
+      const verb = verbs.find((verb) => verb.name === command);
 
       if (verb) {
         try {
           executeVerb(player, verb, args, ws);
           return {
-            jsonrpc: "2.0",
             id: req.id,
+            jsonrpc: "2.0",
             result: { status: "ok" },
           };
-        } catch (e: any) {
+        } catch (error: any) {
           return {
-            jsonrpc: "2.0",
+            error: { code: -32_000, message: error.message },
             id: req.id,
-            error: { code: -32000, message: e.message },
+            jsonrpc: "2.0",
           };
         }
       } else {
         return {
-          jsonrpc: "2.0",
+          error: { code: -32_601, message: "Method not found (unknown verb)" },
           id: req.id,
-          error: { code: -32601, message: "Method not found (unknown verb)" },
+          jsonrpc: "2.0",
         };
       }
     }
     case "get_opcodes": {
       return {
-        jsonrpc: "2.0",
         id: req.id,
+        jsonrpc: "2.0",
         result: getOpcodeMetadata(GameOpcodes),
       };
     }
@@ -364,14 +368,14 @@ export async function handleJsonRpcRequest(
       const params = req.params as { ids: number[] };
       if (!params || !Array.isArray(params.ids)) {
         return {
-          jsonrpc: "2.0",
+          error: { code: -32_602, message: "Invalid params: ids array required" },
           id: req.id,
-          error: { code: -32602, message: "Invalid params: ids array required" },
+          jsonrpc: "2.0",
         };
       }
       return {
-        jsonrpc: "2.0",
         id: req.id,
+        jsonrpc: "2.0",
         result: {
           entities: getEntities(params.ids),
         },
@@ -382,33 +386,33 @@ export async function handleJsonRpcRequest(
       const params = req.params as { entityId: number; name: string };
       if (!params || typeof params.entityId !== "number" || typeof params.name !== "string") {
         return {
-          jsonrpc: "2.0",
+          error: { code: -32_602, message: "Invalid params: entityId and name required" },
           id: req.id,
-          error: { code: -32602, message: "Invalid params: entityId and name required" },
+          jsonrpc: "2.0",
         };
       }
 
       const verb = getVerb(params.entityId, params.name);
       if (!verb) {
         return {
-          jsonrpc: "2.0",
+          error: { code: -32_000, message: "Verb not found" },
           id: req.id,
-          error: { code: -32000, message: "Verb not found" },
+          jsonrpc: "2.0",
         };
       }
 
       try {
         const source = decompile(verb.code);
         return {
-          jsonrpc: "2.0",
           id: req.id,
+          jsonrpc: "2.0",
           result: { source },
         };
-      } catch (e: any) {
+      } catch (error: any) {
         return {
-          jsonrpc: "2.0",
+          error: { code: -32_000, message: `Decompilation failed: ${error.message}` },
           id: req.id,
-          error: { code: -32000, message: `Decompilation failed: ${e.message}` },
+          jsonrpc: "2.0",
         };
       }
     }
@@ -421,9 +425,9 @@ export async function handleJsonRpcRequest(
         typeof params.source !== "string"
       ) {
         return {
-          jsonrpc: "2.0",
+          error: { code: -32_602, message: "Invalid params: entityId, name, source required" },
           id: req.id,
-          error: { code: -32602, message: "Invalid params: entityId, name, source required" },
+          jsonrpc: "2.0",
         };
       }
 
@@ -436,15 +440,15 @@ export async function handleJsonRpcRequest(
           addVerb(params.entityId, params.name, code);
         }
         return {
-          jsonrpc: "2.0",
           id: req.id,
+          jsonrpc: "2.0",
           result: { status: "ok" },
         };
-      } catch (e: any) {
+      } catch (error: any) {
         return {
-          jsonrpc: "2.0",
+          error: { code: -32_000, message: `Compilation failed: ${error.message}` },
           id: req.id,
-          error: { code: -32000, message: `Compilation failed: ${e.message}` },
+          jsonrpc: "2.0",
         };
       }
     }
@@ -452,16 +456,16 @@ export async function handleJsonRpcRequest(
       const params = req.params as { method: string; params: any };
       if (!params || typeof params.method !== "string") {
         return {
-          jsonrpc: "2.0",
+          error: { code: -32_602, message: "Invalid params: method required" },
           id: req.id,
-          error: { code: -32602, message: "Invalid params: method required" },
+          jsonrpc: "2.0",
         };
       }
 
       const commandCtx: CommandContext = {
-        player: { id: playerId, ws },
-        command: params.method,
         args: [],
+        command: params.method,
+        player: { id: playerId, ws },
         send: createSendFunction(ws),
       };
 
@@ -472,35 +476,28 @@ export async function handleJsonRpcRequest(
           commandCtx,
         );
         return {
-          jsonrpc: "2.0",
           id: req.id,
+          jsonrpc: "2.0",
           result,
         };
-      } catch (e: any) {
+      } catch (error: any) {
         return {
-          jsonrpc: "2.0",
+          error: { code: -32_000, message: error.message },
           id: req.id,
-          error: { code: -32000, message: e.message },
+          jsonrpc: "2.0",
         };
       }
     }
-    default:
+    default: {
       return {
-        jsonrpc: "2.0",
+        error: { code: -32_601, message: "Method not found" },
         id: req.id,
-        error: { code: -32601, message: "Method not found" },
+        jsonrpc: "2.0",
       };
+    }
   }
 }
 
-/**
- * Executes a verb script.
- *
- * @param player - The player entity executing the verb.
- * @param verb - The verb definition.
- * @param args - Arguments passed to the verb.
- * @param ws - The WebSocket connection for sending messages.
- */
 // Cache for compiled verbs: JSON string -> Compiled Function
 const verbCache = new Map<string, (ctx: any) => any>();
 
@@ -519,11 +516,11 @@ function executeVerb(
   ws: any,
 ) {
   const ctx = createScriptContext({
-    caller: player,
-    this: getEntity(verb.source)!,
     args,
-    send: createSendFunction(ws),
+    caller: player,
     ops: GameOpcodes,
+    send: createSendFunction(ws),
+    this: getEntity(verb.source)!,
   });
 
   // Check cache
@@ -534,12 +531,12 @@ function executeVerb(
     try {
       compiled = compile(verb.code, GameOpcodes);
       verbCache.set(codeKey, compiled!);
-    } catch (e) {
-      console.error("Failed to compile verb:", e);
+    } catch (error) {
+      console.error("Failed to compile verb:", error);
       // Fallback to interpreter? Or just throw?
       // For now, let's fallback to evaluate to be safe, or just re-throw.
       // Given we want to move to compiler, let's throw but log it.
-      throw e;
+      throw error;
     }
   }
 

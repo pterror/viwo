@@ -1,4 +1,4 @@
-import { createSignal, Show, For } from "solid-js";
+import { For, Show, createSignal } from "solid-js";
 import { gameStore } from "../store/game";
 
 interface DigPanelProps {
@@ -14,13 +14,17 @@ export default function DigPanel(props: DigPanelProps) {
   const [roomName, setRoomName] = createSignal("");
   const [targetRoom, setTargetRoom] = createSignal("");
 
-  const handleDig = (e: Event) => {
-    e.preventDefault();
+  const handleDig = (event: Event) => {
+    event.preventDefault();
     if (mode() === "new") {
-      if (!roomName()) return;
+      if (!roomName()) {
+        return;
+      }
       gameStore.execute("dig", [direction(), roomName()]);
     } else {
-      if (!targetRoom()) return;
+      if (!targetRoom()) {
+        return;
+      }
       gameStore.execute("dig", [direction(), targetRoom()]);
     }
 
@@ -46,7 +50,7 @@ export default function DigPanel(props: DigPanelProps) {
                   : "Direction (e.g. north, up)"
               }
               value={direction()}
-              onInput={(e) => setDirection(e.currentTarget.value)}
+              onInput={(event) => setDirection(event.currentTarget.value)}
               class="builder__input"
               disabled={props.isLocked}
               autocomplete="off"
@@ -77,7 +81,7 @@ export default function DigPanel(props: DigPanelProps) {
               type="text"
               placeholder="New Room Name"
               value={roomName()}
-              onInput={(e) => setRoomName(e.currentTarget.value)}
+              onInput={(event) => setRoomName(event.currentTarget.value)}
               class="builder__input builder__input--full"
               required
             />
@@ -90,7 +94,7 @@ export default function DigPanel(props: DigPanelProps) {
               type="text"
               placeholder="Target Room Name (exact match)"
               value={targetRoom()}
-              onInput={(e) => setTargetRoom(e.currentTarget.value)}
+              onInput={(event) => setTargetRoom(event.currentTarget.value)}
               class="builder__input builder__input--full"
               autocomplete="off"
             />

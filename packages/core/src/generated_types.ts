@@ -1,3 +1,4 @@
+// oxlint-disable max-params, ban-types
 declare global {
   interface Entity {
     /** Unique ID of the entity */
@@ -9,9 +10,7 @@ declare global {
     [key: string]: unknown;
   }
 
-  /**
-   * Represents a scriptable action (verb) attached to an entity.
-   */
+  /** Represents a scriptable action (verb) attached to an entity. */
   interface Verb {
     id: number;
     entity_id: number;
@@ -26,8 +25,10 @@ declare global {
     readonly id: string;
   }
 
-  type UnionToIntersection<T> = (T extends T ? (t: T) => 0 : never) extends (i: infer I) => 0
-    ? Extract<I, T>
+  type UnionToIntersection<Type> = (Type extends Type ? (type: Type) => 0 : never) extends (
+    intersection: infer Intersection,
+  ) => 0
+    ? Extract<Intersection, Type>
     : never;
 
   type UnknownUnion =
@@ -40,26 +41,26 @@ declare global {
     | (Record<string, unknown> & { readonly length?: never })
     | (Record<string, unknown> & { readonly slice?: never });
 
-  type ScriptValue_<T> = Exclude<T, readonly unknown[]>;
+  type ScriptValue_<Type> = Exclude<Type, readonly unknown[]>;
 
   /**
    * Represents a value in the scripting language.
    * Can be a primitive, an object, or a nested S-expression (array).
    */
-  type ScriptValue<T> =
-    | (unknown extends T
+  type ScriptValue<Type> =
+    | (unknown extends Type
         ? ScriptValue_<UnknownUnion>
-        : object extends T
+        : object extends Type
           ? Extract<ScriptValue_<UnknownUnion>, object>
-          : ScriptValue_<T>)
-    | ScriptExpression<any[], T>;
+          : ScriptValue_<Type>)
+    | ScriptExpression<any[], Type>;
 
   // Phantom type for return type safety
-  type ScriptExpression<Args extends (string | ScriptValue_<unknown>)[], Ret> = [
+  type ScriptExpression<Args extends (string | ScriptValue_<unknown>)[], Result> = [
     string,
     ...Args,
   ] & {
-    __returnType: Ret;
+    __returnType: Result;
   };
 
   // Standard library functions
@@ -74,17 +75,17 @@ declare global {
   /**
    * Create a new entity (requires sys.create)
    *
-   * @param cap Capability to use for creation
+   * @param capability Capability to use for creation
    * @param data Initial data for the entity
    */
-  function create(cap: Capability | null, data: object): number;
+  function create(capability: Capability | null, data: object): number;
   /**
    * Destroy an entity (requires entity.control)
    *
-   * @param cap Capability to use.
+   * @param capability Capability to use.
    * @param target The entity to destroy.
    */
-  function destroy(cap: Capability | null, target: Entity): null;
+  function destroy(capability: Capability | null, target: Entity): null;
   /**
    * Get entity by ID
    *
@@ -121,27 +122,27 @@ declare global {
   /**
    * Update entity properties (requires entity.control)
    *
-   * @param cap Capability to use.
+   * @param capability Capability to use.
    * @param entities The entities to update.
    */
-  function set_entity(cap: Capability | null, ...entities: object[]): void;
+  function set_entity(capability: Capability | null, ...entities: object[]): void;
   /**
    * Set entity prototype (requires entity.control)
    *
-   * @param cap Capability to use.
+   * @param capability Capability to use.
    * @param target The entity to set the prototype of.
    * @param prototypeId The ID of the new prototype.
    */
-  function set_prototype(cap: Capability | null, target: Entity, prototypeId: number): null;
+  function set_prototype(capability: Capability | null, target: Entity, prototypeId: number): null;
   /**
    * Execute verb as another entity (requires sys.sudo)
    *
-   * @param cap Capability to use.
+   * @param capability Capability to use.
    * @param target The entity to impersonate.
    * @param verb The verb to call.
    * @param args Arguments to pass to the verb.
    */
-  function sudo(cap: Capability | null, target: Entity, verb: string, args: any[]): any;
+  function sudo(capability: Capability | null, target: Entity, verb: string, args: any[]): any;
   /**
    * Get available verbs
    *
@@ -188,34 +189,34 @@ declare global {
   /**
    * Adds numbers.
    *
-   * @param a The first number.
-   * @param b The second number.
+   * @param left The first number.
+   * @param right The second number.
    * @param args Additional numbers to add.
    */
-  function add(a: number, b: number, ...args: number[]): number;
+  function add(left: number, right: number, ...args: number[]): number;
   /**
    * Divides numbers.
    *
-   * @param a The dividend.
-   * @param b The divisor.
+   * @param left The dividend.
+   * @param right The divisor.
    * @param args Additional divisors.
    */
-  function div(a: number, b: number, ...args: number[]): number;
+  function div(left: number, right: number, ...args: number[]): number;
   /**
    * Calculates the modulo of two numbers.
    *
-   * @param a The dividend.
-   * @param b The divisor.
+   * @param left The dividend.
+   * @param right The divisor.
    */
-  function mod(a: number, b: number): number;
+  function mod(left: number, right: number): number;
   /**
    * Multiplies numbers.
    *
-   * @param a The first number.
-   * @param b The second number.
+   * @param left The first number.
+   * @param right The second number.
    * @param args Additional numbers to multiply.
    */
-  function mul(a: number, b: number, ...args: number[]): number;
+  function mul(left: number, right: number, ...args: number[]): number;
   /**
    * Calculates exponentiation (power tower).
    *
@@ -234,67 +235,67 @@ declare global {
   /**
    * Subtracts numbers.
    *
-   * @param a The number to subtract from.
-   * @param b The number to subtract.
+   * @param left The number to subtract from.
+   * @param right The number to subtract.
    * @param args Additional numbers to subtract.
    */
-  function sub(a: number, b: number, ...args: number[]): number;
+  function sub(left: number, right: number, ...args: number[]): number;
   /**
    * Logical AND. Returns true if all arguments are true.
    *
-   * @param a The first value.
-   * @param b The second value.
+   * @param left The first value.
+   * @param right The second value.
    * @param args Additional values.
    */
-  function and(a: unknown, b: unknown, ...args: unknown[]): boolean;
+  function and(left: unknown, right: unknown, ...args: unknown[]): boolean;
   /**
    * Checks if all arguments are equal.
    *
-   * @param a The first value to compare.
-   * @param b The second value to compare.
+   * @param left The first value to compare.
+   * @param right The second value to compare.
    * @param args Additional values to compare.
    */
-  function eq(a: unknown, b: unknown, ...args: unknown[]): boolean;
+  function eq(left: unknown, right: unknown, ...args: unknown[]): boolean;
   /**
    * Checks if arguments are strictly decreasing.
    *
-   * @param a The first number.
-   * @param b The second number.
+   * @param left The first number.
+   * @param right The second number.
    * @param args Additional numbers.
    */
-  function gt(a: number, b: number, ...args: number[]): boolean;
+  function gt(left: number, right: number, ...args: number[]): boolean;
   /**
    * Checks if arguments are non-increasing.
    *
-   * @param a The first number.
-   * @param b The second number.
+   * @param left The first number.
+   * @param right The second number.
    * @param args Additional numbers.
    */
-  function gte(a: number, b: number, ...args: number[]): boolean;
+  function gte(left: number, right: number, ...args: number[]): boolean;
   /**
    * Checks if arguments are strictly increasing.
    *
-   * @param a The first number.
-   * @param b The second number.
+   * @param left The first number.
+   * @param right The second number.
    * @param args Additional numbers.
    */
-  function lt(a: number, b: number, ...args: number[]): boolean;
+  function lt(left: number, right: number, ...args: number[]): boolean;
   /**
    * Checks if arguments are non-decreasing.
    *
-   * @param a The first number.
-   * @param b The second number.
+   * @param left The first number.
+   * @param right The second number.
    * @param args Additional numbers.
    */
-  function lte(a: number, b: number, ...args: number[]): boolean;
+  function lte(left: number, right: number, ...args: number[]): boolean;
   /**
    * Checks if adjacent arguments are different.
    *
-   * @param a The first value to compare.
-   * @param b The second value to compare.
+   * @param left The first value to compare.
+   * @param right The second value to compare.
    * @param args Additional values to compare.
    */
-  function neq(a: unknown, b: unknown, ...args: unknown[]): boolean;
+  function neq(left: unknown, right: unknown, ...args: unknown[]): boolean;
   /**
    * Logical NOT. Returns the opposite boolean value.
    *
@@ -304,11 +305,11 @@ declare global {
   /**
    * Logical OR. Returns true if at least one argument is true.
    *
-   * @param a The first value.
-   * @param b The second value.
+   * @param left The first value.
+   * @param right The second value.
    * @param args Additional values.
    */
-  function or(a: unknown, b: unknown, ...args: unknown[]): boolean;
+  function or(left: unknown, right: unknown, ...args: unknown[]): boolean;
   /**
    * Calls a lambda function with the provided arguments.
    *
@@ -321,7 +322,7 @@ declare global {
    *
    * @param index The index of the argument.
    */
-  function arg<T>(index: number): T;
+  function arg<Type>(index: number): Type;
   /**
    * Get all arguments
    */
@@ -353,7 +354,7 @@ declare global {
    * @param then The code to execute if true.
    * @param else The code to execute if false.
    */
-  function if_<T>(condition: unknown, then: unknown, else_?: unknown): T;
+  function if_<Type>(condition: unknown, then: Type, else_?: Type): Type;
   /**
    * Creates a lambda (anonymous function).
    *
@@ -478,10 +479,10 @@ declare global {
     /**
      * Returns the angle (in radians) from the X axis to a point.
      *
-     * @param y The y coordinate.
-     * @param x The x coordinate.
+     * @param dy The y coordinate.
+     * @param dx The x coordinate.
      */
-    function atan2(y: number, x: number): number;
+    function atan2(dy: number, dx: number): number;
     /**
      * Rounds up a number.
      *
@@ -589,7 +590,7 @@ declare global {
      *
      * @param lists The lists to concatenate.
      */
-    function concat(...lists: any[][]): any[];
+    function concat<Type>(...lists: (readonly Type[])[]): Type[];
     /**
      * Checks if the list has no items.
      *
@@ -602,35 +603,38 @@ declare global {
      * @param list The list to filter.
      * @param lambda The testing function.
      */
-    function filter(list: any[], lambda: unknown): any[];
+    function filter<Type>(list: Type[], lambda: (item: Type) => boolean): Type[];
     /**
      * Returns the first element in the provided list that satisfies the provided testing function.
      *
      * @param list The list to search.
      * @param lambda The testing function.
      */
-    function find(list: any[], lambda: unknown): any;
+    function find<Type>(list: Type[], lambda: (value: Type) => boolean): Type;
     /**
      * Creates a new list by applying a given callback function to each element of the list, and then flattening the result by one level.
      *
      * @param list The list to map.
      * @param lambda The mapping function.
      */
-    function flatMap(list: readonly unknown[], lambda: object): any[];
+    function flatMap<Type, Result>(
+      list: readonly Type[],
+      lambda: (item: Type) => Result[],
+    ): Result[];
     /**
      * Retrieves the item at the specified index.
      *
      * @param list The list to access.
      * @param index The index of the item.
      */
-    function get(list: any[], index: number): any;
+    function get<Type>(list: Type[], index: number): Type | undefined;
     /**
      * Determines whether a list includes a certain value.
      *
      * @param list The list to check.
      * @param value The value to search for.
      */
-    function includes(list: readonly unknown[], value: any): boolean;
+    function includes<Type>(list: readonly Type[], value: Type): boolean;
     /**
      * Returns the number of items in the list.
      *
@@ -643,26 +647,26 @@ declare global {
      * @param list The list to map.
      * @param lambda The mapping function.
      */
-    function map(list: any[], lambda: unknown): any[];
+    function map<Type, Result>(list: Type[], lambda: (value: Type) => Result): Result[];
     /**
      * Creates a new list from the provided arguments.
      *
      * @param items The items to include in the list.
      */
-    function new_<T>(...items: unknown[]): T[];
+    function new_<Type>(...items: unknown[]): Type[];
     /**
      * Removes and returns the last item of the list.
      *
      * @param list The list to modify.
      */
-    function pop(list: unknown[]): any;
+    function pop<Type>(list: Type[]): Type;
     /**
      * Adds an item to the end of the list.
      *
      * @param list The list to modify.
      * @param value The item to add.
      */
-    function push(list: unknown[], value: any): number;
+    function push<Type>(list: Type[], value: Type): number;
     /**
      * Executes a user-supplied 'reducer' callback function on each element of the list, in order, passing in the return value from the calculation on the preceding element.
      *
@@ -670,13 +674,17 @@ declare global {
      * @param lambda The reducer function.
      * @param initialValue The initial value.
      */
-    function reduce(list: any[], lambda: unknown, initialValue: unknown): any;
+    function reduce<Type, Result>(
+      list: readonly Type[],
+      lambda: (acc: Result, item: Type) => Result,
+      initialValue: Result,
+    ): Result;
     /**
      * Reverses a list in place.
      *
      * @param list The list to reverse.
      */
-    function reverse(list: any[]): any[];
+    function reverse<Type>(list: readonly Type[]): Type[];
     /**
      * Sets the item at the specified index.
      *
@@ -684,13 +692,13 @@ declare global {
      * @param index The index to set.
      * @param value The new value.
      */
-    function set(list: any[], index: number, value: unknown): any;
+    function set<Type>(list: Type[], index: number, value: Type): Type;
     /**
      * Removes and returns the first item of the list.
      *
      * @param list The list to modify.
      */
-    function shift(list: unknown[]): any;
+    function shift<Type>(list: Type[]): Type;
     /**
      * Returns a shallow copy of a portion of the list.
      *
@@ -698,13 +706,13 @@ declare global {
      * @param start The start index.
      * @param end The end index (exclusive).
      */
-    function slice(list: any[], start: number, end?: number): any[];
+    function slice<Type>(list: readonly Type[], start: number, end?: number): Type[];
     /**
      * Sorts the elements of a list in place.
      *
      * @param list The list to sort.
      */
-    function sort(list: any[]): any[];
+    function sort<Type>(list: Type[]): Type[];
     /**
      * Changes the contents of a list by removing or replacing existing elements and/or adding new elements.
      *
@@ -713,14 +721,19 @@ declare global {
      * @param deleteCount The number of items to remove.
      * @param items The items to add.
      */
-    function splice(list: unknown[], start: number, deleteCount: number, ...items: any[]): any[];
+    function splice<Type>(
+      list: Type[],
+      start: number,
+      deleteCount: number,
+      ...items: Type[]
+    ): Type[];
     /**
      * Adds an item to the beginning of the list.
      *
      * @param list The list to modify.
      * @param value The item to add.
      */
-    function unshift(list: unknown[], value: any): number;
+    function unshift<Type>(list: Type[], value: Type): number;
   }
   namespace obj {
     /**
@@ -729,20 +742,25 @@ declare global {
      * @param object The object to modify.
      * @param key The property key.
      */
-    function del<T, K extends keyof T = keyof T>(object: T, key: K): boolean;
+    function del<Type, Key extends keyof Type = keyof Type>(object: Type, key: Key): boolean;
     /**
      * Returns an array of a given object's own enumerable string-keyed property [key, value] pairs.
      *
      * @param object The object to get entries from.
      */
-    function entries<T>(object: T): readonly [keyof T, T[keyof T]][];
+    function entries<Type>(
+      object: Type,
+    ): readonly { [Key in keyof Type]: [Key, Type[Key]] }[keyof Type][];
     /**
      * Creates a new object with a subset of properties that pass the test implemented by the provided function.
      *
      * @param object The object to filter.
      * @param lambda The testing function.
      */
-    function filter<T>(object: T, lambda: object): Partial<T>;
+    function filter<Type>(
+      object: Type,
+      lambda: (...kv: readonly { [Key in keyof Type]: [Key, Type[Key]] }[keyof Type][]) => boolean,
+    ): Partial<Type>;
     /**
      * Creates a new object by applying a given callback function to each entry of the object, and then flattening the result.
      *
@@ -757,27 +775,34 @@ declare global {
      * @param key The property key.
      * @param default The default value if the key is missing.
      */
-    function get<T, K extends keyof T = keyof T>(object: T, key: K, default_?: T[K]): T[K];
+    function get<Type, Key extends keyof Type = keyof Type>(
+      object: Type,
+      key: Key,
+      default_?: Type[Key],
+    ): Type[Key];
     /**
      * Checks if an object has a specific property.
      *
      * @param object The object to check.
      * @param key The property key.
      */
-    function has<T, K extends keyof T = keyof T>(object: T, key: K): boolean;
+    function has<Type, Key extends keyof Type = keyof Type>(object: Type, key: Key): boolean;
     /**
      * Returns an array of a given object's own enumerable property names.
      *
      * @param object The object to get keys from.
      */
-    function keys<T>(object: T): readonly (keyof T)[];
+    function keys<Type>(object: Type): readonly (keyof Type)[];
     /**
      * Creates a new object with the same keys as the original, but with values transformed by a function.
      *
      * @param object The object to map.
      * @param lambda The mapping function.
      */
-    function map(object: object, lambda: object): any;
+    function map<Type, Result>(
+      object: Type,
+      lambda: (...kv: readonly { [Key in keyof Type]: [Key, Type[Key]] }[keyof Type][]) => Result,
+    ): Record<keyof Type, Result>;
     /**
      * Merges multiple objects into a new object.
      *
@@ -792,7 +817,7 @@ declare global {
     function new_<Kvs extends [] | readonly (readonly [key: "" | (string & {}), value: unknown])[]>(
       ...kvs: any[]
     ): {
-      [K in keyof Kvs & `${number}` as (Kvs[K] & [string, unknown])[0]]: (Kvs[K] &
+      [Key in keyof Kvs & `${number}` as (Kvs[Key] & [string, unknown])[0]]: (Kvs[Key] &
         [string, unknown])[1];
     };
     /**
@@ -810,13 +835,17 @@ declare global {
      * @param key The property key.
      * @param value The new value.
      */
-    function set<T, K extends keyof T = keyof T>(object: T, key: K, value: T[K]): T;
+    function set<Type, Key extends keyof Type = keyof Type>(
+      object: Type,
+      key: Key,
+      value: Type[Key],
+    ): Type;
     /**
      * Returns an array of a given object's own enumerable property values.
      *
      * @param object The object to get values from.
      */
-    function values<T>(object: T): readonly T[keyof T][];
+    function values<Type>(object: Type): readonly Type[keyof Type][];
   }
   namespace str {
     /**
@@ -942,4 +971,5 @@ declare global {
   }
 }
 
+// oxlint-disable-next-line require-module-specifiers
 export {};

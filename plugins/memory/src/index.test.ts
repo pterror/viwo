@@ -1,18 +1,18 @@
-import { describe, it, expect, beforeEach, mock } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
+import type { AiPlugin } from "@viwo/plugin-ai";
 import { Database } from "bun:sqlite";
 import { MemoryManager } from "./index";
-import { AiPlugin } from "@viwo/plugin-ai";
 
 // Mock AiPlugin
 const mockAiPlugin = {
-  getEmbedding: mock(async (text: string) => {
+  getEmbedding: mock((text: string) => {
     // Simple deterministic embedding for testing
     // Just map characters to numbers and pad/truncate to 1536
     const embedding = Array.from({ length: 1536 }, () => 0);
-    for (let i = 0; i < Math.min(text.length, 1536); i++) {
-      embedding[i] = text.charCodeAt(i) / 255;
+    for (let idx = 0; idx < Math.min(text.length, 1536); idx += 1) {
+      embedding[idx] = (text.codePointAt(idx) ?? 0) / 255;
     }
-    return embedding;
+    return Promise.resolve(embedding);
   }),
 } as unknown as AiPlugin;
 
@@ -53,7 +53,7 @@ describe("MemoryManager", () => {
       filter: { type: "fruit" },
     });
     expect(results.length).toBe(2);
-    expect(results.map((r) => r.content).sort()).toEqual(["Apple", "Banana"]);
+    expect(results.map((result) => result.content).toSorted()).toEqual(["Apple", "Banana"]);
 
     // Search for vegetable
     const results2 = await memoryManager.search("Carrot", {

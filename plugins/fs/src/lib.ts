@@ -1,7 +1,7 @@
-import { defineOpcode, ScriptError, Capability } from "@viwo/scripting";
+import { type Capability, ScriptError, defineOpcode } from "@viwo/scripting";
+import { readFile, readdir, writeFile } from "node:fs/promises";
 import { checkCapability } from "@viwo/core";
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
+import { resolve } from "node:path";
 
 function checkFsCapability(ctx: any, cap: Capability, type: string, targetPath: string) {
   checkCapability(cap, ctx.this.id, type, (params) => {
@@ -10,28 +10,14 @@ function checkFsCapability(ctx: any, cap: Capability, type: string, targetPath: 
       return false;
     }
 
-    const resolvedTarget = path.resolve(targetPath);
-    const resolvedAllowed = path.resolve(allowedPath);
+    const resolvedTarget = resolve(targetPath);
+    const resolvedAllowed = resolve(allowedPath);
 
     return resolvedTarget.startsWith(resolvedAllowed);
   });
 }
 
 export const fsRead = defineOpcode<[Capability | null, string], Promise<string>>("fs.read", {
-  metadata: {
-    label: "Read File",
-    category: "fs",
-    description: "Read content from a file",
-    slots: [
-      { name: "Cap", type: "block" },
-      { name: "Path", type: "string" },
-    ],
-    parameters: [
-      { name: "cap", type: "Capability | null", description: "The capability to use." },
-      { name: "path", type: "string", description: "The path to read." },
-    ],
-    returnType: "Promise<string>",
-  },
   handler: async ([cap, filePath], ctx) => {
     if (!cap) {
       throw new ScriptError("fs.read: missing capability");
@@ -44,32 +30,30 @@ export const fsRead = defineOpcode<[Capability | null, string], Promise<string>>
     checkFsCapability(ctx, cap, "fs.read", filePath);
 
     try {
-      return await fs.readFile(filePath, "utf-8");
-    } catch (e: any) {
-      throw new ScriptError(`fs.read failed: ${e.message}`);
+      return await readFile(filePath, "utf8");
+    } catch (error: any) {
+      throw new ScriptError(`fs.read failed: ${error.message}`);
     }
+  },
+  metadata: {
+    category: "fs",
+    description: "Read content from a file",
+    label: "Read File",
+    parameters: [
+      { description: "The capability to use.", name: "cap", type: "Capability | null" },
+      { description: "The path to read.", name: "path", type: "string" },
+    ],
+    returnType: "Promise<string>",
+    slots: [
+      { name: "Cap", type: "block" },
+      { name: "Path", type: "string" },
+    ],
   },
 });
 
 export const fsWrite = defineOpcode<[Capability | null, string, string], Promise<null>>(
   "fs.write",
   {
-    metadata: {
-      label: "Write File",
-      category: "fs",
-      description: "Write content to a file",
-      slots: [
-        { name: "Cap", type: "block" },
-        { name: "Path", type: "string" },
-        { name: "Content", type: "string" },
-      ],
-      parameters: [
-        { name: "cap", type: "Capability | null", description: "The capability to use." },
-        { name: "path", type: "string", description: "The path to write to." },
-        { name: "content", type: "string", description: "The content to write." },
-      ],
-      returnType: "Promise<null>",
-    },
     handler: async ([cap, filePath, content], ctx) => {
       if (!cap) {
         throw new ScriptError("fs.write: missing capability");
@@ -85,11 +69,27 @@ export const fsWrite = defineOpcode<[Capability | null, string, string], Promise
       checkFsCapability(ctx, cap, "fs.write", filePath);
 
       try {
-        await fs.writeFile(filePath, content, "utf-8");
+        await writeFile(filePath, content, "utf8");
         return null;
-      } catch (e: any) {
-        throw new ScriptError(`fs.write failed: ${e.message}`);
+      } catch (error: any) {
+        throw new ScriptError(`fs.write failed: ${error.message}`);
       }
+    },
+    metadata: {
+      category: "fs",
+      description: "Write content to a file",
+      label: "Write File",
+      parameters: [
+        { description: "The capability to use.", name: "cap", type: "Capability | null" },
+        { description: "The path to write to.", name: "path", type: "string" },
+        { description: "The content to write.", name: "content", type: "string" },
+      ],
+      returnType: "Promise<null>",
+      slots: [
+        { name: "Cap", type: "block" },
+        { name: "Path", type: "string" },
+        { name: "Content", type: "string" },
+      ],
     },
   },
 );
@@ -97,20 +97,6 @@ export const fsWrite = defineOpcode<[Capability | null, string, string], Promise
 export const fsList = defineOpcode<[Capability | null, string], Promise<readonly string[]>>(
   "fs.list",
   {
-    metadata: {
-      label: "List Directory",
-      category: "fs",
-      description: "List contents of a directory",
-      slots: [
-        { name: "Cap", type: "block" },
-        { name: "Path", type: "string" },
-      ],
-      parameters: [
-        { name: "cap", type: "Capability | null" },
-        { name: "path", type: "string" },
-      ],
-      returnType: "Promise<readonly string[]>",
-    },
     handler: async ([cap, dirPath], ctx) => {
       if (!cap) {
         throw new ScriptError("fs.list: missing capability");
@@ -123,10 +109,24 @@ export const fsList = defineOpcode<[Capability | null, string], Promise<readonly
       checkFsCapability(ctx, cap, "fs.read", dirPath);
 
       try {
-        return await fs.readdir(dirPath);
-      } catch (e: any) {
-        throw new ScriptError(`fs.list failed: ${e.message}`);
+        return await readdir(dirPath);
+      } catch (error: any) {
+        throw new ScriptError(`fs.list failed: ${error.message}`);
       }
+    },
+    metadata: {
+      category: "fs",
+      description: "List contents of a directory",
+      label: "List Directory",
+      parameters: [
+        { name: "cap", type: "Capability | null" },
+        { name: "path", type: "string" },
+      ],
+      returnType: "Promise<readonly string[]>",
+      slots: [
+        { name: "Cap", type: "block" },
+        { name: "Path", type: "string" },
+      ],
     },
   },
 );

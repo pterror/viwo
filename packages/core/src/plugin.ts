@@ -1,4 +1,4 @@
-import { CoreInterface } from "./types";
+import type { CoreInterface } from "./types";
 
 /** Context representing a connected player. */
 interface PlayerContext {
@@ -52,9 +52,9 @@ export interface PluginContext {
 
 /** Manages the lifecycle of plugins and delegates commands to them. */
 export class PluginManager {
-  private plugins: Map<string, Plugin> = new Map();
-  private commands: Map<string, (ctx: CommandContext) => void | Promise<void>> = new Map();
-  private rpcMethods: Map<string, (params: any, ctx: CommandContext) => Promise<any>> = new Map();
+  private plugins = new Map<string, Plugin>();
+  private commands = new Map<string, (ctx: CommandContext) => void | Promise<void>>();
+  private rpcMethods = new Map<string, (params: any, ctx: CommandContext) => Promise<any>>();
   private core: CoreInterface;
 
   constructor(core: CoreInterface) {
@@ -69,6 +69,8 @@ export class PluginManager {
   async loadPlugin(plugin: Plugin) {
     console.log(`Loading plugin: ${plugin.name} v${plugin.version}`);
     const context: PluginContext = {
+      core: this.core,
+      getPlugin: (name) => this.plugins.get(name),
       registerCommand: (cmd, handler) => {
         console.log(`Plugin '${plugin.name}' registered command: ${cmd}`);
         this.commands.set(cmd, handler);
@@ -77,8 +79,6 @@ export class PluginManager {
         console.log(`Plugin '${plugin.name}' registered RPC method: ${method}`);
         this.rpcMethods.set(method, handler);
       },
-      getPlugin: (name) => this.plugins.get(name),
-      core: this.core,
     };
 
     await plugin.onLoad(context);

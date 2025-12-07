@@ -1,11 +1,11 @@
 import {
-  OpcodeBuilder,
-  OpcodeMetadata,
-  ScriptContext,
+  type OpcodeBuilder,
+  type OpcodeMetadata,
+  type ScriptContext,
   ScriptError,
-  ScriptOps,
-  ScriptValue,
-  StackFrame,
+  type ScriptOps,
+  type ScriptValue,
+  type StackFrame,
 } from "./types";
 
 export { type OpcodeBuilder, type ScriptContext, ScriptError, type ScriptValue, type StackFrame };
@@ -35,32 +35,30 @@ export function createOpcodeRegistry(...libs: ScriptOps[]): ScriptOps {
 }
 
 export function executeLambda(lambda: any, args: unknown[], ctx: ScriptContext): any {
-  if (!lambda || lambda.type !== "lambda") return null;
-
+  if (!lambda || lambda.type !== "lambda") {
+    return null;
+  }
   // Create new context
   const newVars = { ...lambda.closure };
   // Bind arguments
-  for (let i = 0; i < lambda.args.length; i += 1) {
-    newVars[lambda.args[i]] = args[i];
+  for (let idx = 0; idx < lambda.args.length; idx += 1) {
+    newVars[lambda.args[idx]] = args[idx];
   }
-
   return evaluate(lambda.body, { ...ctx, vars: newVars });
 }
 
 /** Signal thrown to break out of a loop. */
-export class BreakSignal {
-  constructor() {}
-}
+// oxlint-disable-next-line no-extraneous-class
+export class BreakSignal {}
 
 /** Signal thrown to return from a function. */
 export class ReturnSignal {
-  constructor(public value: any = null) {}
+  constructor(public value: any) {}
 }
 
 /** Signal thrown to continue to the next iteration of a loop. */
-export class ContinueSignal {
-  constructor() {}
-}
+// oxlint-disable-next-line no-extraneous-class
+export class ContinueSignal {}
 
 /**
  * Unsafely casts a value to its awaited type. Use this when you are sure that the value is not a Promise.
@@ -68,8 +66,8 @@ export class ContinueSignal {
  * @param value - The value to cast.
  * @returns The value cast to its awaited type.
  */
-export function unsafeAsAwaited<T>(value: T): Awaited<T> {
-  return value as Awaited<T>;
+export function unsafeAsAwaited<Type>(value: Type): Awaited<Type> {
+  return value as Awaited<Type>;
 }
 
 /**
@@ -80,10 +78,10 @@ export function unsafeAsAwaited<T>(value: T): Awaited<T> {
  * @returns The result of the evaluation (or a Promise if async).
  * @throws ScriptError if execution fails or gas runs out.
  */
-export function evaluate<T>(ast: ScriptValue<T>, ctx: ScriptContext): T | Promise<T> {
+export function evaluate<Type>(ast: ScriptValue<Type>, ctx: ScriptContext): Type | Promise<Type> {
   // If it's a simple value, return immediately
   if (!Array.isArray(ast)) {
-    return ast as T;
+    return ast as Type;
   }
 
   // SOA Stack (Dynamic)
@@ -94,7 +92,7 @@ export function evaluate<T>(ast: ScriptValue<T>, ctx: ScriptContext): T | Promis
   let sp = 0;
 
   // Push initial frame
-  const op = ast[0];
+  const [op] = ast;
   if (typeof op !== "string" || !ctx.ops[op]) {
     throw new ScriptError(`Unknown opcode: ${op}`, []);
   }
@@ -108,6 +106,7 @@ export function evaluate<T>(ast: ScriptValue<T>, ctx: ScriptContext): T | Promis
   return executeLoop(ctx, sp, stackOp, stackArgs, stackAst, stackIdx);
 }
 
+// oxlint-disable-next-line max-params
 function executeLoop(
   ctx: ScriptContext,
   sp: number,
@@ -127,7 +126,9 @@ function executeLoop(
     const top = sp - 1;
     const op = stackOp[top]!;
     const def = ctx.ops[op];
-    if (!def) throw new ScriptError(`Unknown opcode: ${op}`);
+    if (!def) {
+      throw new ScriptError(`Unknown opcode: ${op}`);
+    }
 
     // If Lazy, pass all remaining args as is and execute immediately
     if (def.metadata.lazy) {
@@ -136,7 +137,8 @@ function executeLoop(
       if (idx < ast.length) {
         const args = stackArgs[top]!;
         while (idx < ast.length) {
-          args.push(ast[idx++]);
+          args.push(ast[idx]);
+          idx += 1;
         }
         stackIdx[top] = idx;
       }
@@ -152,7 +154,7 @@ function executeLoop(
 
       if (Array.isArray(nextArg)) {
         // It's a nested call, push a new frame
-        const nextOp = nextArg[0];
+        const [nextOp] = nextArg;
         if (typeof nextOp !== "string" || !ctx.ops[nextOp]) {
           throw new ScriptError(
             `Unknown opcode: ${nextOp}`,
@@ -182,19 +184,19 @@ function executeLoop(
         }
 
         result = def.handler(args, ctx);
-      } catch (e: any) {
-        if (e instanceof BreakSignal) {
-          throw e;
+      } catch (error) {
+        if (error instanceof BreakSignal) {
+          throw error;
         }
-        if (e instanceof ReturnSignal) {
-          return e.value;
+        if (error instanceof ReturnSignal) {
+          return error.value;
         }
-        if (e instanceof ContinueSignal) {
-          throw e; // Propagate continue signal to loop handler
+        if (error instanceof ContinueSignal) {
+          throw error; // Propagate continue signal to loop handler
         }
         let scriptError: ScriptError;
-        if (e instanceof ScriptError) {
-          scriptError = e;
+        if (error instanceof ScriptError) {
+          scriptError = error;
           if (scriptError.stackTrace.length === 0) {
             scriptError.stackTrace = [
               ...(ctx.stack ?? []),
@@ -202,12 +204,14 @@ function executeLoop(
             ];
           }
         } else {
-          scriptError = new ScriptError(e.message ?? String(e), [
+          scriptError = new ScriptError((error as any).message ?? String(error), [
             ...(ctx.stack ?? []),
             ...createStackTrace(sp, stackOp, stackArgs),
           ]);
         }
-        scriptError.context ??= { op: op, args: args };
+        scriptError.context ??= { args: args, op: op };
+        // This *is* an error object.
+        // oxlint-disable-next-line no-throw-literal
         throw scriptError;
       }
 
@@ -230,6 +234,7 @@ function executeLoop(
   throw new ScriptError("Stack underflow");
 }
 
+// oxlint-disable-next-line max-params
 async function handleAsyncResult(
   promise: Promise<unknown>,
   ctx: ScriptContext,
@@ -240,68 +245,68 @@ async function handleAsyncResult(
   stackIdx: number[],
 ): Promise<unknown> {
   let currentResult = await promise;
-
   // Push result to parent frame and continue loop
   if (sp === 0) {
     return currentResult;
   }
-
   stackArgs[sp - 1]!.push(currentResult);
-
   // Resume the loop
   return executeLoop(ctx, sp, stackOp, stackArgs, stackAst, stackIdx);
 }
 
 function createStackTrace(sp: number, stackOp: string[], stackArgs: unknown[][]): StackFrame[] {
   const trace: StackFrame[] = [];
-  for (let i = 0; i < sp; i += 1) {
-    trace.push({
-      name: stackOp[i]!,
-      args: stackArgs[i]!,
-    });
+  for (let idx = 0; idx < sp; idx += 1) {
+    trace.push({ args: stackArgs[idx]!, name: stackOp[idx]! });
   }
   return trace;
 }
 
 function validateArgs(op: string, args: unknown[], metadata: OpcodeMetadata) {
-  const params = metadata.parameters;
-  if (!params) {
+  const { parameters } = metadata;
+  if (!parameters) {
     return;
   }
-  const hasRest = params.some((p) => p.name.startsWith("..."));
-  const minArgs = params.filter((p) => !p.optional && !p.name.startsWith("...")).length;
+  const hasRest = parameters.some((parameter) => parameter.name.startsWith("..."));
+  const minArgs = parameters.filter(
+    (parameter) => !parameter.optional && !parameter.name.startsWith("..."),
+  ).length;
 
   if (args.length < minArgs) {
     throw new ScriptError(`${op}: expected at least ${minArgs} arguments, got ${args.length}`);
   }
 
-  if (!hasRest && args.length > params.length) {
-    throw new ScriptError(`${op}: expected at most ${params.length} arguments, got ${args.length}`);
+  if (!hasRest && args.length > parameters.length) {
+    throw new ScriptError(
+      `${op}: expected at most ${parameters.length} arguments, got ${args.length}`,
+    );
   }
 
   // Type checking
-  for (let i = 0; i < args.length; i += 1) {
-    const param = i < params.length ? params[i] : params[params.length - 1];
+  for (let idx = 0; idx < args.length; idx += 1) {
+    const param = idx < parameters.length ? parameters[idx] : parameters.at(-1);
     if (!param) {
       throw new ScriptError(
-        `${op}: expected at least ${params.length} arguments, got ${args.length}`,
+        `${op}: expected at least ${parameters.length} arguments, got ${args.length}`,
       );
     }
     // Handle rest param logic
     const currentParam =
-      param.name.startsWith("...") || i >= params.length ? params[params.length - 1] : param;
+      param.name.startsWith("...") || idx >= parameters.length ? parameters.at(-1) : param;
     if (!currentParam) {
       throw new ScriptError(
-        `${op}: expected at least ${params.length} arguments, got ${args.length}`,
+        `${op}: expected at least ${parameters.length} arguments, got ${args.length}`,
       );
     }
 
-    const arg = args[i];
+    const arg = args[idx];
     const type = currentParam.type.replace("[]", "");
 
-    if (WHITELISTED_TYPES.has(type)) continue;
+    if (WHITELISTED_TYPES.has(type)) {
+      continue;
+    }
 
-    if (currentParam.type.endsWith("[]")) {
+    if (currentParam.type.endsWith("[]") && !currentParam.type.startsWith("(")) {
       if (currentParam.name.startsWith("...")) {
         // Variadic
         if (
@@ -314,7 +319,9 @@ function validateArgs(op: string, args: unknown[], metadata: OpcodeMetadata) {
           arg !== null
         ) {
           if (type === "object" && (typeof arg !== "object" || arg === null)) {
-            throw new ScriptError(`${op}: expected ${type} for ${currentParam.name} at index ${i}`);
+            throw new ScriptError(
+              `${op}: expected ${type} for ${currentParam.name} at index ${idx}`,
+            );
           }
           if (
             type !== "object" &&
@@ -324,7 +331,9 @@ function validateArgs(op: string, args: unknown[], metadata: OpcodeMetadata) {
               (param) => param.replace(/\s*\bextends\b.+/, "") === type,
             )
           ) {
-            throw new ScriptError(`${op}: expected ${type} for ${currentParam.name} at index ${i}`);
+            throw new ScriptError(
+              `${op}: expected ${type} for ${currentParam.name} at index ${idx}`,
+            );
           }
         }
       } else {
@@ -339,10 +348,10 @@ function validateArgs(op: string, args: unknown[], metadata: OpcodeMetadata) {
           throw new ScriptError(`${op}: expected object for ${currentParam.name}`);
         }
       } else if (typeof arg !== type) {
-        const types = type.split("|").map((t) => t.trim());
+        const types = new Set(type.split("|").map((type) => type.trim()));
         const argType = arg === null ? "null" : typeof arg;
         if (
-          types.includes("Capability") &&
+          types.has("Capability") &&
           arg &&
           typeof arg === "object" &&
           (arg as any).__brand === "Capability"
@@ -350,7 +359,7 @@ function validateArgs(op: string, args: unknown[], metadata: OpcodeMetadata) {
           continue;
         }
         if (
-          types.includes("Entity") &&
+          types.has("Entity") &&
           arg &&
           typeof arg === "object" &&
           typeof (arg as any).id === "number"
@@ -358,7 +367,7 @@ function validateArgs(op: string, args: unknown[], metadata: OpcodeMetadata) {
           continue;
         }
         if (
-          !types.includes(argType) &&
+          !types.has(argType) &&
           !/\W/.test(type) &&
           !metadata.genericParameters?.some(
             (param) => param.replace(/\s*\bextends\b.+/, "") === type,
@@ -396,11 +405,11 @@ export function createScriptContext(
 ): ScriptContext {
   return {
     args: [],
-    gas: 1000,
-    warnings: [],
-    vars: {},
-    stack: [],
     cow: false,
+    gas: 1000,
+    stack: [],
+    vars: {},
+    warnings: [],
     ...ctx,
   };
 }

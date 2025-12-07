@@ -1,12 +1,11 @@
-import { defineFullOpcode } from "@viwo/scripting";
 import {
-  generateText,
-  generateObject,
-  jsonSchema,
-  experimental_generateImage,
   embed,
+  experimental_generateImage,
   experimental_generateSpeech,
   experimental_transcribe,
+  generateObject,
+  generateText,
+  jsonSchema,
 } from "ai";
 import {
   getImageModel,
@@ -15,24 +14,9 @@ import {
   getTextEmbeddingModel,
   getTranscriptionModel,
 } from "./models";
+import { defineFullOpcode } from "@viwo/scripting";
 
 export const aiText = defineFullOpcode<[string, string, string?], string>("ai.text", {
-  metadata: {
-    label: "Generate Text Response",
-    category: "AI",
-    slots: [
-      { name: "Model", type: "string" },
-      { name: "Prompt", type: "string" },
-      { name: "System", type: "string" },
-    ],
-    parameters: [
-      { name: "model", type: "string", description: "The model to use." },
-      { name: "prompt", type: "string", description: "The prompt to generate text from." },
-      { name: "system", type: "string", optional: true, description: "The system prompt." },
-    ],
-    returnType: "string",
-    description: "Generates text.",
-  },
   handler: async ([modelName, prompt, systemPrompt]) => {
     const model = getLanguageModel(modelName);
     const { text } = await generateText({
@@ -42,122 +26,134 @@ export const aiText = defineFullOpcode<[string, string, string?], string>("ai.te
     });
     return text;
   },
+  metadata: {
+    category: "AI",
+    description: "Generates text.",
+    label: "Generate Text Response",
+    parameters: [
+      { description: "The model to use.", name: "model", type: "string" },
+      { description: "The prompt to generate text from.", name: "prompt", type: "string" },
+      { description: "The system prompt.", name: "system", optional: true, type: "string" },
+    ],
+    returnType: "string",
+    slots: [
+      { name: "Model", type: "string" },
+      { name: "Prompt", type: "string" },
+      { name: "System", type: "string" },
+    ],
+  },
 });
 
 export const aiJson = defineFullOpcode<[string, string, object?], any>("ai.json", {
+  handler: async ([modelName, prompt, schema]) => {
+    const model = getLanguageModel(modelName);
+    const { object } = schema
+      ? await generateObject({ model, prompt, schema: jsonSchema(schema) })
+      : await generateObject<never, "no-schema">({ model, prompt });
+    return object;
+  },
   metadata: {
-    label: "Generate JSON Response",
     category: "AI",
+    description: "Generates a JSON object.",
+    label: "Generate JSON Response",
+    parameters: [
+      { description: "The model to use.", name: "model", type: "string" },
+      { description: "The prompt to generate JSON from.", name: "prompt", type: "string" },
+      { description: "The JSON schema.", name: "schema", optional: true, type: "object" },
+    ],
+    returnType: "object",
     slots: [
       { name: "Model", type: "string" },
       { name: "Prompt", type: "string" },
       { name: "Schema", type: "block" },
     ],
-    parameters: [
-      { name: "model", type: "string", description: "The model to use." },
-      { name: "prompt", type: "string", description: "The prompt to generate JSON from." },
-      // TODO: Opcodes to construct JSON schemas.
-      { name: "schema", type: "object", optional: true, description: "The JSON schema." },
-    ],
-    returnType: "object",
-    description: "Generates a JSON object.",
-  },
-  handler: async ([modelName, prompt, schema]) => {
-    const model = getLanguageModel(modelName);
-    const { object } = schema
-      ? await generateObject({ model, schema: jsonSchema(schema), prompt })
-      : await generateObject<never, "no-schema">({ model, prompt });
-    return object;
   },
 });
 
 export const aiEmbeddingText = defineFullOpcode<[string, string], number[]>("ai.embedding.text", {
-  metadata: {
-    label: "Generate Text Embedding",
-    category: "AI",
-    slots: [
-      { name: "Model", type: "string" },
-      { name: "Text", type: "string" },
-    ],
-    parameters: [
-      { name: "model", type: "string", description: "The model to use." },
-      { name: "text", type: "string", description: "The text to embed." },
-    ],
-    returnType: "number[]",
-    description: "Generates an embedding for the given text.",
-  },
   handler: async ([modelName, text]) => {
     const model = getTextEmbeddingModel(modelName);
     const { embedding } = await embed({ model, value: text });
     return embedding;
   },
-});
-
-export const aiImage = defineFullOpcode<[string, string], object>("ai.image", {
   metadata: {
-    label: "Generate Image",
     category: "AI",
-    slots: [
-      { name: "Model", type: "string" },
-      { name: "Prompt", type: "string" },
-    ],
+    description: "Generates an embedding for the given text.",
+    label: "Generate Text Embedding",
     parameters: [
-      { name: "model", type: "string", description: "The model to use." },
-      { name: "prompt", type: "string", description: "The prompt to generate image from." },
+      { description: "The model to use.", name: "model", type: "string" },
+      { description: "The text to embed.", name: "text", type: "string" },
     ],
-    returnType: "object",
-    description: "Generates an image.",
-  },
-  handler: async ([modelName, prompt]) => {
-    const model = getImageModel(modelName);
-    const { image } = await experimental_generateImage({ model, prompt });
-    // TODO: Support specifying width and height
-    // TODO: Return in an actually usable format
-    return image;
-  },
-});
-
-export const aiGenerateSpeech = defineFullOpcode<[string, string], object>("ai.generate_speech", {
-  metadata: {
-    label: "Generate Speech",
-    category: "AI",
+    returnType: "number[]",
     slots: [
       { name: "Model", type: "string" },
       { name: "Text", type: "string" },
     ],
+  },
+});
+
+export const aiImage = defineFullOpcode<[string, string], object>("ai.image", {
+  handler: async ([modelName, prompt]) => {
+    const model = getImageModel(modelName);
+    const { image } = await experimental_generateImage({ model, prompt });
+    return image;
+  },
+  metadata: {
+    category: "AI",
+    description: "Generates an image.",
+    label: "Generate Image",
     parameters: [
-      { name: "model", type: "string", description: "The model to use." },
-      { name: "text", type: "string", description: "The text to generate speech from." },
+      { description: "The model to use.", name: "model", type: "string" },
+      { description: "The prompt to generate image from.", name: "prompt", type: "string" },
     ],
     returnType: "object",
-    description: "Generates speech from text.",
+    slots: [
+      { name: "Model", type: "string" },
+      { name: "Prompt", type: "string" },
+    ],
   },
+});
+
+export const aiGenerateSpeech = defineFullOpcode<[string, string], object>("ai.generate_speech", {
   handler: async ([modelName, text]) => {
     const model = getSpeechModel(modelName);
     const { audio } = await experimental_generateSpeech({ model, text });
-    // TODO: Return in an actually usable format
     return audio;
+  },
+  metadata: {
+    category: "AI",
+    description: "Generates speech from text.",
+    label: "Generate Speech",
+    parameters: [
+      { description: "The model to use.", name: "model", type: "string" },
+      { description: "The text to generate speech from.", name: "text", type: "string" },
+    ],
+    returnType: "object",
+    slots: [
+      { name: "Model", type: "string" },
+      { name: "Text", type: "string" },
+    ],
   },
 });
 
 export const aiTranscribe = defineFullOpcode<[string, string], object>("ai.transcribe", {
+  handler: async ([modelName, audio]) => {
+    const model = getTranscriptionModel(modelName);
+    const { text } = await experimental_transcribe({ audio, model });
+    return text;
+  },
   metadata: {
-    label: "Transcribe Audio",
     category: "AI",
+    description: "Transcribes audio to text.",
+    label: "Transcribe Audio",
+    parameters: [
+      { description: "The model to use.", name: "model", type: "string" },
+      { description: "The audio to transcribe.", name: "audio", type: "object" },
+    ],
+    returnType: "string",
     slots: [
       { name: "Model", type: "string" },
       { name: "Audio", type: "block" },
     ],
-    parameters: [
-      { name: "model", type: "string", description: "The model to use." },
-      { name: "audio", type: "object", description: "The audio to transcribe." },
-    ],
-    returnType: "string",
-    description: "Transcribes audio to text.",
-  },
-  handler: async ([modelName, audio]) => {
-    const model = getTranscriptionModel(modelName);
-    const { text } = await experimental_transcribe({ model, audio });
-    return text;
   },
 });

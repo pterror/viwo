@@ -1,5 +1,5 @@
+import { type Entity, gameStore } from "../store/game";
 import { For, Show } from "solid-js";
-import { gameStore, Entity } from "../store/game";
 
 const ItemView = (props: { item: Entity }) => (
   <div class="room-panel__item">
@@ -7,7 +7,7 @@ const ItemView = (props: { item: Entity }) => (
       onClick={() => gameStore.execute("look", [props.item["name"] as string])}
       class={`room-panel__item-link ${
         (props.item["adjectives"] as readonly string[])
-          ?.map((a) => `attribute-${a.replace(/:/g, "-").replace(/ /g, "-")}`)
+          ?.map((adjective) => `attribute-${adjective.replaceAll(":", "-").replaceAll(" ", "-")}`)
           .join(" ") || ""
       }`}
     >
@@ -36,23 +36,27 @@ const ItemView = (props: { item: Entity }) => (
 export default function RoomPanel() {
   const room = () => {
     const id = gameStore.state.roomId;
-    return id ? gameStore.state.entities.get(id) : null;
+    return id ? gameStore.state.entities.get(id) : undefined;
   };
 
   const contents = () => {
-    const r = room();
-    if (!r || !Array.isArray(r["contents"])) return [];
-    return (r["contents"] as number[])
+    const roomValue = room();
+    if (!roomValue || !Array.isArray(roomValue["contents"])) {
+      return [];
+    }
+    return (roomValue["contents"] as number[])
       .map((id) => gameStore.state.entities.get(id))
-      .filter((e): e is Entity => !!e);
+      .filter((entity) => !!entity);
   };
 
   const exits = () => {
-    const r = room();
-    if (!r || !Array.isArray(r["exits"])) return [];
-    return (r["exits"] as number[])
+    const roomValue = room();
+    if (!roomValue || !Array.isArray(roomValue["exits"])) {
+      return [];
+    }
+    return (roomValue["exits"] as number[])
       .map((id) => gameStore.state.entities.get(id))
-      .filter((e): e is Entity => !!e);
+      .filter((entity) => !!entity);
   };
 
   return (

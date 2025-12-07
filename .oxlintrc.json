@@ -1,10 +1,12 @@
 {
-  "plugins": ["typescript", "import", "unicorn", "jest"],
-  "rules": {
-    "no-console": "off",
-    "no-debugger": "error",
-    "eqeqeq": "error",
-    "import/no-cycle": "error"
+  "plugins": ["typescript", "import", "unicorn"],
+  "categories": {
+    "correctness": "error",
+    "perf": "error",
+    "suspicious": "error",
+    "pedantic": "error",
+    "style": "error",
+    "nursery": "error"
   },
   "overrides": [
     {
@@ -13,5 +15,69 @@
         "no-magic-numbers": "off"
       }
     }
-  ]
+  ],
+  "rules": {
+    "no-debugger": "error",
+    "eqeqeq": "error",
+    "no-plusplus": "error",
+    "no-iterator": "error",
+    "no-empty": "error",
+    "no-proto": "error",
+    "no-var": "error",
+    "no-void": "error",
+    "unicode-bom": "error",
+    "import/no-cycle": "error",
+    "import/no-amd": "error",
+    "import/no-commonjs": "error",
+    "import/unambiguous": "error",
+    "max-params": ["error", { "max": 4 }],
+    "no-namespace": ["error", { "ignore": ["**/lib/*", "lib"] }],
+    "oxc/bad-bitwise-operator": "error",
+    // This rule does not seem to work.
+    "oxc/no-barrel-file": ["error", { "threshold": 1 }],
+    "oxc/no-const-enum": "error",
+    "promise/catch-or-return": "error",
+    "jsdoc/empty-tags": "error",
+    "max-classes-per-file": "off",
+    // Conflicts with formatter
+    "unicorn/number-literal-case": "off",
+    // Actually, avoid default export
+    "prefer-default-export": "off",
+    // `.filter(x => !!x)` narrows the type to remove falsy values. `.filter(Boolean)` does not.
+    "prefer-native-coercion-functions": "off",
+    // We want named exports, not default exports
+    "import/no-named-export": "off",
+    // Grouped exports move export declaration away from the original declaration
+    "import/group-exports": "off",
+    "import/max-dependencies": "off",
+    "func-style": ["off", { "style": "declaration" }],
+    "no-nested-ternary": "off",
+    "unicorn/no-nested-ternary": "off",
+    // TypeScript handles unset declarations
+    "init-declarations": "off",
+    "unicorn/prefer-spread": "off",
+    "unicorn/filename-case": "off",
+    // Lonely if is fine, for example to avoid nesting in the else case
+    "no-lonely-if": "off",
+    "unicorn/no-lonely-if": "off",
+    "unicorn/no-array-method-this-argument": "off",
+    "unicorn/no-array-callback-reference": "off",
+    "max-lines": "off",
+    "no-undef": "off",
+    "no-null": "off",
+    "no-magic-numbers": "off",
+    "no-ternary": "off",
+    // Negated condition is FINE, but only when the negated branch is very short
+    "no-negated-condition": "off",
+    "no-continue": "off",
+    // This lint needs to be disabled because we have exports that are renamed.
+    // These should stay close to the original declarations.
+    "import/exports-last": "off",
+    // Ideally we would want `"prefer-top-level"`, but ONLY if all imports are type imports
+    "import/consistent-type-specifier-style": "off",
+    // TODO: This should be fixed
+    "max-depth": "off",
+    // TODO: This should be fixed
+    "max-lines-per-function": "off"
+  }
 }

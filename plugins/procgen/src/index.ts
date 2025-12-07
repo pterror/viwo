@@ -1,5 +1,5 @@
-import { Plugin, PluginContext } from "@viwo/core";
 import * as ProcGenLib from "./lib";
+import type { Plugin, PluginContext } from "@viwo/core";
 
 export class ProcGenPlugin implements Plugin {
   name = "procgen";

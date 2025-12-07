@@ -1,5 +1,5 @@
-import { Component, For, Show, createMemo } from "solid-js";
-import { BlockDefinition } from "./types";
+import { type Component, For, Show, createMemo } from "solid-js";
+import type { BlockDefinition } from "./types";
 
 interface BlockNodeProps {
   node: any;
@@ -15,27 +15,30 @@ export const BlockNode: Component<BlockNodeProps> = (props) => {
   // Handle null/placeholder
   const isNull = createMemo(() => props.node === null);
 
-  const handleDrop = (e: DragEvent, path: number[]) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const data = e.dataTransfer?.getData("application/json");
-    if (!data) return;
+  const handleDrop = (event: DragEvent, path: number[]) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const data = event.dataTransfer?.getData("application/json");
+    if (!data) {
+      return;
+    }
 
     try {
       const { opcode } = JSON.parse(data);
-      const opcodes = props.opcodes || [];
-      const def = opcodes.find((d) => d.opcode === opcode);
-      if (!def) return;
+      const def = props.opcodes?.find((definition) => definition.opcode === opcode);
+      if (!def) {
+        return;
+      }
 
       let newNode: any = [opcode];
       if (def.slots) {
         def.slots.forEach((slot) => {
-          newNode.push(slot.default !== undefined ? slot.default : null);
+          newNode.push(slot.default !== undefined ? slot.default : undefined);
         });
       }
       props.onUpdate(path, newNode);
-    } catch (err) {
-      console.error("Drop error", err);
+    } catch (error) {
+      console.error("Drop error", error);
     }
   };
 
@@ -45,8 +48,8 @@ export const BlockNode: Component<BlockNodeProps> = (props) => {
       fallback={
         <div
           class="block-node block-node--placeholder"
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => handleDrop(e, props.path)}
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={(event) => handleDrop(event, props.path)}
         >
           Empty Slot
         </div>
@@ -59,17 +62,16 @@ export const BlockNode: Component<BlockNodeProps> = (props) => {
             <input
               class="block-node__input"
               value={props.node}
-              onInput={(e) => props.onUpdate(props.path, e.currentTarget.value)}
+              onInput={(event) => props.onUpdate(props.path, event.currentTarget.value)}
             />
           </div>
         }
       >
         {(() => {
           const opcode = createMemo(() => props.node[0]);
-          const def = createMemo(() => {
-            const opcodes = props.opcodes || [];
-            return opcodes.find((d) => d.opcode === opcode());
-          });
+          const def = createMemo(() =>
+            props.opcodes?.find((definition) => definition.opcode === opcode()),
+          );
           const args = createMemo(() => props.node.slice(1));
 
           return (
@@ -78,9 +80,9 @@ export const BlockNode: Component<BlockNodeProps> = (props) => {
               fallback={<div class="block-node block-node--unknown">Unknown: {opcode()}</div>}
             >
               <div
-                class={`block-node block-node--${def()!.type} block-node--${
-                  def()!.category
-                } ${def()!.layout ? `block-node--${def()!.layout}` : ""}`}
+                class={`block-node block-node--${def()!.type} block-node--${def()!.category} ${
+                  def()!.layout ? `block-node--${def()!.layout}` : ""
+                }`}
               >
                 {/* Header/Label - Hide for primitives and infix (unless we want it) */}
                 <Show when={def()!.layout !== "primitive" && def()!.layout !== "infix"}>
@@ -101,8 +103,8 @@ export const BlockNode: Component<BlockNodeProps> = (props) => {
                           fallback={
                             <div
                               class="block-node__placeholder"
-                              onDragOver={(e) => e.preventDefault()}
-                              onDrop={(e) => handleDrop(e, [...props.path, 1])}
+                              onDragOver={(event) => event.preventDefault()}
+                              onDrop={(event) => handleDrop(event, [...props.path, 1])}
                             >
                               Condition
                             </div>
@@ -121,8 +123,8 @@ export const BlockNode: Component<BlockNodeProps> = (props) => {
 
                     <button
                       class="block-node__delete"
-                      onClick={(e) => {
-                        e.stopPropagation();
+                      onClick={(event) => {
+                        event.stopPropagation();
                         props.onDelete(props.path);
                       }}
                     >
@@ -141,12 +143,12 @@ export const BlockNode: Component<BlockNodeProps> = (props) => {
                           type={def()!.opcode === "number" ? "number" : "text"}
                           class="block-node__input block-node__input--primitive"
                           value={args()[0]}
-                          onInput={(e) =>
+                          onInput={(event) =>
                             props.onUpdate(
                               [...props.path, 1],
                               def()!.opcode === "number"
-                                ? Number(e.currentTarget.value)
-                                : e.currentTarget.value,
+                                ? Number(event.currentTarget.value)
+                                : event.currentTarget.value,
                             )
                           }
                         />
@@ -155,8 +157,8 @@ export const BlockNode: Component<BlockNodeProps> = (props) => {
                       <select
                         class="block-node__select"
                         value={String(args()[0])}
-                        onChange={(e) =>
-                          props.onUpdate([...props.path, 1], e.currentTarget.value === "true")
+                        onChange={(event) =>
+                          props.onUpdate([...props.path, 1], event.currentTarget.value === "true")
                         }
                       >
                         <option value="true">True</option>
@@ -165,8 +167,8 @@ export const BlockNode: Component<BlockNodeProps> = (props) => {
                     </Show>
                     <button
                       class="block-node__delete"
-                      onClick={(e) => {
-                        e.stopPropagation();
+                      onClick={(event) => {
+                        event.stopPropagation();
                         props.onDelete(props.path);
                       }}
                     >
@@ -179,10 +181,10 @@ export const BlockNode: Component<BlockNodeProps> = (props) => {
                   <Show when={def()!.opcode === "seq"}>
                     <div class="block-node__sequence">
                       <For each={args()}>
-                        {(arg, i) => (
+                        {(arg, idx) => (
                           <BlockNode
                             node={arg}
-                            path={[...props.path, i() + 1]}
+                            path={[...props.path, idx() + 1]}
                             opcodes={props.opcodes}
                             onUpdate={props.onUpdate}
                             onDelete={props.onDelete}
@@ -196,16 +198,16 @@ export const BlockNode: Component<BlockNodeProps> = (props) => {
                     when={def()!.opcode !== "seq" && def()!.slots && def()!.layout !== "primitive"}
                   >
                     <For each={def()!.slots}>
-                      {(slot, i) => (
+                      {(slot, idx) => (
                         <Show
                           when={
                             // Skip first slot for control-flow as it's in header
-                            !(def()!.layout === "control-flow" && i() === 0)
+                            !(def()!.layout === "control-flow" && idx() === 0)
                           }
                         >
                           <>
                             {/* Infix Operator between args */}
-                            <Show when={def()!.layout === "infix" && i() === 1}>
+                            <Show when={def()!.layout === "infix" && idx() === 1}>
                               <div class="block-node__infix-op">{def()!.label}</div>
                             </Show>
 
@@ -220,20 +222,22 @@ export const BlockNode: Component<BlockNodeProps> = (props) => {
 
                               <div class="block-node__slot-content">
                                 <Show
-                                  when={args()[i()] !== undefined}
+                                  when={args()[idx()] !== undefined}
                                   fallback={
                                     <div
                                       class="block-node__placeholder"
-                                      onDragOver={(e) => e.preventDefault()}
-                                      onDrop={(e) => handleDrop(e, [...props.path, i() + 1])}
+                                      onDragOver={(event) => event.preventDefault()}
+                                      onDrop={(event) =>
+                                        handleDrop(event, [...props.path, idx() + 1])
+                                      }
                                     >
                                       {def()!.layout === "infix" ? "?" : "Drop here"}
                                     </div>
                                   }
                                 >
                                   <BlockNode
-                                    node={args()[i()]}
-                                    path={[...props.path, i() + 1]}
+                                    node={args()[idx()]}
+                                    path={[...props.path, idx() + 1]}
                                     opcodes={props.opcodes}
                                     onUpdate={props.onUpdate}
                                     onDelete={props.onDelete}
@@ -250,8 +254,8 @@ export const BlockNode: Component<BlockNodeProps> = (props) => {
                     <Show when={def()!.layout === "infix"}>
                       <button
                         class="block-node__delete block-node__delete--infix"
-                        onClick={(e) => {
-                          e.stopPropagation();
+                        onClick={(event) => {
+                          event.stopPropagation();
                           props.onDelete(props.path);
                         }}
                       >

@@ -1,5 +1,5 @@
+import { type ActionType, keybindsStore } from "../store/keybinds";
 import { createSignal, onCleanup, onMount } from "solid-js";
-import { ActionType, keybindsStore } from "../store/keybinds";
 
 interface Props {
   action: ActionType;
@@ -8,16 +8,20 @@ interface Props {
 export const KeybindRecorder = (props: Props) => {
   const [isRecording, setIsRecording] = createSignal(false);
 
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (!isRecording()) return;
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (!isRecording()) {
+      return;
+    }
 
-    e.preventDefault();
-    e.stopPropagation();
+    event.preventDefault();
+    event.stopPropagation();
 
     // Ignore modifier keys alone
-    if (["Control", "Shift", "Alt", "Meta"].includes(e.key)) return;
+    if (["Control", "Shift", "Alt", "Meta"].includes(event.key)) {
+      return;
+    }
 
-    keybindsStore.setKey(props.action, e.key);
+    keybindsStore.setKey(props.action, event.key);
     setIsRecording(false);
   };
 
@@ -26,20 +30,20 @@ export const KeybindRecorder = (props: Props) => {
   };
 
   // Click outside to cancel
-  const handleClickOutside = (e: MouseEvent) => {
-    if (isRecording() && !(e.target as HTMLElement).closest(".keybind-recorder")) {
+  const handleClickOutside = (event: MouseEvent) => {
+    if (isRecording() && !(event.target as HTMLElement).closest(".keybind-recorder")) {
       setIsRecording(false);
     }
   };
 
   onMount(() => {
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("click", handleClickOutside);
+    globalThis.addEventListener("keydown", handleKeyDown);
+    globalThis.addEventListener("click", handleClickOutside);
   });
 
   onCleanup(() => {
-    window.removeEventListener("keydown", handleKeyDown);
-    window.removeEventListener("click", handleClickOutside);
+    globalThis.removeEventListener("keydown", handleKeyDown);
+    globalThis.removeEventListener("click", handleClickOutside);
   });
 
   return (

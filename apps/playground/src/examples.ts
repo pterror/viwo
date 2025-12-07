@@ -1,4 +1,4 @@
-import { StdLib, MathLib, BooleanLib, ScriptExpression } from "@viwo/scripting";
+import { BooleanLib, MathLib, type ScriptExpression, StdLib } from "@viwo/scripting";
 
 const HelloWorld = StdLib.seq(StdLib.log("Hello World"));
 
@@ -29,7 +29,7 @@ const Fibonacci = StdLib.seq(
 );
 
 export const examples: Record<string, ScriptExpression<unknown[], any>> = {
-  "Hello World": HelloWorld,
   Counter: Counter,
   Fibonacci: Fibonacci,
+  "Hello World": HelloWorld,
 };

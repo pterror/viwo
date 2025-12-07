@@ -1,5 +1,5 @@
-import { Plugin, PluginContext } from "@viwo/core";
 import * as FsLib from "./lib";
+import type { Plugin, PluginContext } from "@viwo/core";
 
 export class FsPlugin implements Plugin {
   name = "fs";

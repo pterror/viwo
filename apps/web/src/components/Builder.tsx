@@ -1,8 +1,8 @@
-import { createSignal, Show, For } from "solid-js";
-import { gameStore, Entity } from "../store/game";
+import { type BlockDefinition, MonacoEditor, ScriptEditor } from "@viwo/web-editor";
+import { type Entity, gameStore } from "../store/game";
+import { For, Show, createSignal } from "solid-js";
 import ItemCreator from "./ItemCreator";
 import ItemEditor from "./ItemEditor";
-import { ScriptEditor, MonacoEditor, BlockDefinition } from "@viwo/web-editor";
 
 export default function Builder() {
   const [activeTab, setActiveTab] = createSignal<
@@ -10,9 +10,11 @@ export default function Builder() {
   >("room");
   const [description, setDescription] = createSignal("");
 
-  const handleUpdateDesc = (e: Event) => {
-    e.preventDefault();
-    if (!description()) return;
+  const handleUpdateDesc = (event: Event) => {
+    event.preventDefault();
+    if (!description()) {
+      return;
+    }
     gameStore.execute("set", ["here", "description", description()]);
     setDescription("");
   };
@@ -32,14 +34,14 @@ export default function Builder() {
         return completion;
       }
       return null;
-    } catch (e) {
-      console.error("AI Completion Failed:", e);
+    } catch (error) {
+      console.error("AI Completion Failed:", error);
       return null;
     }
   };
 
   /* Script Fetching Logic */
-  const [selectedEntityId, setSelectedEntityId] = createSignal<number | null>(null);
+  const [selectedEntityId, setSelectedEntityId] = createSignal<number | null>();
   const [verbName, setVerbName] = createSignal("interact"); // Default or empty
 
   // Helper to fetch entities (copied from ItemEditor for now)
@@ -70,8 +72,12 @@ export default function Builder() {
     // (ItemEditor filtered to room/inventory, but for script editor we might want everything available?)
     // Let's stick to Room + Inventory + Player + Room itself for context
     const allIds = new Set<number>();
-    if (gameStore.state.roomId) allIds.add(gameStore.state.roomId);
-    if (gameStore.state.playerId) allIds.add(gameStore.state.playerId);
+    if (gameStore.state.roomId) {
+      allIds.add(gameStore.state.roomId);
+    }
+    if (gameStore.state.playerId) {
+      allIds.add(gameStore.state.playerId);
+    }
 
     (gameStore.state.entities.get(gameStore.state.roomId!)?.["contents"] as number[])?.forEach(
       (id) => allIds.add(id),
@@ -80,9 +86,10 @@ export default function Builder() {
       (id) => allIds.add(id),
     );
 
-    return Array.from(allIds)
-      .map((id) => gameStore.state.entities.get(id))
-      .filter((e) => !!e);
+    return Array.from(allIds).flatMap((id) => {
+      const entity = gameStore.state.entities.get(id);
+      return entity ? [entity] : [];
+    });
   };
 
   const handleLoadScript = async () => {
@@ -97,34 +104,31 @@ export default function Builder() {
     try {
       const code = await gameStore.client.getVerb(eid, vName);
       setScriptCode(code);
-    } catch (e: any) {
-      console.error("Failed to load verb:", e);
-      alert(`Failed to load verb: ${e.message}`);
-      setScriptCode(`// Failed to load: ${e.message}`);
+    } catch (error: any) {
+      console.error("Failed to load verb:", error);
+      alert(`Failed to load verb: ${error.message}`);
+      setScriptCode(`// Failed to load: ${error.message}`);
     }
   };
 
   const handleSaveScript = async () => {
     const code = scriptCode();
-    const eid = selectedEntityId();
+    const entityId = selectedEntityId();
     const vName = verbName();
-
     // If we loaded a script, default to saving back to it.
     // But user might change selection.
     // Let's use current selection, but warn if it differs from loaded?
     // For simplicity, just use current selection.
-
-    if (!eid || !vName) {
+    if (!entityId || !vName) {
       alert("Please select an entity and enter a verb name to save to.");
       return;
     }
-
     try {
-      await gameStore.client.updateVerb(eid, vName, code);
-      alert(`Saved verb '${vName}' to entity ${eid}.`);
-    } catch (e: any) {
-      console.error("Failed to save verb:", e);
-      alert(`Failed to save verb: ${e.message}`);
+      await gameStore.client.updateVerb(entityId, vName, code);
+      alert(`Saved verb '${vName}' to entity ${entityId}.`);
+    } catch (error: any) {
+      console.error("Failed to save verb:", error);
+      alert(`Failed to save verb: ${error.message}`);
     }
   };
 
@@ -173,7 +177,7 @@ export default function Builder() {
               type="text"
               placeholder="New description for current room..."
               value={description()}
-              onInput={(e) => setDescription(e.currentTarget.value)}
+              onInput={(event) => setDescription(event.currentTarget.value)}
               class="builder__input"
             />
             <button type="submit" class="builder__btn">
@@ -207,19 +211,19 @@ export default function Builder() {
           <div
             class="builder__toolbar"
             style={{
-              padding: "10px",
-              margin: "10px",
+              "align-items": "center",
               background: "#2a2a2a",
               "border-radius": "4px",
               display: "flex",
               gap: "10px",
-              "align-items": "center",
+              margin: "10px",
+              padding: "10px",
             }}
           >
             <select
               class="builder__input"
-              style={{ width: "200px", margin: 0 }}
-              onChange={(e) => setSelectedEntityId(Number(e.currentTarget.value))}
+              style={{ margin: 0, width: "200px" }}
+              onChange={(event) => setSelectedEntityId(Number(event.currentTarget.value))}
               value={selectedEntityId() || ""}
             >
               <option value="" disabled>
@@ -236,10 +240,10 @@ export default function Builder() {
             <input
               type="text"
               class="builder__input"
-              style={{ width: "150px", margin: 0 }}
+              style={{ margin: 0, width: "150px" }}
               placeholder="Verb Name (e.g. interact)"
               value={verbName()}
-              onInput={(e) => setVerbName(e.currentTarget.value)}
+              onInput={(event) => setVerbName(event.currentTarget.value)}
             />
             <button class="builder__btn" onClick={handleLoadScript}>
               Load

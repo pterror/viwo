@@ -1,38 +1,28 @@
-import { defineFullOpcode, ScriptError, Capability } from "@viwo/scripting";
+import { type Capability, ScriptError, defineFullOpcode } from "@viwo/scripting";
 import {
-  getCapabilities,
   createCapability,
+  getCapabilities,
   getCapability as originalGetCapability,
   updateCapabilityOwner,
 } from "../../repo";
-import { Entity } from "@viwo/shared/jsonrpc";
+import type { Entity } from "@viwo/shared/jsonrpc";
 
 export const getCapability = defineFullOpcode<[string, object?], Capability | null>(
   "get_capability",
   {
-    metadata: {
-      label: "Get Capability",
-      category: "kernel",
-      description: "Retrieve a capability owned by the current entity",
-      slots: [
-        { name: "Type", type: "string" },
-        { name: "Filter", type: "block" },
-      ],
-      parameters: [
-        { name: "type", type: "string", description: "The capability type." },
-        { name: "filter", type: "object", optional: true, description: "Filter parameters." },
-      ],
-      returnType: "Capability | null",
-    },
     handler: ([type, filter = {}], ctx) => {
-      const caps = getCapabilities(ctx.this.id);
-      const match = caps.find((c) => {
-        if (c.type !== type) return false;
+      const capabilities = getCapabilities(ctx.this.id);
+      const match = capabilities.find((capability) => {
+        if (capability.type !== type) {
+          return false;
+        }
         // Check for wildcard
-        if (c.params["*"] === true) return true;
+        if (capability.params["*"] === true) {
+          return true;
+        }
         // Check filter params
-        for (const [k, v] of Object.entries(filter as Record<string, unknown>)) {
-          if (JSON.stringify(c.params[k]) !== JSON.stringify(v)) {
+        for (const [key, value] of Object.entries(filter as Record<string, unknown>)) {
+          if (JSON.stringify(capability.params[key]) !== JSON.stringify(value)) {
             return false;
           }
         }
@@ -43,26 +33,24 @@ export const getCapability = defineFullOpcode<[string, object?], Capability | nu
       }
       return { __brand: "Capability", id: match.id };
     },
+    metadata: {
+      category: "kernel",
+      description: "Retrieve a capability owned by the current entity",
+      label: "Get Capability",
+      parameters: [
+        { description: "The capability type.", name: "type", type: "string" },
+        { description: "Filter parameters.", name: "filter", optional: true, type: "object" },
+      ],
+      returnType: "Capability | null",
+      slots: [
+        { name: "Type", type: "string" },
+        { name: "Filter", type: "block" },
+      ],
+    },
   },
 );
 
 export const mint = defineFullOpcode<[Capability | null, string, object], Capability>("mint", {
-  metadata: {
-    label: "Mint Capability",
-    category: "kernel",
-    description: "Mint a new capability (requires sys.mint)",
-    slots: [
-      { name: "Authority", type: "block" },
-      { name: "Type", type: "string" },
-      { name: "Params", type: "block" },
-    ],
-    parameters: [
-      { name: "authority", type: "object", description: "The authority capability." },
-      { name: "type", type: "string", description: "The capability type to mint." },
-      { name: "params", type: "object", description: "The capability parameters." },
-    ],
-    returnType: "Capability",
-  },
   handler: ([auth, type, params], ctx) => {
     if (!auth || (auth as any).__brand !== "Capability") {
       throw new ScriptError("mint: expected capability for authority");
@@ -92,23 +80,25 @@ export const mint = defineFullOpcode<[Capability | null, string, object], Capabi
     const newId = createCapability(ctx.this.id, type, params as never);
     return { __brand: "Capability", id: newId };
   },
+  metadata: {
+    category: "kernel",
+    description: "Mint a new capability (requires sys.mint)",
+    label: "Mint Capability",
+    parameters: [
+      { description: "The authority capability.", name: "authority", type: "object" },
+      { description: "The capability type to mint.", name: "type", type: "string" },
+      { description: "The capability parameters.", name: "params", type: "object" },
+    ],
+    returnType: "Capability",
+    slots: [
+      { name: "Authority", type: "block" },
+      { name: "Type", type: "string" },
+      { name: "Params", type: "block" },
+    ],
+  },
 });
 
 export const delegate = defineFullOpcode<[Capability | null, object], Capability>("delegate", {
-  metadata: {
-    label: "Delegate Capability",
-    category: "kernel",
-    description: "Create a restricted version of a capability",
-    slots: [
-      { name: "Parent", type: "block" },
-      { name: "Restrictions", type: "block" },
-    ],
-    parameters: [
-      { name: "parent", type: "object", description: "The parent capability." },
-      { name: "restrictions", type: "object", description: "The restrictions to apply." },
-    ],
-    returnType: "Capability",
-  },
   handler: ([parent, restrictions], ctx) => {
     if (!parent || (parent as any).__brand !== "Capability") {
       throw new ScriptError("delegate: expected capability");
@@ -127,25 +117,25 @@ export const delegate = defineFullOpcode<[Capability | null, object], Capability
 
     return { __brand: "Capability", id: newId };
   },
+  metadata: {
+    category: "kernel",
+    description: "Create a restricted version of a capability",
+    label: "Delegate Capability",
+    parameters: [
+      { description: "The parent capability.", name: "parent", type: "object" },
+      { description: "The restrictions to apply.", name: "restrictions", type: "object" },
+    ],
+    returnType: "Capability",
+    slots: [
+      { name: "Parent", type: "block" },
+      { name: "Restrictions", type: "block" },
+    ],
+  },
 });
 
 export const giveCapability = defineFullOpcode<[Capability | null, Entity], null>(
   "give_capability",
   {
-    metadata: {
-      label: "Give Capability",
-      category: "kernel",
-      description: "Transfer a capability to another entity",
-      slots: [
-        { name: "Cap", type: "block" },
-        { name: "Target", type: "block" },
-      ],
-      parameters: [
-        { name: "cap", type: "object", description: "The capability to give." },
-        { name: "target", type: "object", description: "The target entity." },
-      ],
-      returnType: "null",
-    },
     handler: ([cap, target], ctx) => {
       if (!cap || (cap as any).__brand !== "Capability") {
         throw new ScriptError("give_capability: expected capability");
@@ -163,43 +153,42 @@ export const giveCapability = defineFullOpcode<[Capability | null, Entity], null
       updateCapabilityOwner((cap as Capability).id, target.id);
       return null;
     },
+    metadata: {
+      category: "kernel",
+      description: "Transfer a capability to another entity",
+      label: "Give Capability",
+      parameters: [
+        { description: "The capability to give.", name: "cap", type: "object" },
+        { description: "The target entity.", name: "target", type: "object" },
+      ],
+      returnType: "null",
+      slots: [
+        { name: "Cap", type: "block" },
+        { name: "Target", type: "block" },
+      ],
+    },
   },
 );
 
 export const hasCapability = defineFullOpcode<[Entity, string, object?], boolean>(
   "has_capability",
   {
-    metadata: {
-      label: "Has Capability",
-      category: "kernel",
-      description: "Check if an entity has a capability",
-      slots: [
-        { name: "Target", type: "block" },
-        { name: "Type", type: "string" },
-        { name: "Filter", type: "block" },
-      ],
-      parameters: [
-        { name: "target", type: "object", description: "The target entity." },
-        { name: "type", type: "string", description: "The capability type." },
-        { name: "filter", type: "object", optional: true, description: "Filter parameters." },
-      ],
-      returnType: "boolean",
-    },
     handler: ([target, type, filter = {}], _ctx) => {
       if (!target || typeof target.id !== "number") {
         throw new ScriptError("has_capability: expected target entity");
       }
-
-      const caps = getCapabilities(target.id);
-      const match = caps.find((c) => {
-        if (c.type !== type) return false;
-
+      const capabilities = getCapabilities(target.id);
+      const match = capabilities.find((capability) => {
+        if (capability.type !== type) {
+          return false;
+        }
         // Check for wildcard
-        if (c.params["*"] === true) return true;
-
+        if (capability.params["*"] === true) {
+          return true;
+        }
         // Check filter params
-        for (const [k, v] of Object.entries(filter as Record<string, unknown>)) {
-          if (JSON.stringify(c.params[k]) !== JSON.stringify(v)) {
+        for (const [key, value] of Object.entries(filter as Record<string, unknown>)) {
+          if (JSON.stringify(capability.params[key]) !== JSON.stringify(value)) {
             return false;
           }
         }
@@ -207,6 +196,22 @@ export const hasCapability = defineFullOpcode<[Entity, string, object?], boolean
       });
 
       return !!match;
+    },
+    metadata: {
+      category: "kernel",
+      description: "Check if an entity has a capability",
+      label: "Has Capability",
+      parameters: [
+        { description: "The target entity.", name: "target", type: "object" },
+        { description: "The capability type.", name: "type", type: "string" },
+        { description: "Filter parameters.", name: "filter", optional: true, type: "object" },
+      ],
+      returnType: "boolean",
+      slots: [
+        { name: "Target", type: "block" },
+        { name: "Type", type: "string" },
+        { name: "Filter", type: "block" },
+      ],
     },
   },
 );

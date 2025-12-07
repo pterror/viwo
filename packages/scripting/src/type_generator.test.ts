@@ -1,14 +1,14 @@
 import { describe, expect, test } from "bun:test";
+import type { OpcodeMetadata } from "./types";
 import { generateTypeDefinitions } from "./type_generator";
-import { OpcodeMetadata } from "./types";
 
 describe("generateTypeDefinitions", () => {
   test("generates basic function definitions", () => {
-    const opcodes: OpcodeMetadata[] = [
+    const opcodes: readonly OpcodeMetadata[] = [
       {
+        category: "test",
         label: "Test Op",
         opcode: "test.op",
-        category: "test",
         parameters: [{ name: "a", type: "string" }],
         returnType: "number",
       },
@@ -20,59 +20,65 @@ describe("generateTypeDefinitions", () => {
   });
 
   test("generates function definitions with generics", () => {
-    const opcodes: OpcodeMetadata[] = [
+    const opcodes: readonly OpcodeMetadata[] = [
       {
+        category: "list",
+        genericParameters: ["Type", "Result"],
         label: "Map",
         opcode: "list.map",
-        category: "list",
         parameters: [
-          { name: "list", type: "T[]" },
-          { name: "fn", type: "(item: T) => U" },
+          { name: "list", type: "Type[]" },
+          { name: "fn", type: "(item: Type) => Result" },
         ],
-        genericParameters: ["T", "U"],
-        returnType: "U[]",
+        returnType: "Result[]",
       },
     ];
 
     const defs = generateTypeDefinitions(opcodes);
     expect(defs).toContain("namespace list {");
-    expect(defs).toContain("function map<T, U>(list: T[], fn: (item: T) => U): U[];");
+    expect(defs).toContain(
+      "function map<Type, Result>(list: Type[], fn: (item: Type) => Result): Result[];",
+    );
   });
 
   test("generates global function definitions with generics", () => {
-    const opcodes: OpcodeMetadata[] = [
+    const opcodes: readonly OpcodeMetadata[] = [
       {
+        category: "global",
+        genericParameters: ["Type"],
         label: "Global Generic",
         opcode: "identity",
-        category: "global",
-        parameters: [{ name: "val", type: "T" }],
-        genericParameters: ["T"],
-        returnType: "T",
+        parameters: [{ name: "val", type: "Type" }],
+        returnType: "Type",
       },
     ];
 
     const defs = generateTypeDefinitions(opcodes);
-    expect(defs).toContain("function identity<T>(val: T): T;");
+    expect(defs).toContain("function identity<Type>(val: Type): Type;");
   });
 
   test("generates complex generic definitions", () => {
-    const opcodes: OpcodeMetadata[] = [
+    const opcodes: readonly OpcodeMetadata[] = [
       {
-        label: "New Object",
-        opcode: "obj.new",
         category: "data",
         genericParameters: [
           "Kvs extends [] | readonly (readonly [key: '' | (string & {}), value: unknown])[]",
         ],
+        label: "New Object",
+        opcode: "obj.new",
         parameters: [{ name: "...kvs", type: "Kvs" }],
         returnType:
-          "{ [K in keyof Kvs & `${number}` as (Kvs[K] & [string, unknown])[0]]: (Kvs[K] & [string, unknown])[1] }",
+          // This is an intentional template curly (part of TypeScript's type syntax)
+          // oxlint-disable-next-line no-template-curly-in-string
+          "{ [Key in keyof Kvs & `${number}` as (Kvs[Key] & [string, unknown])[0]]: (Kvs[Key] & [string, unknown])[1] }",
       },
     ];
 
     const defs = generateTypeDefinitions(opcodes);
     expect(defs).toContain(
-      "function new_<Kvs extends [] | readonly (readonly [key: '' | (string & {}), value: unknown])[]>(...kvs: Kvs): { [K in keyof Kvs & `${number}` as (Kvs[K] & [string, unknown])[0]]: (Kvs[K] & [string, unknown])[1] };",
+      // This is an intentional template curly (part of TypeScript's type syntax)
+      // oxlint-disable-next-line no-template-curly-in-string
+      "function new_<Kvs extends [] | readonly (readonly [key: '' | (string & {}), value: unknown])[]>(...kvs: Kvs): { [Key in keyof Kvs & `${number}` as (Kvs[Key] & [string, unknown])[0]]: (Kvs[Key] & [string, unknown])[1] };",
     );
   });
 });

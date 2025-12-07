@@ -1,6 +1,6 @@
-import { createSignal, For } from "solid-js";
-import { gameStore } from "../store/game";
+import { For, createSignal } from "solid-js";
 import { ALL_ADJECTIVES } from "@viwo/shared/constants/adjectives";
+import { gameStore } from "../store/game";
 
 export default function ItemCreator(props: { onClose?: () => void }) {
   const [name, setName] = createSignal("");
@@ -10,28 +10,34 @@ export default function ItemCreator(props: { onClose?: () => void }) {
 
   const filteredAdjectives = () => {
     const input = adjInput().toLowerCase();
-    if (!input) return [];
+    if (!input) {
+      return [];
+    }
     return ALL_ADJECTIVES.filter(
       (adj) => adj.includes(input) && !selectedAdjectives().includes(adj),
     ).slice(0, 5);
   };
 
-  const addAdjective = (adj: string) => {
-    setSelectedAdjectives([...selectedAdjectives(), adj]);
+  const addAdjective = (adjective: string) => {
+    setSelectedAdjectives([...selectedAdjectives(), adjective]);
     setAdjInput("");
   };
 
-  const removeAdjective = (adj: string) => {
-    setSelectedAdjectives(selectedAdjectives().filter((a) => a !== adj));
+  const removeAdjective = (adjective: string) => {
+    setSelectedAdjectives(
+      selectedAdjectives().filter((otherAdjective) => otherAdjective !== adjective),
+    );
   };
 
-  const handleCreate = (e: Event) => {
-    e.preventDefault();
-    if (!name()) return;
+  const handleCreate = (event: Event) => {
+    event.preventDefault();
+    if (!name()) {
+      return;
+    }
 
     const itemProps = {
-      description: description(),
       adjectives: selectedAdjectives(),
+      description: description(),
     };
 
     gameStore.execute("create", [name(), JSON.stringify(itemProps)]);
@@ -50,7 +56,7 @@ export default function ItemCreator(props: { onClose?: () => void }) {
           type="text"
           placeholder="Item Name"
           value={name()}
-          onInput={(e) => setName(e.currentTarget.value)}
+          onInput={(event) => setName(event.currentTarget.value)}
           class="builder__input"
           required
         />
@@ -58,7 +64,7 @@ export default function ItemCreator(props: { onClose?: () => void }) {
           type="text"
           placeholder="Description"
           value={description()}
-          onInput={(e) => setDescription(e.currentTarget.value)}
+          onInput={(event) => setDescription(event.currentTarget.value)}
           class="builder__input"
         />
 
@@ -71,7 +77,7 @@ export default function ItemCreator(props: { onClose?: () => void }) {
                   onClick={() => removeAdjective(adj)}
                   title="Click to remove"
                 >
-                  {adj} ×
+                  {adj} &times;
                 </span>
               )}
             </For>
@@ -81,7 +87,7 @@ export default function ItemCreator(props: { onClose?: () => void }) {
               type="text"
               placeholder="Add Adjective (e.g. color:red)"
               value={adjInput()}
-              onInput={(e) => setAdjInput(e.currentTarget.value)}
+              onInput={(event) => setAdjInput(event.currentTarget.value)}
               class="builder__input"
             />
             {filteredAdjectives().length > 0 && (

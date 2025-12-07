@@ -1,8 +1,8 @@
-import { Component, createSignal, For } from "solid-js";
+import { type Component, For, createSignal } from "solid-js";
+import { clearOutput, getOutput, opcodes, ops } from "./runtime";
+import { createScriptContext, evaluate } from "@viwo/scripting";
 import { ScriptEditor } from "@viwo/web-editor";
-import { opcodes, clearOutput, getOutput, ops } from "./runtime";
 import { examples } from "./examples";
-import { evaluate, createScriptContext } from "@viwo/scripting";
 
 const App: Component = () => {
   const [output, setOutput] = createSignal("");
@@ -15,13 +15,15 @@ const App: Component = () => {
     clearOutput();
     setOutput("");
     try {
-      const ctx = createScriptContext({ caller: { id: 0 }, this: { id: 0 }, ops });
+      const ctx = createScriptContext({ caller: { id: 0 }, ops, this: { id: 0 } });
       await evaluate(script(), ctx);
       setOutput(getOutput());
-    } catch (e: any) {
-      console.error(e);
+    } catch (error: any) {
+      console.error(error);
       setOutput(
-        `Error: ${e.message}\n${e.stackTrace ? JSON.stringify(e.stackTrace, null, 2) : ""}`,
+        `Error: ${error.message}\n${
+          error.stackTrace ? JSON.stringify(error.stackTrace, undefined, 2) : ""
+        }`,
       );
     }
   };
@@ -36,7 +38,10 @@ const App: Component = () => {
       <header class="playground__header">
         <h1>Viwo Scripting Playground</h1>
         <div class="playground__controls">
-          <select value={selectedExample()} onChange={(e) => loadExample(e.currentTarget.value)}>
+          <select
+            value={selectedExample()}
+            onChange={(event) => loadExample(event.currentTarget.value)}
+          >
             <For each={Object.keys(examples)}>{(name) => <option value={name}>{name}</option>}</For>
           </select>
           <button onClick={runScript}>Run</button>

@@ -1,25 +1,23 @@
-import { Plugin, PluginContext, CommandContext } from "@viwo/core";
-import { generateText, generateObject, embed, streamText } from "ai";
-import { z } from "zod";
 import * as AiLib from "./lib";
+import type { CommandContext, Plugin, PluginContext } from "@viwo/core";
+import { embed, experimental_generateImage, generateObject, generateText, streamText } from "ai";
 import { getImageModel, getLanguageModel, getTextEmbeddingModel } from "./models";
+import { z } from "zod";
 
-export interface GenerationTemplate<T = any> {
+export interface GenerationTemplate<Type = any> {
   name: string;
   description: string;
-  // TODO: Remove dependency on zod. We don't need it if all schemas are defined at runtime.
-  schema: z.ZodType<T>;
+  schema: z.ZodType<Type>;
   prompt: (context: CommandContext, instruction?: string) => string;
 }
 
 export class AiPlugin implements Plugin {
   name = "ai";
   version = "0.1.0";
-  // TODO: Make this configurable
   private modelSpec = "openai:gpt-4o";
   private imageModelSpec = "openai:dall-e-3";
   private textEmbeddingModelSpec = "openai:text-embedding-3-small";
-  private templates: Map<string, GenerationTemplate<any>> = new Map();
+  private templates = new Map<string, GenerationTemplate<any>>();
   private context!: PluginContext;
 
   onLoad(ctx: PluginContext) {
@@ -31,31 +29,31 @@ export class AiPlugin implements Plugin {
 
     // Register default templates
     this.registerTemplate({
-      name: "item",
       description: "Generate an item",
-      schema: z.object({
-        name: z.string(),
-        description: z.string(),
-        adjectives: z.array(z.string()),
-        custom_css: z.string().optional(),
-      }),
+      name: "item",
       prompt: (_ctx, instruction) => `
         You are a creative game master. Create an item based on the description: "${instruction}".
       `,
+      schema: z.object({
+        adjectives: z.array(z.string()),
+        custom_css: z.string().optional(),
+        description: z.string(),
+        name: z.string(),
+      }),
     });
 
     this.registerTemplate({
-      name: "room",
       description: "Generate a room",
-      schema: z.object({
-        name: z.string(),
-        description: z.string(),
-        adjectives: z.array(z.string()),
-        custom_css: z.string().optional(),
-      }),
+      name: "room",
       prompt: (_ctx, instruction) => `
         You are a creative game master. Create a room based on the description: "${instruction}".
       `,
+      schema: z.object({
+        adjectives: z.array(z.string()),
+        custom_css: z.string().optional(),
+        description: z.string(),
+        name: z.string(),
+      }),
     });
     ctx.registerRpcMethod("ai_completion", this.handleCompletion.bind(this));
     ctx.registerRpcMethod("stream_talk", this.handleStreamTalk.bind(this));
@@ -73,7 +71,7 @@ export class AiPlugin implements Plugin {
     const functionSignatures = Object.values(opcodes)
       .map((op) => {
         const params = op.parameters
-          ? op.parameters.map((p) => `${p.name}: ${p.type}`).join(", ")
+          ? op.parameters.map((parameter) => `${parameter.name}: ${parameter.type}`).join(", ")
           : "";
         return `${op.opcode}(${params}): ${op.returnType || "any"}`;
       })
@@ -103,22 +101,22 @@ export class AiPlugin implements Plugin {
 
       const { object: data } = await generateObject({
         model,
+        prompt: prompt,
         schema: z.object({
           completion: z.string(),
         }),
-        prompt: prompt,
       });
 
       return (data as any).completion;
     } catch (error: any) {
       console.error("AI Completion Error:", error);
-      return null;
+      return;
     }
   }
 
   async handleTalk(ctx: CommandContext) {
-    const targetName = ctx.args[0];
-    const message = ctx.args.slice(1).join(" ");
+    const [targetName, ...args] = ctx.args;
+    const message = args.join(" ");
 
     if (!targetName || !message) {
       ctx.send("message", "Usage: talk <npc> <message>");
@@ -133,7 +131,9 @@ export class AiPlugin implements Plugin {
     }
 
     const roomItems = this.getResolvedRoom(playerEntity["location"] as number)?.contents;
-    const target = roomItems?.find((e: any) => e.name.toLowerCase() === targetName.toLowerCase());
+    const target = roomItems?.find(
+      (item) => (item["name"] as string)?.toLowerCase() === targetName.toLowerCase(),
+    );
 
     if (!target) {
       ctx.send("message", `You don't see '${targetName}' here.`);
@@ -146,8 +146,8 @@ export class AiPlugin implements Plugin {
       const model = getLanguageModel(this.modelSpec);
       const { text } = await generateText({
         model,
-        system: systemPrompt,
         prompt: message,
+        system: systemPrompt,
       });
 
       ctx.send("message", `${target["name"]} says: "${text}"`);
@@ -170,7 +170,9 @@ export class AiPlugin implements Plugin {
     }
 
     const roomItems = this.getResolvedRoom(playerEntity["location"] as number)?.contents;
-    const target = roomItems?.find((e: any) => e.name.toLowerCase() === targetName.toLowerCase());
+    const target = roomItems?.find(
+      (item) => (item["name"] as string)?.toLowerCase() === targetName.toLowerCase(),
+    );
 
     if (!target) {
       throw new Error(`You don't see '${targetName}' here.`);
@@ -182,22 +184,22 @@ export class AiPlugin implements Plugin {
       const model = getLanguageModel(this.modelSpec);
       const { textStream } = await streamText({
         model,
-        system: systemPrompt,
         prompt: message,
+        system: systemPrompt,
       });
 
       const streamId = `stream-${Date.now()}`;
       ctx.send("stream_start", { streamId });
       ctx.send("stream_chunk", {
-        streamId,
         chunk: `${target["name"]} says: "`,
+        streamId,
       });
 
       for await (const textPart of textStream) {
-        ctx.send("stream_chunk", { streamId, chunk: textPart });
+        ctx.send("stream_chunk", { chunk: textPart, streamId });
       }
 
-      ctx.send("stream_chunk", { streamId, chunk: `"` });
+      ctx.send("stream_chunk", { chunk: `"`, streamId });
       ctx.send("stream_end", { streamId });
     } catch (error: any) {
       console.error("AI Stream Error:", error);
@@ -229,11 +231,11 @@ Keep your response short and in character.`;
           });
           if (memories.length > 0) {
             systemPrompt += `\n\nRelevant Memories:\n${memories
-              .map((m: any) => `- ${m.content}`)
+              .map((memory: any) => `- ${memory.content}`)
               .join("\n")}`;
           }
-        } catch (e) {
-          console.warn("Failed to fetch memories:", e);
+        } catch (error) {
+          console.warn("Failed to fetch memories:", error);
         }
       }
     }
@@ -241,7 +243,7 @@ Keep your response short and in character.`;
   }
 
   async handleGen(ctx: CommandContext) {
-    const templateName = ctx.args[0];
+    const [templateName] = ctx.args;
     const instruction = ctx.args.slice(1).join(" ");
 
     if (!templateName) {
@@ -268,20 +270,22 @@ Keep your response short and in character.`;
 
       const { object: data } = await generateObject({
         model,
-        schema: template.schema,
         prompt: prompt,
+        schema: template.schema,
       });
 
       const playerEntity = this.context.core.getEntity(ctx.player.id);
-      if (!playerEntity || !playerEntity["location"]) return;
+      if (!playerEntity || !playerEntity["location"]) {
+        return;
+      }
 
       if (templateName === "room") {
         // Create room and exit
         const newRoomId = this.context.core.createEntity({
-          name: data.name,
-          description: data.description,
           adjectives: data.adjectives,
           custom_css: data.custom_css,
+          description: data.description,
+          name: data.name,
         });
         const room = this.getResolvedRoom(newRoomId);
         if (room) {
@@ -291,11 +295,11 @@ Keep your response short and in character.`;
       } else {
         // Default: Create item in current room
         this.context.core.createEntity({
-          name: data.name,
-          location: playerEntity["location"],
-          description: data.description,
           adjectives: data.adjectives,
           custom_css: data.custom_css,
+          description: data.description,
+          location: playerEntity["location"],
+          name: data.name,
         });
         const room = this.getResolvedRoom(playerEntity["location"] as number);
         if (room) {
@@ -336,9 +340,9 @@ Keep your response short and in character.`;
         // This is a bit fuzzy. The command is `image <args>`.
         // If args[0] is a target, we might want to use its prompt.
 
-        const possibleTargetName = ctx.args[0];
+        const [possibleTargetName] = ctx.args;
         const target = roomItems?.find(
-          (e: any) => e.name.toLowerCase() === possibleTargetName?.toLowerCase(),
+          (item) => (item["name"] as string)?.toLowerCase() === possibleTargetName?.toLowerCase(),
         );
 
         if (target) {
@@ -356,17 +360,12 @@ Keep your response short and in character.`;
       }
 
       const model = getImageModel(this.imageModelSpec);
-      const { image } = await import("ai").then((m) =>
-        m.experimental_generateImage({
-          model,
-          prompt: imagePrompt,
-          n: 1,
-        }),
-      );
+      // oxlint-disable-next-line id-length
+      const { image } = await experimental_generateImage({ model, n: 1, prompt: imagePrompt });
 
       const base64Data = image.base64;
       const buffer = Buffer.from(base64Data, "base64");
-      const filename = `${Date.now()}-${Math.random().toString(36).substring(7)}.png`;
+      const filename = `${Date.now()}-${Math.random().toString(36).slice(7)}.png`;
       const filepath = `apps/web/public/images/${filename}`;
       const publicUrl = `/images/${filename}`;
 
@@ -375,8 +374,8 @@ Keep your response short and in character.`;
       // Update current room or item
 
       // Re-parsing args for target
-      const targetName = ctx.args[0];
-      const prompt = ctx.args.slice(1).join(" ");
+      const [targetName, ...args] = ctx.args;
+      const prompt = args.slice(1).join(" ");
 
       if (!targetName || !prompt) {
         ctx.send("message", "Usage: image <target> <prompt>");

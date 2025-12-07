@@ -1,14 +1,19 @@
-import { describe, test, expect, beforeEach } from "bun:test";
-import { BooleanLib, StdLib } from "@viwo/scripting";
-import { evaluate, createScriptContext, ObjectLib, ListLib } from "@viwo/scripting";
-import { Entity } from "@viwo/shared/jsonrpc";
-import { createEntity, getEntity, addVerb, updateEntity, createCapability } from "./repo";
-import { db } from ".";
 import * as CoreLib from "./runtime/lib/core";
 import * as KernelLib from "./runtime/lib/kernel";
-import { seed } from "./seed";
-
+import {
+  BooleanLib,
+  ListLib,
+  ObjectLib,
+  StdLib,
+  createScriptContext,
+  evaluate,
+} from "@viwo/scripting";
+import { addVerb, createCapability, createEntity, getEntity, updateEntity } from "./repo";
+import { beforeEach, describe, expect, test } from "bun:test";
+import type { Entity } from "@viwo/shared/jsonrpc";
 import { GameOpcodes } from "./runtime/opcodes";
+import { db } from ".";
+import { seed } from "./seed";
 
 describe("Mailbox Verification", () => {
   let sender: Entity;
@@ -31,7 +36,9 @@ describe("Mailbox Verification", () => {
     const systemRes = db
       .query<Entity, []>("SELECT * FROM entities WHERE json_extract(props, '$.name') = 'System'")
       .get();
-    if (!systemRes) throw new Error("System entity not found");
+    if (!systemRes) {
+      throw new Error("System entity not found");
+    }
     system = getEntity(systemRes.id)!;
 
     // 1. Create Sender and Receiver
@@ -52,9 +59,9 @@ describe("Mailbox Verification", () => {
 
     // 3. Create Item to send
     const itemId = createEntity({
+      location: senderId,
       name: "Letter",
-      owner: senderId,
-      location: senderId, // Held by sender
+      owner: senderId, // Held by sender
     });
     item = getEntity(itemId)!;
     // Sender gets control of item
@@ -69,12 +76,7 @@ describe("Mailbox Verification", () => {
       ObjectLib.objNew(["target_id", target.id]),
     );
 
-    const ctx = createScriptContext({
-      caller: actor,
-      this: system,
-      args: [],
-      ops: GameOpcodes,
-    });
+    const ctx = createScriptContext({ args: [], caller: actor, ops: GameOpcodes, this: system });
     return evaluate(script, ctx);
   };
 
@@ -135,12 +137,7 @@ describe("Mailbox Verification", () => {
       CoreLib.entity(mailbox.id),
     );
 
-    const ctx = createScriptContext({
-      caller: sender,
-      this: system,
-      args: [],
-      ops: GameOpcodes,
-    });
+    const ctx = createScriptContext({ args: [], caller: sender, ops: GameOpcodes, this: system });
 
     const result = await evaluate(callGive, ctx);
     expect(result).toBe(true);
@@ -170,10 +167,10 @@ describe("Mailbox Verification", () => {
     const callLook = CoreLib.call(CoreLib.entity(system.id), "look_at", CoreLib.entity(mailbox.id));
 
     const ctx = createScriptContext({
-      caller: sender,
-      this: system,
       args: [],
+      caller: sender,
       ops: GameOpcodes,
+      this: system,
     });
 
     const contents = await evaluate(callLook, ctx);
@@ -198,12 +195,7 @@ describe("Mailbox Verification", () => {
 
     const callLook = CoreLib.call(CoreLib.entity(system.id), "look_at", CoreLib.entity(mailbox.id));
 
-    const ctx = createScriptContext({
-      caller: receiver,
-      this: system,
-      args: [],
-      ops: GameOpcodes,
-    });
+    const ctx = createScriptContext({ args: [], caller: receiver, ops: GameOpcodes, this: system });
 
     // First put something in there so we can see it
     updateEntity({ ...item, location: mailbox.id });

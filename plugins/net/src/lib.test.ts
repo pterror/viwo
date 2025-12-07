@@ -1,18 +1,18 @@
-import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test";
+import * as NetLib from "./lib";
+import { KernelLib, createCapability, createEntity, db, getEntity } from "@viwo/core";
 import {
-  createScriptContext,
-  evaluate,
-  createOpcodeRegistry,
+  ListLib,
+  ObjectLib,
   ScriptError,
   StdLib,
-  ObjectLib,
-  ListLib,
+  createOpcodeRegistry,
+  createScriptContext,
+  evaluate,
 } from "@viwo/scripting";
-import { createCapability, KernelLib, createEntity, getEntity, db } from "@viwo/core";
-import * as NetLib from "./lib";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 // Mock fetch
-const originalFetch = global.fetch;
+const originalFetch = globalThis.fetch;
 const mockFetch = mock();
 
 const TEST_OPS = createOpcodeRegistry(StdLib, ObjectLib, ListLib, KernelLib, NetLib);
@@ -37,24 +37,25 @@ describe("net.http", () => {
     user = getEntity(userId)!;
 
     mockFetch.mockReset();
-    // @ts-expect-error
-    global.fetch = mockFetch;
+    // @ts-expect-error We do not need preconnect.
+    globalThis.fetch = mockFetch;
   });
 
   afterEach(() => {
-    global.fetch = originalFetch;
+    globalThis.fetch = originalFetch;
   });
 
   describe("net.http.fetch", () => {
     it("should fetch with valid capability", async () => {
-      const ctx = createScriptContext({ caller: admin, this: admin, ops: TEST_OPS });
+      const ctx = createScriptContext({ caller: admin, ops: TEST_OPS, this: admin });
       mockFetch.mockResolvedValue({
+        bytes: () =>
+          Promise.resolve(new Uint8Array(new TextEncoder().encode("Hello World").buffer)),
+        headers: new Headers({ "Content-Type": "text/plain" }),
         ok: true,
         status: 200,
         statusText: "OK",
-        headers: new Headers({ "Content-Type": "text/plain" }),
-        text: async () => "Hello World",
-        bytes: async () => new Uint8Array(new TextEncoder().encode("Hello World").buffer),
+        text: () => Promise.resolve("Hello World"),
       });
 
       const response = await evaluate(
@@ -75,15 +76,15 @@ describe("net.http", () => {
       );
     });
 
-    it("should fail if capability is missing", async () => {
-      const ctx = createScriptContext({ caller: user, this: user, ops: TEST_OPS });
+    it("should fail if capability is missing", () => {
+      const ctx = createScriptContext({ caller: user, ops: TEST_OPS, this: user });
       expect(evaluate(NetLib.netHttpFetch(null, "https://example.com", {}), ctx)).rejects.toThrow(
         ScriptError,
       );
     });
 
-    it("should fail if domain does not match", async () => {
-      const ctx = createScriptContext({ caller: admin, this: admin, ops: TEST_OPS });
+    it("should fail if domain does not match", () => {
+      const ctx = createScriptContext({ caller: admin, ops: TEST_OPS, this: admin });
       expect(
         evaluate(
           NetLib.netHttpFetch(KernelLib.getCapability("net.http"), "https://google.com", {}),
@@ -92,8 +93,8 @@ describe("net.http", () => {
       ).rejects.toThrow(ScriptError);
     });
 
-    it("should fail if method is not allowed", async () => {
-      const ctx = createScriptContext({ caller: admin, this: admin, ops: TEST_OPS });
+    it("should fail if method is not allowed", () => {
+      const ctx = createScriptContext({ caller: admin, ops: TEST_OPS, this: admin });
       // Admin only has GET
       expect(
         evaluate(
@@ -111,15 +112,15 @@ describe("net.http", () => {
       const unrestricted = getEntity(unrestrictedId)!;
       createCapability(unrestrictedId, "net.http", { domain: "example.com" });
 
-      const ctx = createScriptContext({ caller: unrestricted, this: unrestricted, ops: TEST_OPS });
+      const ctx = createScriptContext({ caller: unrestricted, ops: TEST_OPS, this: unrestricted });
 
       mockFetch.mockResolvedValue({
+        bytes: () => Promise.resolve(new Uint8Array()),
+        headers: new Headers(),
         ok: true,
         status: 200,
         statusText: "OK",
-        headers: new Headers(),
-        text: async () => "",
-        bytes: async () => new Uint8Array(),
+        text: () => Promise.resolve(""),
       });
 
       await evaluate(
@@ -137,31 +138,32 @@ describe("net.http", () => {
 
   describe("response parsing", () => {
     const mockResponse: NetLib.HttpResponse = {
+      __response: {
+        bytes: () =>
+          Promise.resolve(new Uint8Array(new TextEncoder().encode('{"foo":"bar"}').buffer)),
+        json: () => Promise.resolve({ foo: "bar" }),
+        text: () => Promise.resolve('{"foo":"bar"}'),
+      } as Response,
+      headers: {},
       ok: true,
       status: 200,
       statusText: "OK",
-      headers: {},
-      __response: {
-        text: async () => '{"foo":"bar"}',
-        json: async () => ({ foo: "bar" }),
-        bytes: async () => new Uint8Array(new TextEncoder().encode('{"foo":"bar"}').buffer),
-      } as Response,
     };
 
     it("should parse text", async () => {
-      const ctx = createScriptContext({ caller: admin, this: admin, ops: TEST_OPS });
+      const ctx = createScriptContext({ caller: admin, ops: TEST_OPS, this: admin });
       const text = await evaluate(NetLib.netHttpResponseText(mockResponse), ctx);
       expect(text).toBe('{"foo":"bar"}');
     });
 
     it("should parse json", async () => {
-      const ctx = createScriptContext({ caller: admin, this: admin, ops: TEST_OPS });
+      const ctx = createScriptContext({ caller: admin, ops: TEST_OPS, this: admin });
       const json = await evaluate(NetLib.netHttpResponseJson(mockResponse), ctx);
       expect(json).toEqual({ foo: "bar" });
     });
 
     it("should parse bytes", async () => {
-      const ctx = createScriptContext({ caller: admin, this: admin, ops: TEST_OPS });
+      const ctx = createScriptContext({ caller: admin, ops: TEST_OPS, this: admin });
       const bytes = await evaluate(NetLib.netHttpResponseBytes(mockResponse), ctx);
       expect(bytes).toEqual(Array.from(new TextEncoder().encode('{"foo":"bar"}')));
     });

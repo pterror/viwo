@@ -1,54 +1,46 @@
-import { describe, test, expect, beforeEach, mock, spyOn } from "bun:test";
+import { beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 
 // Mock alert
-global.alert = mock(() => {});
+globalThis.alert = mock(() => {});
 
 // Mock localStorage
 const mockStorage = new Map<string, string>();
 const localStorageMock = {
-  getItem: mock((key: string) => mockStorage.get(key) || null),
-  setItem: mock((key: string, value: string) => mockStorage.set(key, value)),
-  removeItem: mock((key: string) => mockStorage.delete(key)),
   clear: mock(() => mockStorage.clear()),
-  length: 0,
+  getItem: mock((key: string) => mockStorage.get(key) || null),
   key: mock(() => null),
+  length: 0,
+  removeItem: mock((key: string) => mockStorage.delete(key)),
+  setItem: mock((key: string, value: string) => mockStorage.set(key, value)),
 };
 
-if (!global.localStorage) {
-  Object.defineProperty(global, "localStorage", {
+if (!globalThis.localStorage) {
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
     value: localStorageMock,
     writable: true,
-    configurable: true,
   });
 }
 
 // Mock crypto.randomUUID
-global.crypto = {
-  randomUUID: mock(() => "test-uuid-" + Math.random()),
+globalThis.crypto = {
+  randomUUID: mock(() => `test-uuid-${Math.random()}`),
 } as any;
 
 // Mock confirm/alert
-global.confirm = mock(() => true);
-global.alert = mock(() => {});
+globalThis.confirm = mock(() => true);
+globalThis.alert = mock(() => {});
 
-// Remove static import
-// import { themeStore, loadInitialState } from "./theme";
+// This is intentionally imported later so that mocks are setup first.
+// oxlint-disable-next-line first
+import { themeStore, loadInitialState } from "./theme";
 
 describe("Theme Store", () => {
-  let themeStore: any;
-  let loadInitialState: any;
-
-  beforeEach(async () => {
+  beforeEach(() => {
     // Clear storage (whichever mock is used)
-    if (global.localStorage) {
-      global.localStorage.clear();
+    if (globalThis.localStorage) {
+      globalThis.localStorage.clear();
     }
-
-    // Dynamic import to ensure mocks are set up first
-    const module = await import("./theme");
-    themeStore = module.themeStore;
-    loadInitialState = module.loadInitialState;
-
     themeStore.reset();
   });
 
@@ -90,23 +82,23 @@ describe("Theme Store", () => {
   test("Delete Theme", () => {
     themeStore.createTheme("To Delete");
     const id = themeStore.state.activeThemeId;
-    expect(themeStore.state.themes.find((t: any) => t.id === id)).toBeDefined();
+    expect(themeStore.state.themes.find((theme) => theme.id === id)).toBeDefined();
 
     themeStore.deleteTheme(id);
-    expect(themeStore.state.themes.find((t: any) => t.id === id)).toBeUndefined();
+    expect(themeStore.state.themes.find((theme) => theme.id === id)).toBeUndefined();
     expect(themeStore.state.activeThemeId).toBe("default");
   });
 
   test("Delete Builtin Theme (Protected)", () => {
     themeStore.setActiveTheme("default");
     themeStore.deleteTheme("default");
-    expect(themeStore.state.themes.find((t: any) => t.id === "default")).toBeDefined();
+    expect(themeStore.state.themes.find((theme) => theme.id === "default")).toBeDefined();
   });
 
   test("Import Theme", () => {
     const validTheme = {
-      manifest: { kind: "viwo-theme", version: "1.0.0", name: "Imported" },
       colors: { "--bg-app": "green" },
+      manifest: { kind: "viwo-theme", name: "Imported", version: "1.0.0" },
     };
     themeStore.importTheme(validTheme);
 
@@ -117,17 +109,17 @@ describe("Theme Store", () => {
 
   test("Delete Active Theme", () => {
     themeStore.createTheme("To Delete");
-    const newTheme = themeStore.state.themes[themeStore.state.themes.length - 1]!;
+    const newTheme = themeStore.state.themes.at(-1)!;
     themeStore.setActiveTheme(newTheme.id);
     expect(themeStore.state.activeThemeId).toBe(newTheme.id);
 
     themeStore.deleteTheme(newTheme.id);
-    expect(themeStore.state.themes.find((t: any) => t.id === newTheme.id)).toBeUndefined();
+    expect(themeStore.state.themes.find((theme) => theme.id === newTheme.id)).toBeUndefined();
     expect(themeStore.state.activeThemeId).toBe("default");
   });
 
   test("Import Invalid Theme", () => {
-    const alertSpy = spyOn(global, "alert").mockImplementation(() => {});
+    const alertSpy = spyOn(globalThis, "alert").mockImplementation(() => {});
     themeStore.importTheme({}); // Empty object
     expect(alertSpy).toHaveBeenCalledWith("Invalid theme format. Must be a valid Viwo Theme.");
     alertSpy.mockRestore();
@@ -136,8 +128,8 @@ describe("Theme Store", () => {
   test("Import Theme Version Warning", () => {
     const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
     const theme = {
-      manifest: { kind: "viwo-theme", version: "0.9.0", name: "Old" },
       colors: {},
+      manifest: { kind: "viwo-theme", name: "Old", version: "0.9.0" },
     };
     themeStore.importTheme(theme);
     expect(warnSpy).toHaveBeenCalled();
@@ -152,17 +144,17 @@ describe("Theme Store", () => {
 
   describe("Theme Migration", () => {
     beforeEach(() => {
-      if (global.localStorage) {
-        global.localStorage.removeItem("viwo_theme");
-        global.localStorage.removeItem("viwo_themes");
-        global.localStorage.removeItem("viwo_active_theme_id");
-        global.localStorage.removeItem("viwo_allow_custom_css");
+      if (globalThis.localStorage) {
+        globalThis.localStorage.removeItem("viwo_theme");
+        globalThis.localStorage.removeItem("viwo_themes");
+        globalThis.localStorage.removeItem("viwo_active_theme_id");
+        globalThis.localStorage.removeItem("viwo_allow_custom_css");
       }
       themeStore.reset();
     });
 
     test("Migrate from old single theme", () => {
-      global.localStorage.setItem("viwo_theme", JSON.stringify({ "--bg-app": "red" }));
+      globalThis.localStorage.setItem("viwo_theme", JSON.stringify({ "--bg-app": "red" }));
 
       const state = loadInitialState();
 
@@ -174,17 +166,17 @@ describe("Theme Store", () => {
     test("Migrate from array with missing manifest", () => {
       const oldThemes = JSON.stringify([
         {
-          id: "t1",
           colors: { "--bg-app": "blue" },
+          id: "t1",
           manifest: { name: "Old Theme" }, // Missing kind/version
         },
       ]);
-      global.localStorage.setItem("viwo_themes", oldThemes);
+      globalThis.localStorage.setItem("viwo_themes", oldThemes);
 
       const state = loadInitialState();
 
       expect(state.themes.length).toBe(2); // Default + Old
-      const migrated = state.themes.find((t: any) => t.id === "t1");
+      const migrated = state.themes.find((theme) => theme.id === "t1");
       expect(migrated).toBeDefined();
       expect(migrated!.manifest.kind).toBe("viwo-theme");
       expect(migrated!.manifest.version).toBe("1.0.0");

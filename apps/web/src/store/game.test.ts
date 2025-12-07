@@ -1,5 +1,5 @@
 /// <reference types="bun" />
-import { describe, test, expect, beforeEach, afterEach, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { gameStore } from "./game";
 
 // Capture instances
@@ -8,23 +8,23 @@ let mockSockets: MockWebSocket[] = [];
 class MockWebSocket {
   static OPEN = 1;
   readyState = 1;
-  onopen: (() => void) | null = null;
-  onclose: (() => void) | null = null;
-  onmessage: ((event: { data: string }) => void) | null = null;
+  onopen: (() => void) | undefined = undefined;
+  onclose: (() => void) | undefined = undefined;
+  onmessage: ((event: { data: string }) => void) | undefined = undefined;
   send = mock((_data: string) => {});
   close = mock(() => {});
 
   constructor(_url: string) {
     mockSockets.push(this);
     setTimeout(() => {
-      if (this.onopen) this.onopen();
+      if (this.onopen) {
+        this.onopen();
+      }
     }, 0);
   }
 }
 
-Object.defineProperty(global, "WebSocket", {
-  value: MockWebSocket,
-});
+Object.defineProperty(globalThis, "WebSocket", { value: MockWebSocket });
 
 describe("Game Store", () => {
   beforeEach(() => {
@@ -35,8 +35,8 @@ describe("Game Store", () => {
 
   afterEach(() => {
     // Close all sockets to reset store state
-    mockSockets.forEach((s) => {
-      if (s.onclose) s.onclose();
+    mockSockets.forEach((socket) => {
+      socket.onclose?.();
     });
   });
 
@@ -52,7 +52,7 @@ describe("Game Store", () => {
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(gameStore.state.isConnected).toBe(true);
 
-    const socket = mockSockets[0];
+    const [socket] = mockSockets;
     expect(socket).toBeDefined();
 
     // Simulate receiving a message
@@ -62,15 +62,15 @@ describe("Game Store", () => {
           jsonrpc: "2.0",
           method: "message",
           params: {
-            type: "message",
             text: "Hello World",
+            type: "message",
           },
         }),
       });
     }
 
     expect(gameStore.state.messages.length).toBeGreaterThan(0);
-    const lastMsg = gameStore.state.messages[gameStore.state.messages.length - 1];
+    const lastMsg = gameStore.state.messages.at(-1);
     if (lastMsg && lastMsg.type === "message") {
       expect(lastMsg.text).toBe("Hello World");
     }
@@ -83,7 +83,7 @@ describe("Game Store", () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
 
-    const socket = mockSockets[0];
+    const [socket] = mockSockets;
     gameStore.execute("look", []);
     expect(socket?.send).toHaveBeenCalled();
     expect(socket?.send.mock.lastCall?.[0]).toContain(JSON.stringify(["look"]));
@@ -92,7 +92,7 @@ describe("Game Store", () => {
   test("Handle Malformed Message", async () => {
     gameStore.connect();
     await new Promise((resolve) => setTimeout(resolve, 10));
-    const socket = mockSockets[0];
+    const [socket] = mockSockets;
 
     // Mock console.error to keep output clean
     const originalError = console.error;

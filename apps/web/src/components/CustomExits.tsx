@@ -1,9 +1,9 @@
-import { Show, For } from "solid-js";
-import { Entity, gameStore } from "../store/game";
+import { type Entity, gameStore } from "../store/game";
+import { For, Show } from "solid-js";
 import DigPanel from "./DigPanel";
 import Popover from "./Popover";
 
-const STANDARD_DIRS = [
+const STANDARD_DIRS = new Set([
   "north",
   "south",
   "east",
@@ -12,19 +12,23 @@ const STANDARD_DIRS = [
   "northwest",
   "southeast",
   "southwest",
-];
+]);
 
 export default function CustomExits() {
   const customExits = () => {
-    const roomId = gameStore.state.roomId;
-    if (!roomId) return [];
+    const { roomId } = gameStore.state;
+    if (!roomId) {
+      return [];
+    }
     const room = gameStore.state.entities.get(roomId);
-    if (!room || !Array.isArray(room["exits"])) return [];
+    if (!room || !Array.isArray(room["exits"])) {
+      return [];
+    }
 
     return (room["exits"] as number[])
       .map((id) => gameStore.state.entities.get(id))
       .filter(
-        (item) => item && !STANDARD_DIRS.includes((item["name"] as string).toLowerCase()),
+        (item) => item && !STANDARD_DIRS.has((item["name"] as string).toLowerCase()),
       ) as Entity[];
   };
 

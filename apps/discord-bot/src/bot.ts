@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Events, ChannelType, TextChannel } from "discord.js";
+import { ChannelType, Client, Events, GatewayIntentBits, type TextChannel } from "discord.js";
 import { CONFIG } from "./config";
 import { db } from "./instances";
 import { sessionManager } from "./session";
@@ -25,8 +25,8 @@ class DiscordBot {
   }
 
   private setupListeners() {
-    this.client.once(Events.ClientReady, (c) => {
-      console.log(`Ready! Logged in as ${c.user.tag}`);
+    this.client.once(Events.ClientReady, (client) => {
+      console.log(`Ready! Logged in as ${client.user.tag}`);
     });
 
     // Listen for messages from Core (via SocketManager)
@@ -35,7 +35,9 @@ class DiscordBot {
     });
 
     this.client.on(Events.MessageCreate, async (message) => {
-      if (message.author.bot) return;
+      if (message.author.bot) {
+        return;
+      }
 
       // Handle Slash Commands (mocked for now via !cmd)
       if (message.content.startsWith("!")) {
@@ -45,7 +47,7 @@ class DiscordBot {
 
       try {
         // 1. Resolve Channel -> Room (DMs rely on player location)
-        let roomId = null;
+        let roomId;
         if (message.channel.type !== ChannelType.DM) {
           roomId = db.getRoomForChannel(message.channelId);
           if (!roomId) {
@@ -81,7 +83,7 @@ class DiscordBot {
     });
   }
 
-  private async handleCommand(message: any) {
+  private handleCommand(message: any) {
     const args = message.content.slice(1).trim().split(/ +/);
     const command = args.shift().toLowerCase();
 
@@ -91,7 +93,7 @@ class DiscordBot {
         message.reply("Usage: !link <room_id>");
         return;
       }
-      const roomId = parseInt(args[0]);
+      const roomId = parseInt(args[0], 10);
       if (isNaN(roomId)) {
         message.reply("Invalid Room ID.");
         return;
@@ -107,36 +109,34 @@ class DiscordBot {
     // Find all active sessions for this entity
     const sessions = db.getSessionsForEntity(entityId);
 
-    for (const session of sessions) {
-      try {
-        const channel = await this.client.channels.fetch(session.channel_id);
-        if (channel && channel.isTextBased()) {
-          // Format message
-          let content = "";
-          if (data.type === "message") {
-            content = data.text;
-          } else if (data.type === "room") {
-            content = `**${data.name}**\n${data.description}\n\n*Exits*: ${data.contents
-              .filter((c: any) => c.kind === "EXIT")
-              .map((c: any) => c.name)
-              .join(", ")}\n*Items*: ${data.contents
-              .filter((c: any) => c.kind !== "EXIT")
-              .map((c: any) => c.name)
-              .join(", ")}`;
-          } else if (data.type === "error") {
-            content = `🔴 ${data.text}`;
-          } else {
-            content = `\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``;
-          }
+    await Promise.all(
+      sessions.map((session) => async () => {
+        try {
+          const channel = await this.client.channels.fetch(session.channel_id);
+          if (channel && channel.isTextBased()) {
+            // Format message
+            let content = "";
+            if (data.type === "message") {
+              content = data.text;
+            } else if (data.type === "room") {
+              content = `**${data.name}**\n${data.description}\n\n*Exits*: ${data.exits
+                ?.map((exit: any) => exit.name)
+                .join(", ")}\n*Items*: ${data.contents?.map((item: any) => item.name).join(", ")}`;
+            } else if (data.type === "error") {
+              content = `🔴 ${data.text}`;
+            } else {
+              content = `\`\`\`json\n${JSON.stringify(data, undefined, 2)}\n\`\`\``;
+            }
 
-          if (content) {
-            (channel as TextChannel).send(content);
+            if (content) {
+              (channel as TextChannel).send(content);
+            }
           }
+        } catch (error) {
+          console.error(`Failed to send to channel ${session.channel_id}`, error);
         }
-      } catch (e) {
-        console.error(`Failed to send to channel ${session.channel_id}`, e);
-      }
-    }
+      }),
+    );
   }
 }
 

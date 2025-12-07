@@ -1,16 +1,16 @@
-import {
-  createOpcodeRegistry,
-  StdLib,
-  ListLib,
-  ObjectLib,
-  StringLib,
-  TimeLib,
-  MathLib,
-  BooleanLib,
-  ScriptOps,
-} from "@viwo/scripting";
 import * as CoreLib from "./lib/core";
 import * as KernelLib from "./lib/kernel";
+import {
+  BooleanLib,
+  ListLib,
+  MathLib,
+  ObjectLib,
+  type ScriptOps,
+  StdLib,
+  StringLib,
+  TimeLib,
+  createOpcodeRegistry,
+} from "@viwo/scripting";
 
 export const GameOpcodes = createOpcodeRegistry(
   StdLib,

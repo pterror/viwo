@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
 import { Box, Text, useInput } from "ink";
+import React, { useEffect, useState } from "react";
 
 interface EditorProps {
   initialContent: string;
@@ -8,11 +8,11 @@ interface EditorProps {
   onAiCompletion: (
     code: string,
     position: { lineNumber: number; column: number },
-  ) => Promise<string | null>;
+  ) => string | null | Promise<string | null>;
   onLocalCompletion: (
     code: string,
     position: { lineNumber: number; column: number },
-  ) => Promise<string | null>;
+  ) => string | null | Promise<string | null>;
 }
 
 const Editor: React.FC<EditorProps> = ({
@@ -23,7 +23,7 @@ const Editor: React.FC<EditorProps> = ({
   onLocalCompletion,
 }) => {
   const [lines, setLines] = useState<string[]>(initialContent.split("\n"));
-  const [cursor, setCursor] = useState({ x: 0, y: 0 });
+  const [cursor, setCursor] = useState({ col: 0, row: 0 });
   const [offset, setOffset] = useState(0); // Vertical scroll offset
   const [isLoading, setIsLoading] = useState(false);
 
@@ -40,134 +40,146 @@ const Editor: React.FC<EditorProps> = ({
 
     if (key.upArrow) {
       setCursor((prev) => {
-        const newY = Math.max(0, prev.y - 1);
+        const newY = Math.max(0, prev.row - 1);
         const line = lines[newY];
-        const newX = Math.min(prev.x, line ? line.length : 0);
-        return { x: newX, y: newY };
+        const newX = Math.min(prev.col, line ? line.length : 0);
+        return { col: newX, row: newY };
       });
     } else if (key.downArrow) {
       setCursor((prev) => {
-        const newY = Math.min(lines.length - 1, prev.y + 1);
+        const newY = Math.min(lines.length - 1, prev.row + 1);
         const line = lines[newY];
-        const newX = Math.min(prev.x, line ? line.length : 0);
-        return { x: newX, y: newY };
+        const newX = Math.min(prev.col, line ? line.length : 0);
+        return { col: newX, row: newY };
       });
     } else if (key.leftArrow) {
       setCursor((prev) => {
-        if (prev.x > 0) return { ...prev, x: prev.x - 1 };
-        if (prev.y > 0) {
-          const newY = prev.y - 1;
+        if (prev.col > 0) {
+          return { ...prev, col: prev.col - 1 };
+        }
+        if (prev.row > 0) {
+          const newY = prev.row - 1;
           const line = lines[newY];
-          return { x: line ? line.length : 0, y: newY };
+          return { col: line ? line.length : 0, row: newY };
         }
         return prev;
       });
     } else if (key.rightArrow) {
       setCursor((prev) => {
-        const line = lines[prev.y];
-        if (line && prev.x < line.length) return { ...prev, x: prev.x + 1 };
-        if (prev.y < lines.length - 1) {
-          return { x: 0, y: prev.y + 1 };
+        const line = lines[prev.row];
+        if (line && prev.col < line.length) {
+          return { ...prev, col: prev.col + 1 };
+        }
+        if (prev.row < lines.length - 1) {
+          return { col: 0, row: prev.row + 1 };
         }
         return prev;
       });
     } else if (key.return) {
       setLines((prev) => {
-        const currentLine = prev[cursor.y] || "";
-        const before = currentLine.slice(0, cursor.x);
-        const after = currentLine.slice(cursor.x);
+        const currentLine = prev[cursor.row] || "";
+        const before = currentLine.slice(0, cursor.col);
+        const after = currentLine.slice(cursor.col);
         const newLines = [...prev];
-        newLines.splice(cursor.y, 1, before, after);
+        newLines.splice(cursor.row, 1, before, after);
         return newLines;
       });
-      setCursor((prev) => ({ x: 0, y: prev.y + 1 }));
+      setCursor((prev) => ({ col: 0, row: prev.row + 1 }));
     } else if (key.backspace || key.delete) {
-      if (cursor.x > 0) {
+      if (cursor.col > 0) {
         // Simple backspace within line
         setLines((prev) => {
-          const line = prev[cursor.y] || "";
-          const newLine = line.slice(0, cursor.x - 1) + line.slice(cursor.x);
+          const line = prev[cursor.row] || "";
+          const newLine = line.slice(0, cursor.col - 1) + line.slice(cursor.col);
           const newLines = [...prev];
-          newLines[cursor.y] = newLine;
+          newLines[cursor.row] = newLine;
           return newLines;
         });
-        setCursor((prev) => ({ ...prev, x: prev.x - 1 }));
-      } else if (cursor.y > 0) {
+        setCursor((prev) => ({ ...prev, col: prev.col - 1 }));
+      } else if (cursor.row > 0) {
         // Merge with previous line
         setLines((prev) => {
-          const currentLine = prev[cursor.y] || "";
-          const prevLine = prev[cursor.y - 1] || "";
+          const currentLine = prev[cursor.row] || "";
+          const prevLine = prev[cursor.row - 1] || "";
           const newLines = [...prev];
-          newLines.splice(cursor.y - 1, 2, prevLine + currentLine);
+          newLines.splice(cursor.row - 1, 2, prevLine + currentLine);
           return newLines;
         });
         setCursor((prev) => ({
-          x: (lines[prev.y - 1] || "").length,
-          y: prev.y - 1,
+          col: (lines[prev.row - 1] || "").length,
+          row: prev.row - 1,
         }));
       }
     } else if (key.tab) {
-      if (isLoading) return;
+      if (isLoading) {
+        return;
+      }
       setIsLoading(true);
       // AI Completion
-      onAiCompletion(lines.join("\n"), {
-        lineNumber: cursor.y + 1,
-        column: cursor.x + 1,
-      })
+      Promise.resolve()
+        .then(() =>
+          onAiCompletion(lines.join("\n"), { column: cursor.col + 1, lineNumber: cursor.row + 1 }),
+        )
         .then((completion) => {
           if (completion) {
             setLines((prev) => {
-              const line = prev[cursor.y] || "";
-              const newLine = line.slice(0, cursor.x) + completion + line.slice(cursor.x);
+              const line = prev[cursor.row] || "";
+              const newLine = line.slice(0, cursor.col) + completion + line.slice(cursor.col);
               const newLines = [...prev];
-              newLines[cursor.y] = newLine;
+              newLines[cursor.row] = newLine;
               return newLines;
             });
-            setCursor((prev) => ({ ...prev, x: prev.x + completion.length }));
+            setCursor((prev) => ({ ...prev, col: prev.col + completion.length }));
           }
         })
         .finally(() => setIsLoading(false));
     } else if (key.ctrl && input === " ") {
       // Local/LSP Completion
-      if (isLoading) return;
+      if (isLoading) {
+        return;
+      }
       // We don't necessarily need a loading state for local, but good practice
-      onLocalCompletion(lines.join("\n"), {
-        lineNumber: cursor.y + 1,
-        column: cursor.x + 1,
-      }).then((completion) => {
-        if (completion) {
-          setLines((prev) => {
-            const line = prev[cursor.y] || "";
-            const newLine = line.slice(0, cursor.x) + completion + line.slice(cursor.x);
-            const newLines = [...prev];
-            newLines[cursor.y] = newLine;
-            return newLines;
-          });
-          setCursor((prev) => ({ ...prev, x: prev.x + completion.length }));
-        }
-      });
+      Promise.resolve()
+        .then(() =>
+          onLocalCompletion(lines.join("\n"), {
+            column: cursor.col + 1,
+            lineNumber: cursor.row + 1,
+          }),
+        )
+        .then((completion) => {
+          if (completion) {
+            setLines((prev) => {
+              const line = prev[cursor.row] || "";
+              const newLine = line.slice(0, cursor.col) + completion + line.slice(cursor.col);
+              const newLines = [...prev];
+              newLines[cursor.row] = newLine;
+              return newLines;
+            });
+            setCursor((prev) => ({ ...prev, col: prev.col + completion.length }));
+          }
+        });
     } else {
       // Regular typing
       setLines((prev) => {
-        const line = prev[cursor.y] || "";
-        const newLine = line.slice(0, cursor.x) + input + line.slice(cursor.x);
+        const line = prev[cursor.row] || "";
+        const newLine = line.slice(0, cursor.col) + input + line.slice(cursor.col);
         const newLines = [...prev];
-        newLines[cursor.y] = newLine;
+        newLines[cursor.row] = newLine;
         return newLines;
       });
-      setCursor((prev) => ({ ...prev, x: prev.x + 1 }));
+      setCursor((prev) => ({ ...prev, col: prev.col + 1 }));
     }
   });
 
   // Simple scrolling logic
   useEffect(() => {
-    if (cursor.y < offset) {
-      setOffset(cursor.y);
-    } else if (cursor.y >= offset + 20) {
+    if (cursor.row < offset) {
+      setOffset(cursor.row);
+    } else if (cursor.row >= offset + 20) {
       // Assuming 20 lines visible
-      setOffset(cursor.y - 19);
+      setOffset(cursor.row - 19);
     }
-  }, [cursor.y, offset]);
+  }, [cursor.row, offset]);
 
   const visibleLines = lines.slice(offset, offset + 20);
 
@@ -177,13 +189,13 @@ const Editor: React.FC<EditorProps> = ({
         <Text bold> Script Editor {isLoading ? "(AI Generating...)" : ""} </Text>
         <Text>
           {" "}
-          Ln {cursor.y + 1}, Col {cursor.x + 1}{" "}
+          Ln {cursor.row + 1}, Col {cursor.col + 1}{" "}
         </Text>
       </Box>
       <Box flexDirection="column" height={20}>
-        {visibleLines.map((line, i) => {
-          const lineIndex = offset + i;
-          const isCurrentLine = lineIndex === cursor.y;
+        {visibleLines.map((line, idx) => {
+          const lineIndex = offset + idx;
+          const isCurrentLine = lineIndex === cursor.row;
           return (
             <Box key={lineIndex}>
               <Text color="gray" dimColor>
@@ -191,11 +203,11 @@ const Editor: React.FC<EditorProps> = ({
               </Text>
               {isCurrentLine ? (
                 <Text>
-                  {line.slice(0, cursor.x)}
+                  {line.slice(0, cursor.col)}
                   <Text inverse color="cyan">
-                    {line[cursor.x] || " "}
+                    {line[cursor.col] || " "}
                   </Text>
-                  {line.slice(cursor.x + 1)}
+                  {line.slice(cursor.col + 1)}
                 </Text>
               ) : (
                 <Text>{line}</Text>

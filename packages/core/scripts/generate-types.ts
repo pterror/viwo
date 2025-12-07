@@ -1,20 +1,21 @@
+// oxlint-disable first
 // Use in-memory DB
 process.env.NODE_ENV = "test";
-import { generateTypeDefinitions } from "@viwo/scripting";
-import * as CoreLib from "../src/runtime/lib/core";
-import * as KernelLib from "../src/runtime/lib/kernel";
 import {
   MathLib,
   BooleanLib,
   ListLib,
   ObjectLib,
+  type OpcodeMetadata,
   StringLib,
   TimeLib,
   StdLib,
-  OpcodeMetadata,
+  generateTypeDefinitions,
 } from "@viwo/scripting";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
+import * as CoreLib from "../src/runtime/lib/core";
+import * as KernelLib from "../src/runtime/lib/kernel";
 
 const libraries = [
   CoreLib,
@@ -31,11 +32,8 @@ const libraries = [
 const opcodes: OpcodeMetadata[] = [];
 
 for (const lib of libraries) {
-  for (const key in lib) {
-    const value = (lib as any)[key];
-    if (value && typeof value === "function" && "metadata" in value) {
-      opcodes.push(value.metadata);
-    }
+  for (const value of Object.values(lib)) {
+    opcodes.push(value.metadata);
   }
 }
 

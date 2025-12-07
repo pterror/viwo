@@ -1,4 +1,4 @@
-import { Show, For } from "solid-js";
+import { For, Show } from "solid-js";
 import { gameStore } from "../store/game";
 
 const ItemView = (props: { item: number }) => {
@@ -10,8 +10,8 @@ const ItemView = (props: { item: number }) => {
           onClick={() => gameStore.execute("look", [item["name"] as string])}
           class={`inspector-panel__item-link ${
             (item["adjectives"] as readonly string[])
-              ?.map((a) => `attribute-${a.replace(/[: ]/g, "-")}`)
-              .join(" ") || ""
+              ?.map((adjective) => `attribute-${adjective.replaceAll(/[: ]/g, "-")}`)
+              .join(" ") ?? ""
           }`}
         >
           {item["name"] as string}
@@ -31,7 +31,7 @@ const ItemView = (props: { item: number }) => {
 export default function InspectorPanel() {
   const inspectedItem =
     gameStore.state.inspectedItem === null
-      ? null!
+      ? undefined!
       : gameStore.state.entities.get(gameStore.state.inspectedItem)!;
   return (
     <div class="inspector-panel">

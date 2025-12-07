@@ -1,8 +1,8 @@
-import { createSignal, Show, onCleanup, onMount, JSX } from "solid-js";
+import { type JSX, Show, createSignal, onCleanup, onMount } from "solid-js";
 import { Portal } from "solid-js/web";
 
 interface PopoverProps {
-  trigger: (props: { onClick: (e: MouseEvent) => void }) => JSX.Element;
+  trigger: (props: { onClick: (event: MouseEvent) => void }) => JSX.Element;
   children: (props: { close: () => void }) => JSX.Element;
   contentClass?: string;
   triggerWrapperClass?: string;
@@ -11,13 +11,14 @@ interface PopoverProps {
 
 export default function Popover(props: PopoverProps) {
   const [isOpen, setIsOpen] = createSignal(false);
-  let triggerRef: HTMLDivElement | undefined = undefined;
-  let contentRef: HTMLDivElement | undefined = undefined;
-  const [position, setPosition] = createSignal({ top: 0, left: 0 });
+  // oxlint-disable-next-line no-unassigned-vars
+  let triggerRef: HTMLDivElement | undefined;
+  let contentRef: HTMLDivElement | undefined;
+  const [position, setPosition] = createSignal({ left: 0, top: 0 });
 
-  const toggle = (e: MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const toggle = (event: MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
     if (!isOpen()) {
       setIsOpen(true);
     } else {
@@ -27,13 +28,13 @@ export default function Popover(props: PopoverProps) {
 
   const close = () => setIsOpen(false);
 
-  const handleClickOutside = (e: MouseEvent) => {
+  const handleClickOutside = (event: MouseEvent) => {
     if (
       isOpen() &&
       contentRef &&
-      !(contentRef as HTMLElement).contains(e.target as Node) &&
+      !(contentRef as HTMLElement).contains(event.target as Node) &&
       triggerRef &&
-      !(triggerRef as HTMLElement).contains(e.target as Node)
+      !(triggerRef as HTMLElement).contains(event.target as Node)
     ) {
       setIsOpen(false);
     }
@@ -76,17 +77,17 @@ export default function Popover(props: PopoverProps) {
                     }
                   }
 
-                  setPosition({ top, left });
+                  setPosition({ left, top });
                 });
               }
             }}
             class={props.contentClass}
             style={{
+              left: `${position().left}px`,
+              opacity: position().top === 0 ? 0 : 1,
               position: "absolute",
               top: `${position().top}px`,
-              left: `${position().left}px`,
-              "z-index": 1000,
-              opacity: position().top === 0 ? 0 : 1, // Hide until positioned
+              "z-index": 1000, // Hide until positioned
             }}
           >
             {props.children({ close })}

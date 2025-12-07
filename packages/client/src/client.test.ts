@@ -1,4 +1,4 @@
-import { describe, it, expect, mock, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { ViwoClient } from "./client";
 
 // Mock WebSocket
@@ -15,11 +15,9 @@ class MockWebSocket {
   readyState = 1; // OPEN
   send = mock(() => {});
   close = mock(() => {});
-
-  constructor() {}
 }
 
-global.WebSocket = MockWebSocket as any;
+globalThis.WebSocket = MockWebSocket as any;
 
 describe("ViwoClient", () => {
   let client: ViwoClient;
@@ -62,8 +60,8 @@ describe("ViwoClient", () => {
     // Simulate response
     ws.onmessage({
       data: JSON.stringify({
-        jsonrpc: "2.0",
         id: sentData.id,
+        jsonrpc: "2.0",
         result: "You see a room.",
       }),
     });

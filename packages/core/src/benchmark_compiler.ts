@@ -1,12 +1,12 @@
 import {
-  evaluate,
-  createScriptContext,
-  StdLib,
-  MathLib,
   BooleanLib,
+  MathLib,
+  StdLib,
   compile,
-  setTypechecking,
   createOpcodeRegistry,
+  createScriptContext,
+  evaluate,
+  setTypechecking,
 } from "@viwo/scripting";
 
 const OPS = createOpcodeRegistry(StdLib, MathLib, BooleanLib);
@@ -38,15 +38,15 @@ const script = StdLib.seq(
 );
 
 const ctx2 = createScriptContext({
-  this: null!,
-  caller: null!,
   args: [],
+  caller: null!,
   gas: ITERATIONS * 100,
   ops: OPS,
+  this: null!,
 });
 const startCompile = performance.now();
 const compiledFn = compile(script, OPS);
-console.log(compiledFn + "");
+console.log(`${compiledFn}`);
 const endCompile = performance.now();
 
 console.log(`Benchmarking loop with ${ITERATIONS} iterations...`);
@@ -54,11 +54,11 @@ console.log(`Benchmarking loop with ${ITERATIONS} iterations...`);
 setTypechecking(false);
 // 1. Interpreter
 const ctx1 = createScriptContext({
-  this: null!,
-  caller: null!,
   args: [],
+  caller: null!,
   gas: ITERATIONS * 100,
   ops: OPS,
+  this: null!,
 });
 const startInterp = performance.now();
 const result = await evaluate(script, ctx1);
@@ -82,10 +82,10 @@ console.log(`Result: ${result2}`);
 const startJs = performance.now();
 let resultJs = 0;
 (() => {
-  let i = 0;
-  while (i < ITERATIONS) {
-    resultJs += i;
-    i += 1;
+  let idx = 0;
+  while (idx < ITERATIONS) {
+    resultJs += idx;
+    idx += 1;
   }
 })();
 const endJs = performance.now();

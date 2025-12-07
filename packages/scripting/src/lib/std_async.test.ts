@@ -1,22 +1,22 @@
+import * as BooleanLib from "../lib/boolean";
+import * as MathLib from "../lib/math";
+import * as StdLib from "../lib/std";
+import { createOpcodeRegistry, createScriptContext, evaluate } from "../interpreter";
 import { expect, test } from "bun:test";
-import { createScriptContext, evaluate, createOpcodeRegistry } from "../interpreter";
-import * as Std from "./std";
-import * as Boolean from "./boolean";
-import * as Math from "./math";
 import { defineFullOpcode } from "../types";
 
 const asyncOp = defineFullOpcode<[], Promise<number>>("asyncOp", {
-  metadata: {
-    label: "Async Op",
-    category: "test",
-    description: "Returns a promise",
-    slots: [],
-    parameters: [],
-    returnType: "number",
-  },
   handler: async () => {
     await new Promise((resolve) => setTimeout(resolve, 1));
     return 1;
+  },
+  metadata: {
+    category: "test",
+    description: "Returns a promise",
+    label: "Async Op",
+    parameters: [],
+    returnType: "number",
+    slots: [],
   },
 });
 
@@ -25,13 +25,13 @@ const AsyncLib = {
 };
 
 test("async while loop", async () => {
-  const TEST_OPS = createOpcodeRegistry(Std, Boolean, Math, AsyncLib);
+  const TEST_OPS = createOpcodeRegistry(StdLib, BooleanLib, MathLib, AsyncLib);
 
   const ctx = createScriptContext({
-    caller: null!,
-    this: null!,
     args: [],
+    caller: null!,
     ops: TEST_OPS,
+    this: null!,
   });
 
   // let i = 0;
@@ -41,13 +41,13 @@ test("async while loop", async () => {
   // }
   // i
 
-  const script = Std.seq(
-    Std.let("i", 0),
-    Std.while(
-      Boolean.lt(Std.var("i"), 5),
-      Std.seq(AsyncLib.asyncOp(), Std.set("i", Math.add(Std.var("i"), 1))),
+  const script = StdLib.seq(
+    StdLib.let("i", 0),
+    StdLib.while(
+      BooleanLib.lt(StdLib.var("i"), 5),
+      StdLib.seq(AsyncLib.asyncOp(), StdLib.set("i", MathLib.add(StdLib.var("i"), 1))),
     ),
-    Std.var("i"),
+    StdLib.var("i"),
   );
 
   const result = await evaluate(script, ctx);
@@ -55,27 +55,30 @@ test("async while loop", async () => {
 });
 
 test("async for loop", async () => {
-  const TEST_OPS = createOpcodeRegistry(Std, Boolean, Math, AsyncLib);
+  const TEST_OPS = createOpcodeRegistry(StdLib, BooleanLib, MathLib, AsyncLib);
   // We need List lib for listNew, but it's not imported.
   // Let's just use a literal array if possible?
   // Std.for takes a block that evaluates to an array.
   // Std.quote([1, 2, 3]) returns the array.
 
   const ctx = createScriptContext({
-    caller: null!,
-    this: null!,
     args: [],
+    caller: null!,
     ops: TEST_OPS,
+    this: null!,
   });
 
-  const script = Std.seq(
-    Std.let("sum", 0),
-    Std.for(
+  const script = StdLib.seq(
+    StdLib.let("sum", 0),
+    StdLib.for(
       "x",
-      Std.quote([1, 2, 3]),
-      Std.seq(AsyncLib.asyncOp(), Std.set("sum", Math.add(Std.var("sum"), Std.var("x")))),
+      StdLib.quote([1, 2, 3]),
+      StdLib.seq(
+        AsyncLib.asyncOp(),
+        StdLib.set("sum", MathLib.add(StdLib.var("sum"), StdLib.var("x"))),
+      ),
     ),
-    Std.var("sum"),
+    StdLib.var("sum"),
   );
 
   const result = await evaluate(script, ctx);

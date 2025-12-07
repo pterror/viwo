@@ -10,8 +10,10 @@ function getDefinedOpcodes(): Set<string> {
   const files = fs.readdirSync(LIB_DIR);
 
   for (const file of files) {
-    if (!file.endsWith(".ts") || file.endsWith(".test.ts")) continue;
-    const content = fs.readFileSync(path.join(LIB_DIR, file), "utf-8");
+    if (!file.endsWith(".ts") || file.endsWith(".test.ts")) {
+      continue;
+    }
+    const content = fs.readFileSync(path.join(LIB_DIR, file), "utf8");
 
     // Simplified regex that looks for the function call and the string literal
     const opcodeRegex = /define(?:Full)?Opcode(?:<[\s\S]*?>)?\(\s*(["'`])(.+?)\1/g;
@@ -26,7 +28,7 @@ function getDefinedOpcodes(): Set<string> {
 
 function getHandledOpcodes(): Set<string> {
   const opcodes = new Set<string>();
-  const content = fs.readFileSync(COMPILER_PATH, "utf-8");
+  const content = fs.readFileSync(COMPILER_PATH, "utf8");
 
   // Look for case "OPCODE_NAME":
   const caseRegex = /case\s+(["'`])(.+?)\1\s*:/g;

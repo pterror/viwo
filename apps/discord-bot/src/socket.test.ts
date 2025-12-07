@@ -1,4 +1,4 @@
-import { describe, test, expect, mock, beforeEach, afterEach, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { ViwoClient } from "@viwo/client";
 
 // Mock config
@@ -7,6 +7,7 @@ mock.module("./config", () => ({
 }));
 
 // Import after mocks
+// oxlint-disable-next-line first
 import { GameSocket, SocketManager } from "./socket";
 
 describe("GameSocket", () => {
@@ -18,11 +19,13 @@ describe("GameSocket", () => {
 
   beforeEach(() => {
     // Spy on ViwoClient prototype methods
-    connectSpy = spyOn(ViwoClient.prototype, "connect").mockImplementation(function (this: any) {
-      // Capture the instance.
-    });
-    executeSpy = spyOn(ViwoClient.prototype, "execute").mockResolvedValue(undefined);
-    sendRequestSpy = spyOn(ViwoClient.prototype, "sendRequest").mockResolvedValue(undefined);
+    connectSpy = spyOn(ViwoClient.prototype, "connect").mockImplementation(
+      function connectSpy(this: any) {
+        // Capture the instance.
+      },
+    );
+    executeSpy = spyOn(ViwoClient.prototype, "execute").mockResolvedValue(null);
+    sendRequestSpy = spyOn(ViwoClient.prototype, "sendRequest").mockResolvedValue(null);
     disconnectSpy = spyOn(ViwoClient.prototype, "disconnect").mockImplementation(() => {});
 
     // We need to capture the subscribe listener to simulate state changes
@@ -33,17 +36,17 @@ describe("GameSocket", () => {
       return () => true;
     });
 
-    onMessageSpy = spyOn(ViwoClient.prototype, "onMessage").mockImplementation((_listener: any) => {
-      // Use `mock.fn` behavior to capture calls.
-      return () => true;
-    });
+    // Use `mock.fn` behavior to capture calls.
+    onMessageSpy = spyOn(ViwoClient.prototype, "onMessage").mockImplementation(
+      (_listener: any) => () => true,
+    );
   });
 
   afterEach(() => {
     mock.restore();
   });
 
-  test("Connects and sends login", async () => {
+  test("Connects and sends login", () => {
     const socket = new GameSocket(123);
     socket.connect();
 
@@ -52,7 +55,7 @@ describe("GameSocket", () => {
     expect(sendRequestSpy).toHaveBeenCalledWith("login", { entityId: 123 });
   });
 
-  test("Queue messages when disconnected", async () => {
+  test("Queue messages when disconnected", () => {
     // Restore execute spy to throw error
     executeSpy.mockRejectedValue(new Error("Socket not connected"));
 
@@ -60,7 +63,7 @@ describe("GameSocket", () => {
     expect(socket.execute("test", [])).rejects.toThrow("Socket not connected");
   });
 
-  test("Handle messages", async () => {
+  test("Handle messages", () => {
     // We need to trigger onMessage listener.
     // We can capture it from the spy.
     let capturedListener: any;
@@ -72,26 +75,25 @@ describe("GameSocket", () => {
     const socket = new GameSocket(1);
     socket.connect();
 
-    let received: any = null;
+    let received: any;
     socket.on("message", (msg) => {
       received = msg;
     });
 
     // Simulate incoming message
     expect(capturedListener).toBeDefined();
-    capturedListener({ type: "message", text: "hello" });
+    capturedListener({ text: "hello", type: "message" });
 
     expect(received).toEqual({
       method: "message",
-      params: { type: "info", text: "hello" },
+      params: { text: "hello", type: "info" },
     });
   });
 
-  test("Handle close", async () => {
+  test("Handle close", () => {
     const socket = new GameSocket(1);
     socket.connect();
     socket.close();
-
     expect(disconnectSpy).toHaveBeenCalled();
   });
 });

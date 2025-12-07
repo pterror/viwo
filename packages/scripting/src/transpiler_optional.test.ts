@@ -1,16 +1,18 @@
-import { describe, expect, test, beforeEach, afterEach } from "bun:test";
-import { transpile } from "./transpiler";
-import * as Std from "./lib/std";
-import * as ObjectLib from "./lib/object";
 import * as BooleanLib from "./lib/boolean";
-import { ListLib } from ".";
+import * as ListLib from "./lib/list";
+import * as ObjectLib from "./lib/object";
+import * as StdLib from "./lib/std";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { transpile } from "./transpiler";
 
 // Mock Math.random for deterministic temp vars
 const originalRandom = Math.random;
 beforeEach(() => {
-  let i = 0;
+  let idx = 0;
   Math.random = () => {
-    return (i++ * 0.1) % 1;
+    const val = idx * 0.1;
+    idx += 1;
+    return val % 1;
   };
 });
 afterEach(() => {
@@ -22,9 +24,9 @@ describe("transpiler optional chaining", () => {
     // a?.b
     // if (a != null) a.b else null
     const code = "a?.b";
-    const expected = Std.if(
-      BooleanLib.neq(Std.var("a"), null),
-      ObjectLib.objGet(Std.var("a"), "b"),
+    const expected = StdLib.if(
+      BooleanLib.neq(StdLib.var("a"), null),
+      ObjectLib.objGet(StdLib.var("a"), "b"),
       null,
     );
     expect(transpile(code)).toEqual(expected);
@@ -42,9 +44,9 @@ describe("transpiler optional chaining", () => {
     //   null
     // }
     const code = "a?.b.c";
-    const expected = Std.if(
-      BooleanLib.neq(Std.var("a"), null),
-      ObjectLib.objGet(ObjectLib.objGet(Std.var("a"), "b"), "c"),
+    const expected = StdLib.if(
+      BooleanLib.neq(StdLib.var("a"), null),
+      ObjectLib.objGet(ObjectLib.objGet(StdLib.var("a"), "b"), "c"),
       null,
     );
     expect(transpile(code)).toEqual(expected);
@@ -95,20 +97,20 @@ describe("transpiler optional chaining", () => {
     // Or I can just check that it is an `if` containing a `seq` containing an `if`.
 
     expect(result[0]).toBe("if");
-    expect(result[1]).toEqual(BooleanLib.neq(Std.var("a"), null));
+    expect(result[1]).toEqual(BooleanLib.neq(StdLib.var("a"), null));
 
-    const inner = result[2]; // The then branch
+    const { 2: inner } = result; // The then branch
     expect(inner[0]).toBe("seq");
     // let tmp = a.b
     expect(inner[1][0]).toBe("let");
-    expect(inner[1][2]).toEqual(ObjectLib.objGet(Std.var("a"), "b"));
-    const tmpName = inner[1][1];
+    expect(inner[1][2]).toEqual(ObjectLib.objGet(StdLib.var("a"), "b"));
+    const [, [, tmpName]] = inner;
 
     // if (tmp != null, tmp.c, null)
-    const innerIf = inner[2];
+    const { 2: innerIf } = inner;
     expect(innerIf[0]).toBe("if");
-    expect(innerIf[1]).toEqual(BooleanLib.neq(Std.var(tmpName), null));
-    expect(innerIf[2]).toEqual(ObjectLib.objGet(Std.var(tmpName), "c"));
+    expect(innerIf[1]).toEqual(BooleanLib.neq(StdLib.var(tmpName), null));
+    expect(innerIf[2]).toEqual(ObjectLib.objGet(StdLib.var(tmpName), "c"));
     expect(innerIf[3]).toBe(null);
 
     expect(result[3]).toBe(null);
@@ -117,9 +119,9 @@ describe("transpiler optional chaining", () => {
   test("optional element access", () => {
     // arr?.[0]
     const code = "arr?.[0]";
-    const expected = Std.if(
-      BooleanLib.neq(Std.var("arr"), null),
-      ListLib.listGet(Std.var("arr"), 0),
+    const expected = StdLib.if(
+      BooleanLib.neq(StdLib.var("arr"), null),
+      ListLib.listGet(StdLib.var("arr"), 0),
       null,
     );
     expect(transpile(code)).toEqual(expected);
@@ -128,9 +130,9 @@ describe("transpiler optional chaining", () => {
   test("optional call", () => {
     // func?.()
     const code = "func?.()";
-    const expected = Std.if(
-      BooleanLib.neq(Std.var("func"), null),
-      Std.apply(Std.var("func")),
+    const expected = StdLib.if(
+      BooleanLib.neq(StdLib.var("func"), null),
+      StdLib.apply(StdLib.var("func")),
       null,
     );
     expect(transpile(code)).toEqual(expected);
@@ -140,9 +142,9 @@ describe("transpiler optional chaining", () => {
     // a?.b()
     // if (a != null) a.b() else null
     const code = "a?.b()";
-    const expected = Std.if(
-      BooleanLib.neq(Std.var("a"), null),
-      Std.apply(ObjectLib.objGet(Std.var("a"), "b")),
+    const expected = StdLib.if(
+      BooleanLib.neq(StdLib.var("a"), null),
+      StdLib.apply(ObjectLib.objGet(StdLib.var("a"), "b")),
       null,
     );
     expect(transpile(code)).toEqual(expected);
@@ -155,15 +157,15 @@ describe("transpiler optional chaining", () => {
     // b?.c -> if(b!=null, b.c, null) (b is simple)
 
     const code = "a?.[b?.c]";
-    const keyTranspiled = Std.if(
-      BooleanLib.neq(Std.var("b"), null),
-      ObjectLib.objGet(Std.var("b"), "c"),
+    const keyTranspiled = StdLib.if(
+      BooleanLib.neq(StdLib.var("b"), null),
+      ObjectLib.objGet(StdLib.var("b"), "c"),
       null,
     );
 
-    const expected = Std.if(
-      BooleanLib.neq(Std.var("a"), null),
-      ObjectLib.objGet(Std.var("a"), keyTranspiled),
+    const expected = StdLib.if(
+      BooleanLib.neq(StdLib.var("a"), null),
+      ObjectLib.objGet(StdLib.var("a"), keyTranspiled),
       null,
     );
     expect(transpile(code)).toEqual(expected);
@@ -172,18 +174,22 @@ describe("transpiler optional chaining", () => {
   test("mixed chain a.b?.c", () => {
     const code = "a.b?.c";
     const tmp = "__tmp_";
-    const expected = Std.seq(
-      Std.let(tmp, ObjectLib.objGet(Std.var("a"), "b")),
-      Std.if(BooleanLib.neq(Std.var(tmp), null), ObjectLib.objGet(Std.var(tmp), "c"), null),
+    const expected = StdLib.seq(
+      StdLib.let(tmp, ObjectLib.objGet(StdLib.var("a"), "b")),
+      StdLib.if(
+        BooleanLib.neq(StdLib.var(tmp), null),
+        ObjectLib.objGet(StdLib.var(tmp), "c"),
+        null,
+      ),
     );
     expect(transpile(code)).toEqual(expected);
   });
 
   test("mixed chain a?.b[c]", () => {
     const code = "a?.b[c]";
-    const expected = Std.if(
-      BooleanLib.neq(Std.var("a"), null),
-      ObjectLib.objGet(ObjectLib.objGet(Std.var("a"), "b"), Std.var("c")),
+    const expected = StdLib.if(
+      BooleanLib.neq(StdLib.var("a"), null),
+      ObjectLib.objGet(ObjectLib.objGet(StdLib.var("a"), "b"), StdLib.var("c")),
       null,
     );
     expect(transpile(code)).toEqual(expected);
@@ -192,11 +198,11 @@ describe("transpiler optional chaining", () => {
   test("mixed chain a.b?.[c]", () => {
     const code = "a.b?.[c]";
     const tmp = "__tmp_";
-    const expected = Std.seq(
-      Std.let(tmp, ObjectLib.objGet(Std.var("a"), "b")),
-      Std.if(
-        BooleanLib.neq(Std.var(tmp), null),
-        ObjectLib.objGet(Std.var(tmp), Std.var("c")),
+    const expected = StdLib.seq(
+      StdLib.let(tmp, ObjectLib.objGet(StdLib.var("a"), "b")),
+      StdLib.if(
+        BooleanLib.neq(StdLib.var(tmp), null),
+        ObjectLib.objGet(StdLib.var(tmp), StdLib.var("c")),
         null,
       ),
     );
@@ -205,9 +211,9 @@ describe("transpiler optional chaining", () => {
 
   test("mixed chain a?.[b].c", () => {
     const code = "a?.[b].c";
-    const expected = Std.if(
-      BooleanLib.neq(Std.var("a"), null),
-      ObjectLib.objGet(ObjectLib.objGet(Std.var("a"), Std.var("b")), "c"),
+    const expected = StdLib.if(
+      BooleanLib.neq(StdLib.var("a"), null),
+      ObjectLib.objGet(ObjectLib.objGet(StdLib.var("a"), StdLib.var("b")), "c"),
       null,
     );
     expect(transpile(code)).toEqual(expected);
@@ -216,9 +222,13 @@ describe("transpiler optional chaining", () => {
   test("mixed chain a[b]?.c", () => {
     const code = "a[b]?.c";
     const tmp = "__tmp_";
-    const expected = Std.seq(
-      Std.let(tmp, ObjectLib.objGet(Std.var("a"), Std.var("b"))),
-      Std.if(BooleanLib.neq(Std.var(tmp), null), ObjectLib.objGet(Std.var(tmp), "c"), null),
+    const expected = StdLib.seq(
+      StdLib.let(tmp, ObjectLib.objGet(StdLib.var("a"), StdLib.var("b"))),
+      StdLib.if(
+        BooleanLib.neq(StdLib.var(tmp), null),
+        ObjectLib.objGet(StdLib.var(tmp), "c"),
+        null,
+      ),
     );
     expect(transpile(code)).toEqual(expected);
   });
@@ -226,18 +236,18 @@ describe("transpiler optional chaining", () => {
   test("mixed chain a.b?.()", () => {
     const code = "a.b?.()";
     const tmp = "__tmp_";
-    const expected = Std.seq(
-      Std.let(tmp, ObjectLib.objGet(Std.var("a"), "b")),
-      Std.if(BooleanLib.neq(Std.var(tmp), null), Std.apply(Std.var(tmp)), null),
+    const expected = StdLib.seq(
+      StdLib.let(tmp, ObjectLib.objGet(StdLib.var("a"), "b")),
+      StdLib.if(BooleanLib.neq(StdLib.var(tmp), null), StdLib.apply(StdLib.var(tmp)), null),
     );
     expect(transpile(code)).toEqual(expected);
   });
 
   test("mixed chain a?.().c", () => {
     const code = "a?.().c";
-    const expected = Std.if(
-      BooleanLib.neq(Std.var("a"), null),
-      ObjectLib.objGet(Std.apply(Std.var("a")), "c"),
+    const expected = StdLib.if(
+      BooleanLib.neq(StdLib.var("a"), null),
+      ObjectLib.objGet(StdLib.apply(StdLib.var("a")), "c"),
       null,
     );
     expect(transpile(code)).toEqual(expected);
@@ -250,30 +260,38 @@ describe("transpiler optional chaining", () => {
     const tmp = "__tmp_"; // 0.toString(36) is "0", slice(2,8) is ""
     // Wait, if slice returns empty, var name is "__tmp_".
 
-    const expected = Std.seq(
-      Std.let(tmp, Std.apply(Std.var("a"))),
-      Std.if(BooleanLib.neq(Std.var(tmp), null), ObjectLib.objGet(Std.var(tmp), "c"), null),
+    const expected = StdLib.seq(
+      StdLib.let(tmp, StdLib.apply(StdLib.var("a"))),
+      StdLib.if(
+        BooleanLib.neq(StdLib.var(tmp), null),
+        ObjectLib.objGet(StdLib.var(tmp), "c"),
+        null,
+      ),
     );
     expect(transpile(code)).toEqual(expected);
   });
 
   test("nested arg a?.(b?.c)", () => {
     const code = "a?.(b?.c)";
-    const arg = Std.if(
-      BooleanLib.neq(Std.var("b"), null),
-      ObjectLib.objGet(Std.var("b"), "c"),
+    const arg = StdLib.if(
+      BooleanLib.neq(StdLib.var("b"), null),
+      ObjectLib.objGet(StdLib.var("b"), "c"),
       null,
     );
-    const expected = Std.if(BooleanLib.neq(Std.var("a"), null), Std.apply(Std.var("a"), arg), null);
+    const expected = StdLib.if(
+      BooleanLib.neq(StdLib.var("a"), null),
+      StdLib.apply(StdLib.var("a"), arg),
+      null,
+    );
     expect(transpile(code)).toEqual(expected);
   });
 
   test("nested arg a?.[b.c]", () => {
     const code = "a?.[b.c]";
-    const arg = ObjectLib.objGet(Std.var("b"), "c");
-    const expected = Std.if(
-      BooleanLib.neq(Std.var("a"), null),
-      ObjectLib.objGet(Std.var("a"), arg),
+    const arg = ObjectLib.objGet(StdLib.var("b"), "c");
+    const expected = StdLib.if(
+      BooleanLib.neq(StdLib.var("a"), null),
+      ObjectLib.objGet(StdLib.var("a"), arg),
       null,
     );
     expect(transpile(code)).toEqual(expected);
@@ -281,17 +299,25 @@ describe("transpiler optional chaining", () => {
 
   test("nested arg a?.(b.c)", () => {
     const code = "a?.(b.c)";
-    const arg = ObjectLib.objGet(Std.var("b"), "c");
-    const expected = Std.if(BooleanLib.neq(Std.var("a"), null), Std.apply(Std.var("a"), arg), null);
+    const arg = ObjectLib.objGet(StdLib.var("b"), "c");
+    const expected = StdLib.if(
+      BooleanLib.neq(StdLib.var("a"), null),
+      StdLib.apply(StdLib.var("a"), arg),
+      null,
+    );
     expect(transpile(code)).toEqual(expected);
   });
 
   test("nested arg a?.[b?.()]", () => {
     const code = "a?.[b?.()]";
-    const arg = Std.if(BooleanLib.neq(Std.var("b"), null), Std.apply(Std.var("b")), null);
-    const expected = Std.if(
-      BooleanLib.neq(Std.var("a"), null),
-      ObjectLib.objGet(Std.var("a"), arg),
+    const arg = StdLib.if(
+      BooleanLib.neq(StdLib.var("b"), null),
+      StdLib.apply(StdLib.var("b")),
+      null,
+    );
+    const expected = StdLib.if(
+      BooleanLib.neq(StdLib.var("a"), null),
+      ObjectLib.objGet(StdLib.var("a"), arg),
       null,
     );
     expect(transpile(code)).toEqual(expected);
@@ -299,8 +325,16 @@ describe("transpiler optional chaining", () => {
 
   test("nested arg a?.(b?.())", () => {
     const code = "a?.(b?.())";
-    const arg = Std.if(BooleanLib.neq(Std.var("b"), null), Std.apply(Std.var("b")), null);
-    const expected = Std.if(BooleanLib.neq(Std.var("a"), null), Std.apply(Std.var("a"), arg), null);
+    const arg = StdLib.if(
+      BooleanLib.neq(StdLib.var("b"), null),
+      StdLib.apply(StdLib.var("b")),
+      null,
+    );
+    const expected = StdLib.if(
+      BooleanLib.neq(StdLib.var("a"), null),
+      StdLib.apply(StdLib.var("a"), arg),
+      null,
+    );
     expect(transpile(code)).toEqual(expected);
   });
 });
