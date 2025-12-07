@@ -35,9 +35,15 @@ const HELPERS = {
       return true;
     },
   },
+  checkObjKey: (key: any) => {
+    if (key === "__proto__" || key === "constructor" || key === "prototype") {
+      throw new ScriptError(`Security Error: Cannot access dangerous key "${key}"`);
+    }
+    return key;
+  },
   "random.between": (min: number, max: number) => {
     if (min > max) {
-      throw new Error("random: min must be less than or equal to max");
+      throw new ScriptError("random: min must be less than or equal to max");
     }
     return Math.floor(Math.random() * (max - min + 1)) + min;
   },
@@ -207,6 +213,15 @@ const SPECIAL_FORMS = new Set([
   "obj.new",
 ]);
 
+// Helper to check for dangerous keys at compile time
+function validateKey(node: any) {
+  if (typeof node === "string") {
+    if (node === "__proto__" || node === "constructor" || node === "prototype") {
+      throw new Error(`Security Error: Cannot access dangerous key "${node}"`);
+    }
+  }
+}
+
 function compileValue(node: any, ops: ScriptOps, shouldReturn = false): string {
   const prefix = shouldReturn ? "return " : "";
   if (!Array.isArray(node)) {
@@ -288,9 +303,10 @@ ${compileValue(args[1], ops, true)}}`;
       case "obj.new": {
         const props = [];
         for (const arg of args) {
+          validateKey(arg[0]);
           const keyExpr = compileValue(arg[0], ops);
           const valExpr = compileValue(arg[1], ops);
-          props.push(`[${keyExpr}]: ${valExpr}`);
+          props.push(`[__helpers__.checkObjKey(${keyExpr})]: ${valExpr}`);
         }
         return `${prefix}({ ${props.join(", ")} })`;
       }
@@ -461,10 +477,12 @@ ${compileValue(args[1], ops, true)}}`;
       return `${prefix}(${compiledArgs[0]}.length === 0)`;
     }
     case "list.get": {
-      return `${prefix}${compiledArgs[0]}[${compiledArgs[1]}]`;
+      validateKey(args[1]);
+      return `${prefix}${compiledArgs[0]}[__helpers__.checkObjKey(${compiledArgs[1]})]`;
     }
     case "list.set": {
-      return `${prefix}(${compiledArgs[0]}[${compiledArgs[1]}] = ${compiledArgs[2]})`;
+      validateKey(args[1]);
+      return `${prefix}(${compiledArgs[0]}[__helpers__.checkObjKey(${compiledArgs[1]})] = ${compiledArgs[2]})`;
     }
     case "list.push": {
       return `${prefix}${compiledArgs[0]}.push(${compiledArgs[1]})`;
@@ -517,18 +535,22 @@ ${compileValue(args[1], ops, true)}}`;
       return `${prefix}${compiledArgs[0]}.toSorted()`;
     }
     case "obj.get": {
-      return `${prefix}((${compiledArgs[0]})[${compiledArgs[1]}] ?? ${
+      validateKey(args[1]);
+      return `${prefix}((${compiledArgs[0]})[__helpers__.checkObjKey(${compiledArgs[1]})] ?? ${
         compiledArgs[2] !== undefined ? compiledArgs[2] : "null"
       })`;
     }
     case "obj.set": {
-      return `${prefix}((${compiledArgs[0]})[${compiledArgs[1]}] = ${compiledArgs[2]})`;
+      validateKey(args[1]);
+      return `${prefix}((${compiledArgs[0]})[__helpers__.checkObjKey(${compiledArgs[1]})] = ${compiledArgs[2]})`;
     }
     case "obj.has": {
-      return `${prefix}(${compiledArgs[1]} in ${compiledArgs[0]})`;
+      validateKey(args[1]);
+      return `${prefix}(__helpers__.checkObjKey(${compiledArgs[1]}) in ${compiledArgs[0]})`;
     }
     case "obj.del": {
-      return `${prefix}(delete ${compiledArgs[0]}[${compiledArgs[1]}])`;
+      validateKey(args[1]);
+      return `${prefix}(delete ${compiledArgs[0]}[__helpers__.checkObjKey(${compiledArgs[1]})])`;
     }
     case "obj.keys": {
       return `${prefix}Object.getOwnPropertyNames(${compiledArgs[0]})`;

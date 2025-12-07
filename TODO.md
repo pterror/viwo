@@ -50,7 +50,6 @@
 - [ ] **Scripting**: Figure out what to do with the duplication of `procgen.random` vs Std `random` opcodes
 - [ ] **Seed**: Fix hotel seed - floors and rooms should be 'ephemeral' - that is, they should be destroyed when a: no longer in use and b: not modified.
 - [ ] **Seed**: Make sure mailbox uses capability based permissions.
-- [ ] **Decompiler**: Return the last element in the body in `packages/scripting/src/decompiler.ts`. See `packages/scripting/src/compiler.ts` for a similar implementation.
 - [ ] **Transpiler**: Handle all compiler constructs
 - [ ] **Compiler**: Consider tracking usages of `__ctx__` and removing it from the parameter list if it is unused
 - [ ] **Scripting**: Either document wildcard capability support (see `packages/core/src/runtime/lib/kernel.ts`), or remove it
@@ -65,5 +64,4 @@
 - [ ] **AI**: Return images and audio in a usable format in `plugins/ai/src/lib.ts`
 - [ ] **AI**: Add support for specifying image size in `plugins/ai/src/lib.ts`
 - [ ] **AI**: Add support for streaming text in `plugins/ai/src/lib.ts`
-- [ ] **Compiler**: Disallow accessing dangerous keys in `packages/scripting/src/compiler.ts`
 - [ ] **Core**: Fix tests in `packages/core/src/runtime/lib/core.test.ts`: `call` test should verify, using a mocked verb, that it actually calls the verb; `set_entity` and `set_prototype` should add real testcases
