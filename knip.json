@@ -3,7 +3,7 @@
   "workspaces": {
     "packages/*": {
       "entry": ["src/{index.ts,cli.ts}"],
-      "project": ["src/**/*.ts"]
+      "project": ["src/**/*.{ts,tsx}"]
     },
     "apps/*": {
       "entry": ["{src/index.ts,src/index.tsx,index.html}"],
