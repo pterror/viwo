@@ -73,6 +73,14 @@ describe("Parity: Interpreter vs Compiler", () => {
     checkParity("quoted list", ["quote", [1, 2, 3]]);
   });
 
+  describe("Numbers", () => {
+    checkParity("std.int", ["std.int", "123"]);
+    checkParity("std.int radix", ["std.int", "101", 2]);
+    checkParity("std.float", ["std.float", "123.456"]);
+    checkParity("std.number", ["std.number", "123"]);
+    checkParity("std.number from bool", ["std.number", true]);
+  });
+
   describe("Arithmetic", () => {
     checkParity("add", ["+", 1, 2]);
     checkParity("sub", ["-", 10, 2]);

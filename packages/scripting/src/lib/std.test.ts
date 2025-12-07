@@ -22,6 +22,25 @@ createLibraryTester(StdLib, "Standard Library", (test) => {
     expect(evaluate(StdLib.this(), ctx)).toEqual({ id: 2 });
   });
 
+  // Numbers
+  test("std.int", () => {
+    expect(evaluate(StdLib.int("123"), ctx)).toBe(123);
+    expect(evaluate(StdLib.int("101", 2), ctx)).toBe(5);
+    expect(evaluate(StdLib.int("invalid"), ctx)).toBeNaN();
+  });
+
+  test("std.float", () => {
+    expect(evaluate(StdLib.float("1.5"), ctx)).toBe(1.5);
+    expect(evaluate(StdLib.float("invalid"), ctx)).toBeNaN();
+  });
+
+  test("std.number", () => {
+    expect(evaluate(StdLib.number("123"), ctx)).toBe(123);
+    expect(evaluate(StdLib.number("1.5"), ctx)).toBe(1.5);
+    expect(evaluate(StdLib.number(true), ctx)).toBe(1);
+    expect(evaluate(StdLib.number(false), ctx)).toBe(0);
+  });
+
   test("caller", () => {
     expect(evaluate(StdLib.caller(), ctx)).toEqual({ id: 1 });
   });

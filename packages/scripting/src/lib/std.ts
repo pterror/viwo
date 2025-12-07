@@ -601,6 +601,57 @@ const set_ = defineFullOpcode<[string, unknown], any>("set", {
 });
 export { set_ as set };
 
+// Numbers
+/** Parses a string into an integer. */
+export const int = defineFullOpcode<[string, number?], number>("std.int", {
+  handler: ([str, radix], _ctx) => parseInt(str, radix),
+  metadata: {
+    category: "data",
+    description: "Parses a string into an integer.",
+    label: "Parse Integer",
+    parameters: [
+      { description: "The string to parse.", name: "string", type: "string" },
+      {
+        description: "The radix (2-36).",
+        name: "radix",
+        optional: true,
+        type: "number",
+      },
+    ],
+    returnType: "number",
+    slots: [
+      { name: "String", type: "string" },
+      { default: 10, name: "Radix", type: "number" },
+    ],
+  },
+});
+
+/** Parses a string into a float. */
+export const float = defineFullOpcode<[string], number>("std.float", {
+  handler: ([str], _ctx) => parseFloat(str),
+  metadata: {
+    category: "data",
+    description: "Parses a string into a floating-point number.",
+    label: "Parse Float",
+    parameters: [{ description: "The string to parse.", name: "string", type: "string" }],
+    returnType: "number",
+    slots: [{ name: "String", type: "string" }],
+  },
+});
+
+/** Converts a value to a number. */
+export const number = defineFullOpcode<[unknown], number>("std.number", {
+  handler: ([val], _ctx) => Number(val),
+  metadata: {
+    category: "data",
+    description: "Converts a value to a number.",
+    label: "To Number",
+    parameters: [{ description: "The value to convert.", name: "value", type: "unknown" }],
+    returnType: "number",
+    slots: [{ name: "Value", type: "block" }],
+  },
+});
+
 // System
 /** Logs a message to the console/client. */
 export const log = defineFullOpcode<[unknown, ...unknown[]], null>("log", {

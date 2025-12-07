@@ -955,6 +955,27 @@ declare global {
      */
     function to_timestamp(time: string): number;
   }
+  namespace std {
+    /**
+     * Parses a string into a floating-point number.
+     *
+     * @param string The string to parse.
+     */
+    function float(string: string): number;
+    /**
+     * Parses a string into an integer.
+     *
+     * @param string The string to parse.
+     * @param radix The radix (2-36).
+     */
+    function int(string: string, radix?: number): number;
+    /**
+     * Converts a value to a number.
+     *
+     * @param value The value to convert.
+     */
+    function number(value: unknown): number;
+  }
   namespace json {
     /**
      * Parses a JSON string into a value.

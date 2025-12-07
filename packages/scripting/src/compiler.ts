@@ -613,6 +613,17 @@ ${compileValue(args[1], ops, true)}}`;
       const [amount, unit, base] = compiledArgs;
       return `${prefix}__helpers__.timeOffset(${amount}, ${unit}${base ? `, ${base}` : ""})`;
     }
+    case "std.int": {
+      return `${prefix}parseInt(${compiledArgs[0]}, ${
+        compiledArgs[1] !== undefined ? compiledArgs[1] : 10
+      })`;
+    }
+    case "std.float": {
+      return `${prefix}parseFloat(${compiledArgs[0]})`;
+    }
+    case "std.number": {
+      return `${prefix}Number(${compiledArgs[0]})`;
+    }
     default: {
       const def = ops[op];
       if (!def) {

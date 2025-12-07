@@ -1565,7 +1565,7 @@ export function player_quest_log() {
       continue;
     } // Only show active? Or completed too?
 
-    const questEnt = entity(parseInt(qId, 10));
+    const questEnt = entity(std.int(qId));
     const structure = call(questEnt, "get_structure") as any;
 
     output = str.concat(output, `\n[${questEnt["name"]}]\n`);
