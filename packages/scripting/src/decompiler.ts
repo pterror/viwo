@@ -1,21 +1,28 @@
-export function decompile(script: any, indentLevel = 0, isStatement = false): string {
+export function decompile(
+  script: any,
+  indentLevel = 0,
+  isStatement = false,
+  shouldReturn = false,
+): string {
   const indent = "  ".repeat(indentLevel);
 
   if (script === null || script === undefined) {
-    return "null";
+    return shouldReturn ? "return null" : "null";
   }
 
   if (typeof script === "string") {
-    return JSON.stringify(script);
+    const val = JSON.stringify(script);
+    return shouldReturn ? `return ${val}` : val;
   }
 
   if (typeof script === "number" || typeof script === "boolean") {
-    return String(script);
+    const val = String(script);
+    return shouldReturn ? `return ${val}` : val;
   }
 
   if (Array.isArray(script)) {
     if (script.length === 0) {
-      return "[]";
+      return shouldReturn ? "return []" : "[]";
     }
     const [opcode] = script;
     const args = script.slice(1);
@@ -32,10 +39,15 @@ export function decompile(script: any, indentLevel = 0, isStatement = false): st
       // In TS, a block doesn't return.
       // If we are in an expression context (e.g. lambda body), we might wrap in IIFE or just use { ... } if it's a lambda body.
 
-      // For now, let's just decompile as statements.
-      const statements = args.map((stmt) =>
-        decompile(stmt, indentLevel + (isStatement ? 0 : 1), true),
-      );
+      const statements = args.map((stmt, idx) => {
+        const isLast = idx === args.length - 1;
+        return decompile(
+          stmt,
+          indentLevel + (isStatement ? 0 : 1),
+          true,
+          shouldReturn && isLast, // Only return the last statement if seq should return
+        );
+      });
 
       if (isStatement) {
         // Top level or inside another block
@@ -58,15 +70,21 @@ export function decompile(script: any, indentLevel = 0, isStatement = false): st
     if (opcode === "if") {
       const [cond, thenBranch, elseBranch] = args;
       if (isStatement) {
-        const thenCode = decompile(thenBranch, indentLevel + 1, true);
+        // If we should return, we need to return from both branches
+        const thenCode = decompile(thenBranch, indentLevel + 1, true, shouldReturn);
         let out = `if (${decompile(cond, indentLevel, false)}) {\n${indent}  ${thenCode}${
           thenCode.endsWith("}") || thenCode.endsWith(";") ? "" : ";"
         }\n${indent}}`;
+
         if (elseBranch) {
-          const elseCode = decompile(elseBranch, indentLevel + 1, true);
+          const elseCode = decompile(elseBranch, indentLevel + 1, true, shouldReturn);
           out += ` else {\n${indent}  ${elseCode}${
             elseCode.endsWith("}") || elseCode.endsWith(";") ? "" : ";"
           }\n${indent}}`;
+        } else if (shouldReturn) {
+          // If we should return, but there is no else branch, we should implicitly return null
+          // or just fall through? ViwoScript returns null if else is missing and condition is false.
+          out += ` else {\n${indent}  return null;\n${indent}}`;
         }
         return out;
       }
@@ -121,15 +139,10 @@ export function decompile(script: any, indentLevel = 0, isStatement = false): st
       const [name, val] = args;
       // let returns the value.
       if (isStatement) {
-        return `let ${name} = ${decompile(val, indentLevel, false)}`;
+        const decl = `let ${name} = ${decompile(val, indentLevel, false)}`;
+        return shouldReturn ? `${decl};\n${indent}return ${name}` : decl;
       }
       // (let x = ...) is not valid.
-      // But maybe we can just output the assignment if it was already declared?
-      // No, let declares.
-      // We can't declare in expression.
-      // Fallback to function call or just assume it's valid in our "TS-like" script?
-      // User wants "valid TS".
-      // So we must use IIFE if it's an expression.
       return `(() => { let ${name} = ${decompile(
         val,
         indentLevel + 1,
@@ -140,12 +153,14 @@ export function decompile(script: any, indentLevel = 0, isStatement = false): st
     if (opcode === "set") {
       const [name, val] = args;
       // Assignment is an expression in JS.
-      return `${name} = ${decompile(val, indentLevel, false)}`;
+      const expr = `${name} = ${decompile(val, indentLevel, false)}`;
+      return shouldReturn ? `return ${expr}` : expr;
     }
 
     if (opcode === "var") {
       const [name] = args;
-      return String(name);
+      const expr = String(name);
+      return shouldReturn ? `return ${expr}` : expr;
     }
 
     // --- Functions ---
@@ -161,22 +176,11 @@ export function decompile(script: any, indentLevel = 0, isStatement = false): st
 
       if (bodyIsSeq) {
         // Decompile seq contents as statements
-        const statements = body.slice(1).map((stmt: any) => decompile(stmt, indentLevel + 1, true));
-        // Add return to the last statement if it's not a control flow that returns?
-        // In ViwoScript, last value is returned.
-        // In TS, we need explicit return.
-        if (statements.length > 0) {
-          const lastIdx = statements.length - 1;
-          const last = statements[lastIdx]!;
-          if (
-            !last.startsWith("return ") &&
-            !last.startsWith("if") &&
-            !last.startsWith("while") &&
-            !last.startsWith("for")
-          ) {
-            statements[lastIdx] = `return ${last}`;
-          }
-        }
+        // We explicitly tell the seq to handle returns for the last statement
+        const statements = body.slice(1).map((stmt: any, idx: number) => {
+          const isLast = idx === body.length - 2; // body[0] is opcode
+          return decompile(stmt, indentLevel + 1, true, isLast);
+        });
 
         return `(${params.join(", ")}) => {\n${statements
           .map(
@@ -186,21 +190,26 @@ export function decompile(script: any, indentLevel = 0, isStatement = false): st
           .join("\n")}\n${indent}}`;
       }
       // Single expression body
-      return `(${params.join(", ")}) => ${decompile(body, indentLevel, false)}`;
+      const bodyCode = decompile(body, indentLevel, false);
+      return shouldReturn
+        ? `return (${params.join(", ")}) => ${bodyCode}`
+        : `(${params.join(", ")}) => ${bodyCode}`;
     }
 
     if (opcode === "apply") {
       const [func, ...funcArgs] = args;
-      return `${decompile(func, indentLevel, false)}(${funcArgs
+      const expr = `${decompile(func, indentLevel, false)}(${funcArgs
         .map((arg) => decompile(arg, indentLevel, false))
         .join(", ")})`;
+      return shouldReturn ? `return ${expr}` : expr;
     }
 
     // --- Data Structures ---
 
     if (opcode === "list.new") {
-      const items = args.map((arg) => decompile(arg, indentLevel, false));
-      return `[${items.join(", ")}]`;
+      const items = args.map((arg: any) => decompile(arg, indentLevel, false));
+      const expr = `[${items.join(", ")}]`;
+      return shouldReturn ? `return ${expr}` : expr;
     }
 
     if (opcode === "obj.new") {
@@ -210,7 +219,8 @@ export function decompile(script: any, indentLevel = 0, isStatement = false): st
         const val = decompile(arg[1], indentLevel, false);
         props.push(`${key}: ${val}`);
       }
-      return `{ ${props.join(", ")} }`;
+      const expr = `{ ${props.join(", ")} }`;
+      return shouldReturn ? `return ${expr}` : expr;
     }
 
     if (opcode === "obj.get") {
@@ -227,10 +237,11 @@ export function decompile(script: any, indentLevel = 0, isStatement = false): st
         }
       }
 
+      let expr = access;
       if (def !== undefined) {
-        return `(${access} ?? ${decompile(def, indentLevel, false)})`;
+        expr = `(${access} ?? ${decompile(def, indentLevel, false)})`;
       }
-      return access;
+      return shouldReturn ? `return ${expr}` : expr;
     }
 
     if (opcode === "obj.set") {
@@ -247,12 +258,14 @@ export function decompile(script: any, indentLevel = 0, isStatement = false): st
         }
       }
 
-      return `${access} = ${valCode}`;
+      const expr = `${access} = ${valCode}`;
+      return shouldReturn ? `return ${expr}` : expr;
     }
 
     if (opcode === "obj.has") {
       const [obj, key] = args;
-      return `${decompile(key, indentLevel, false)} in ${decompile(obj, indentLevel, false)}`;
+      const expr = `${decompile(key, indentLevel, false)} in ${decompile(obj, indentLevel, false)}`;
+      return shouldReturn ? `return ${expr}` : expr;
     }
 
     if (opcode === "obj.del") {
@@ -267,7 +280,8 @@ export function decompile(script: any, indentLevel = 0, isStatement = false): st
           access = `${objCode}.${inner}`;
         }
       }
-      return `delete ${access}`;
+      const expr = `delete ${access}`;
+      return shouldReturn ? `return ${expr}` : expr;
     }
 
     // --- Infix Operators ---
@@ -289,29 +303,41 @@ export function decompile(script: any, indentLevel = 0, isStatement = false): st
 
     if (infixOps[opcode]) {
       const op = infixOps[opcode];
-      return `(${decompile(args[0], indentLevel, false)} ${op} ${decompile(
+      const expr = `(${decompile(args[0], indentLevel, false)} ${op} ${decompile(
         args[1],
         indentLevel,
         false,
       )})`;
+      return shouldReturn ? `return ${expr}` : expr;
     }
 
     if (opcode === "^") {
-      return `Math.pow(${decompile(args[0], indentLevel, false)}, ${decompile(
+      const expr = `Math.pow(${decompile(args[0], indentLevel, false)}, ${decompile(
         args[1],
         indentLevel,
         false,
       )})`;
+      return shouldReturn ? `return ${expr}` : expr;
     }
 
     if (opcode === "not") {
-      return `!${decompile(args[0], indentLevel, false)}`;
+      const expr = `!${decompile(args[0], indentLevel, false)}`;
+      return shouldReturn ? `return ${expr}` : expr;
     }
 
     // --- Standard Library ---
 
     if (opcode === "log") {
-      return `console.log(${args.map((arg) => decompile(arg, indentLevel, false)).join(", ")})`;
+      const expr = `console.log(${args
+        .map((arg) => decompile(arg, indentLevel, false))
+        .join(", ")})`;
+      return shouldReturn ? `return ${expr}` : expr;
+    }
+
+    if (opcode === "new_return") {
+      // Explicit return opcode if we add it
+      const expr = args[0] ? decompile(args[0], indentLevel, false) : "null";
+      return `return ${expr}`;
     }
 
     if (opcode === "throw") {
@@ -320,20 +346,21 @@ export function decompile(script: any, indentLevel = 0, isStatement = false): st
 
     if (opcode === "try") {
       const [tryBlock, errVar, catchBlock] = args;
-      return `try {\n${indent}  ${decompile(
-        tryBlock,
-        indentLevel + 1,
-        true,
-      )};\n${indent}} catch (${errVar}) {\n${indent}  ${decompile(
-        catchBlock,
-        indentLevel + 1,
-        true,
-      )};\n${indent}}`;
+      // try/catch handles returns recursively
+      const tryCode = decompile(tryBlock, indentLevel + 1, true, shouldReturn);
+      const catchCode = decompile(catchBlock, indentLevel + 1, true, shouldReturn);
+      return `try {\n${indent}  ${tryCode}${
+        tryCode.endsWith("}") || tryCode.endsWith(";") ? "" : ";"
+      }\n${indent}} catch (${errVar}) {\n${indent}  ${catchCode}${
+        catchCode.endsWith("}") || catchCode.endsWith(";") ? "" : ";"
+      }\n${indent}}`;
     }
 
     // Generic function call
-    return `${opcode}(${args.map((arg) => decompile(arg, indentLevel, false)).join(", ")})`;
+    const expr = `${opcode}(${args.map((arg) => decompile(arg, indentLevel, false)).join(", ")})`;
+    return shouldReturn ? `return ${expr}` : expr;
   }
 
-  return JSON.stringify(script);
+  const val = JSON.stringify(script);
+  return shouldReturn ? `return ${val}` : val;
 }

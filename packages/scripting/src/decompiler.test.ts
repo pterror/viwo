@@ -101,4 +101,50 @@ describe("Decompiler", () => {
     // obj.del
     expect(decompile(ObjectLib.objDel(StdLib.var("o"), "k"))).toBe("delete o.k");
   });
+
+  test("implicit returns in control flow (if)", () => {
+    // (x) => { if (x) { 1 } else { 2 } }  -> returns 1 or 2
+    const script = StdLib.lambda(
+      ["x"],
+      StdLib.seq(StdLib.if(StdLib.var("x"), StdLib.seq(1), StdLib.seq(2))),
+    );
+    // Note: The decompiler logic for `seq` with `shouldReturn` propagates it to the last item.
+    // Here `if` is the last item. `if` propagates to its branches.
+    // Branches are `seq(1)` and `seq(2)`.
+    // `seq(1)` propagates to `1`, which becomes `return 1`.
+    const expected = `(x) => {
+  if (x) {
+    return 1;
+  } else {
+    return 2;
+  }
+}`;
+    expect(decompile(script)).toBe(expected);
+  });
+
+  test("implicit returns in control flow (if with missing else)", () => {
+    // (x) => { if (x) { 1 } } -> returns 1 or null implicitly
+    const script = StdLib.lambda(["x"], StdLib.seq(StdLib.if(StdLib.var("x"), StdLib.seq(1))));
+    const expected = `(x) => {
+  if (x) {
+    return 1;
+  } else {
+    return null;
+  }
+}`;
+    expect(decompile(script)).toBe(expected);
+  });
+
+  test("implicit returns in control flow (try/catch)", () => {
+    // (x) => { try { 1 } catch (e) { 2 } }
+    const script = StdLib.lambda(["x"], StdLib.seq(StdLib.try(StdLib.seq(1), "e", StdLib.seq(2))));
+    const expected = `(x) => {
+  try {
+    return 1;
+  } catch (e) {
+    return 2;
+  }
+}`;
+    expect(decompile(script)).toBe(expected);
+  });
 });

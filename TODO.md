@@ -56,7 +56,6 @@
 - [ ] **Seed**: Make sure mailbox uses capability based permissions.
 - [ ] **Decompiler**: Return the last element in the body in `packages/scripting/src/decompiler.ts`. See `packages/scripting/src/compiler.ts` for a similar implementation.
 - [ ] **Compiler**: Fix documentation to remove IIFEs
-- [ ] **Compiler**: Does this supersede the decompiler?
 - [ ] **Transpiler**: Handle all compiler constructs
 - [ ] **Compiler**: Consider tracking usages of `__ctx__` and removing it from the parameter list if it is unused
 - [ ] **Scripting**: Either document wildcard capability support (see `packages/core/src/runtime/lib/kernel.ts`), or remove it
