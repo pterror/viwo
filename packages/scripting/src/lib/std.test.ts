@@ -243,6 +243,11 @@ createLibraryTester(StdLib, "Standard Library", (test) => {
     expect(evaluate(StdLib.try(123, "err", 456), ctx)).toBe(123);
   });
 
+  test("std.call_method", () => {
+    const result = evaluate(StdLib.callMethod({ foo: (num: number) => num * 2 }, "foo", 21), ctx);
+    expect(result).toBe(42);
+  });
+
   test("std.lambda", () => {
     const l = evaluate(StdLib.lambda(["x"], StdLib.var("x")), ctx);
     expect(l.type).toBe("lambda");

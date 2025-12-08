@@ -1,5 +1,6 @@
-import { type Entity } from "@viwo/shared/jsonrpc";
-import { WrappedEntity } from "./wrappers";
+// import { type Entity } from "@viwo/shared/jsonrpc";
+// import { WrappedEntity } from "./wrappers";
+
 import { hydrateCapability } from "./capabilities";
 
 export function hydrate(value: unknown): unknown {
@@ -24,11 +25,7 @@ export function hydrate(value: unknown): unknown {
   // Hydrate Entity
   // Check signature { id: number, props: ... }
   if ("id" in value && typeof (value as any).id === "number") {
-    // Is it already wrapped?
-    if (value instanceof WrappedEntity) {
-      return value;
-    }
-    return new WrappedEntity(value as Entity);
+    return value;
   }
 
   return value;

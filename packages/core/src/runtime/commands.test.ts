@@ -196,6 +196,9 @@ describe("Player Commands", () => {
     await runCommand("set", ["Stone", "weight", 20]);
 
     const updatedItem = getEntity(itemId)!;
+    if (updatedItem["weight"] !== 20) {
+      console.log("DEBUG: Sent messages:", JSON.stringify(sentMessages, null, 2));
+    }
     expect(updatedItem["weight"]).toBe(20);
   });
 });

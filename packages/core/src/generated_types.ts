@@ -163,13 +163,14 @@ declare global {
   }
 
   // Standard library functions
-  class Entity {
+  interface Entity {
+    /** Unique ID of the entity */
     id: number;
-    prototype_id: number;
-    has_verb(name: string): boolean;
-    toJSON(): this;
+    /** Unique ID of the entity's prototype */
+    prototype_id?: number | null;
+    /** Dynamic properties */
+    [key: string]: unknown;
   }
-
   class EntityControl {
     destroy(targetId: number): boolean;
   }

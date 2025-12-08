@@ -236,7 +236,7 @@ export function defineFullOpcode<
 /** Metadata for a method on an SDK class. */
 export interface MethodMetadata {
   name: string;
-  description?: string;
+  description?: string | undefined;
   parameters: { name: string; type: string; optional?: boolean }[];
   returnType: string;
 }
@@ -245,17 +245,17 @@ export interface MethodMetadata {
 export interface PropertyMetadata {
   name: string;
   type: string;
-  description?: string;
+  description?: string | undefined;
 }
 
 /** Metadata for an SDK class for type generation. */
 export interface ClassMetadata {
   name: string;
-  description?: string;
+  description?: string | undefined;
   methods: MethodMetadata[];
   properties?: PropertyMetadata[];
-  indexSignature?: string;
-  implements?: string[]; // e.g. "Capability"
+  indexSignature?: string | undefined;
+  implements?: string[] | undefined; // e.g. "Capability"
 }
 
 /** Interface for classes that expose metadata for type generation. */

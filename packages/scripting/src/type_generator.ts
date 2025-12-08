@@ -52,7 +52,7 @@ const OPERATOR_MAP: Record<string, string> = {
 };
 
 function generateJSDoc(op: {
-  description?: string;
+  description?: string | undefined;
   parameters?: readonly { name: string; description?: string }[];
 }): string {
   if (
@@ -137,7 +137,7 @@ function renderClass(meta: ClassMetadata): string {
   }
   // Index Signature
   if (meta.indexSignature) {
-    output += `  ${meta.indexSignature};\n`;
+    output += `  ${meta.indexSignature}\n`;
   }
   // Methods
   for (const method of meta.methods) {
@@ -151,7 +151,7 @@ function renderClass(meta: ClassMetadata): string {
         return `${parameter.name}${question}: ${parameter.type}`;
       })
       .join(", ");
-    output += `  ${method.name}(${params}): ${method.returnType};\n`;
+    output += `${method.name}(${params}): ${method.returnType};\n`;
   }
   output += "}\n";
   return output;

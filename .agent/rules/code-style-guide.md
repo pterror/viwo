@@ -4,6 +4,7 @@ description: General Guidelines
 ---
 
 # Core Tenets
+- If you are not sure about something, PLEASE ASK instead of catastrophically failing by risking trying the wrong thing
 - Use `??`, not `||`, for fallbacks
 - Deliberate slowly and thoroughly on matters that require more care/attention.
 - Avoid `any` whenever possible. It is the equivalent of `NaN` for the type system - it is infectious.

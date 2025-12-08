@@ -1,4 +1,5 @@
 import { type Capability, type ScriptContext, ScriptError } from "@viwo/scripting";
+import { deepFreeze } from "./utils";
 import { destroyEntityLogic } from "./logic";
 
 export abstract class BaseCapability implements Capability {
@@ -6,7 +7,9 @@ export abstract class BaseCapability implements Capability {
   constructor(
     public readonly id: string,
     public readonly ownerId: number,
-  ) {}
+  ) {
+    deepFreeze(this);
+  }
 
   // Helper to check ownership or validity if needed
   protected check(_ctx: ScriptContext) {

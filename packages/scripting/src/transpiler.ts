@@ -351,11 +351,18 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
     const props: any[] = [];
     node.properties.forEach((prop) => {
       if (ts.isPropertyAssignment(prop)) {
-        const key = prop.name.getText();
-        // Strip quotes if present
-        const cleanKey = key.startsWith('"') || key.startsWith("'") ? key.slice(1, -1) : key;
+        let key: any;
+        if (ts.isComputedPropertyName(prop.name)) {
+          key = transpileNode(prop.name.expression, scope);
+        } else {
+          key = prop.name.getText();
+          // Strip quotes if present
+          if (typeof key === "string" && (key.startsWith('"') || key.startsWith("'"))) {
+            key = key.slice(1, -1);
+          }
+        }
         const val = transpileNode(prop.initializer, scope);
-        props.push([cleanKey, val]);
+        props.push([key, val]);
       }
     });
     return ObjectLib.objNew(...props);

@@ -18,7 +18,8 @@ import {
 } from "../../repo";
 import { checkCapability, resolveProps } from "../utils";
 import type { Entity } from "@viwo/shared/jsonrpc";
-import { WrappedEntity } from "../wrappers";
+// import { WrappedEntity } from "../wrappers";
+
 import { destroyEntityLogic } from "../logic";
 import { hydrate } from "../hydration";
 import { scheduler } from "../../scheduler";
@@ -37,10 +38,8 @@ export const create = defineFullOpcode<[Capability | null, object], number>("cre
     checkCapability(capability, ctx.this.id, "sys.create");
 
     const newId = createEntity(data as never);
-
     // Mint entity.control for the new entity and give to creator
     createCapability(ctx.this.id, "entity.control", { target_id: newId });
-
     return newId;
   },
   metadata: {
@@ -200,7 +199,7 @@ export const entity = defineFullOpcode<[number], Entity>("entity", {
     if (!entity) {
       throw new ScriptError(`entity: entity ${id} not found`);
     }
-    return new WrappedEntity(entity);
+    return entity;
   },
   metadata: {
     category: "world",
@@ -238,7 +237,7 @@ export const setEntity = defineFullOpcode<[Capability | null, Entity, object], E
       );
       updateEntity({ id: (entity as Entity).id, ...updates });
       updateEntity({ id: (entity as Entity).id, ...updates });
-      return new WrappedEntity({ ...entity, ...updates });
+      return { ...entity, ...updates };
     },
     metadata: {
       category: "action",
@@ -326,7 +325,8 @@ export const setPrototype = defineFullOpcode<[Capability | null, Entity, number 
 
 /** Resolves all properties of an entity, including dynamic ones. */
 export const resolve_props = defineFullOpcode<[Entity], Entity>("resolve_props", {
-  handler: ([entity], ctx) => new WrappedEntity(resolveProps(entity, ctx)),
+  handler: ([entity], ctx) => resolveProps(entity, ctx),
+
   metadata: {
     category: "data",
     description: "Resolve entity properties",

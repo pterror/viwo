@@ -93,3 +93,18 @@ export function checkCapability(
     throw new ScriptError("Capability parameters do not match requirements");
   }
 }
+
+export function deepFreeze<Type extends object>(object: Type, visited = new WeakSet()): Type {
+  if (visited.has(object)) {
+    return object;
+  }
+  visited.add(object);
+  Object.freeze(object);
+  for (const key of Object.getOwnPropertyNames(object)) {
+    const value = (object as any)[key];
+    if (value && typeof value === "object") {
+      deepFreeze(value, visited);
+    }
+  }
+  return object;
+}

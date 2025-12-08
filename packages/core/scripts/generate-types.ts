@@ -1,6 +1,8 @@
-// oxlint-disable
+// oxlint-disable first
 // Use in-memory DB
 process.env.NODE_ENV = "test";
+import * as CoreLib from "../src/runtime/lib/core";
+import * as KernelLib from "../src/runtime/lib/kernel";
 import {
   MathLib,
   BooleanLib,
@@ -15,11 +17,9 @@ import {
   type MethodMetadata,
   type PropertyMetadata,
 } from "@viwo/scripting";
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
-import * as CoreLib from "../src/runtime/lib/core";
-import * as KernelLib from "../src/runtime/lib/kernel";
 import { Project, SyntaxKind, type ClassDeclaration, Scope } from "ts-morph";
+import { join } from "node:path";
+import { writeFileSync } from "node:fs";
 
 const libraries = [
   CoreLib,
@@ -38,74 +38,92 @@ const opcodes = libraries.flatMap((lib) => Object.values(lib).map((value) => val
 // Introspect Classes using ts-morph
 const project = new Project();
 project.addSourceFilesAtPaths([
-  join(import.meta.dir, "../src/runtime/wrappers.ts"),
+  // join(import.meta.dir, "../src/runtime/wrappers.ts"),
   join(import.meta.dir, "../src/runtime/capabilities.ts"),
 ]);
 
-function extractMetadata(cls: ClassDeclaration, nameOverride?: string): ClassMetadata {
-  const methods: MethodMetadata[] = cls
+function extractMetadata(class_: ClassDeclaration, nameOverride?: string): ClassMetadata {
+  const methods: MethodMetadata[] = class_
     .getMethods()
-    .filter((m) => m.getScope() === Scope.Public && !m.isStatic())
-    .map((m) => ({
-      name: m.getName(),
-      description: m.getJsDocs()[0]?.getDescription().trim(),
-      parameters: m
+    .filter((method) => method.getScope() === Scope.Public && !method.isStatic())
+    .map((method) => ({
+      description: method.getJsDocs()[0]?.getDescription().trim(),
+      name: method.getName(),
+      parameters: method
         .getParameters()
-        .filter((p) => {
-          const typeText = p.getType().getText(p);
-          const name = p.getName();
+        .filter((parameter) => {
+          const typeText = parameter.getType().getText(parameter);
+          const name = parameter.getName();
           return !typeText.includes("ScriptContext") && name !== "ctx" && name !== "_ctx";
         })
-        .map((p) => ({
-          name: p.getName(),
-          type: p.getType().getText(p), // Use type text
-          optional: p.isOptional(),
+        .map((parameter) => ({
+          name: parameter.getName(),
+          optional: parameter.isOptional(),
+          type: parameter.getType().getText(parameter), // Use type text
         })),
-      returnType: m.getReturnType().getText(m),
+      returnType: method.getReturnType().getText(method),
     }));
 
-  const properties: PropertyMetadata[] = cls
+  const properties: PropertyMetadata[] = class_
     .getProperties()
-    .filter((p) => !p.isStatic() && (p.getScope() === Scope.Public || p.getScope() === undefined)) // default is public
-    .map((p) => ({
-      name: p.getName(),
-      type: p.getType().getText(p),
-      description: p.getJsDocs()[0]?.getDescription().trim(),
+    .filter(
+      (property) =>
+        !property.isStatic() &&
+        (property.getScope() === Scope.Public || property.getScope() === undefined),
+    ) // default is public
+    .map((property) => ({
+      description: property.getJsDocs()[0]?.getDescription().trim(),
+      name: property.getName(),
+      type: property.getType().getText(property),
     }));
 
   // Handle index signature if present
-  let indexSignature: string | undefined;
-  const indexSig = cls.getMembers().find((m) => m.getKind() === SyntaxKind.IndexSignature);
-  if (indexSig) {
-    indexSignature = indexSig.getText();
-  }
+  const indexSigs = class_.getDescendantsOfKind(SyntaxKind.IndexSignature);
+  const indexSignature = indexSigs[0]?.getText();
 
   // Handle implements
-  const implementsClauses = cls.getImplements().map((i) => i.getExpression().getText());
+  const implementsClauses = class_
+    .getImplements()
+    .map((implement) => implement.getExpression().getText());
 
   return {
-    name: nameOverride ?? cls.getName()!,
-    description: cls.getJsDocs()[0]?.getDescription().trim(),
-    methods,
-    properties,
+    description: class_.getJsDocs()[0]?.getDescription().trim(),
+    implements: implementsClauses.length > 0 ? implementsClauses : undefined,
     indexSignature,
-    implements: implementsClauses.length ? implementsClauses : undefined,
+    methods,
+    name: nameOverride ?? class_.getName()!,
+    properties,
   };
 }
 
 const classes: ClassMetadata[] = [];
 
 // WrappedEntity -> Entity
-const wrappersFile = project.getSourceFileOrThrow("wrappers.ts");
-const wrappedEntity = wrappersFile.getClassOrThrow("WrappedEntity");
-classes.push(extractMetadata(wrappedEntity, "Entity"));
+// const wrappersFile = project.getSourceFileOrThrow("wrappers.ts");
+// const wrappedEntity = wrappersFile.getClassOrThrow("WrappedEntity");
+// classes.push(extractMetadata(wrappedEntity, "Entity"));
 
 // EntityControl
 const capabilitiesFile = project.getSourceFileOrThrow("capabilities.ts");
 const entityControl = capabilitiesFile.getClassOrThrow("EntityControl");
 classes.push(extractMetadata(entityControl));
 
-const definitions = generateTypeDefinitions(opcodes, classes);
+let definitions = generateTypeDefinitions(opcodes, classes);
+
+// Inject Entity interface
+definitions = definitions.replace(
+  "// Standard library functions",
+  `// Standard library functions
+  interface Entity {
+    /** Unique ID of the entity */
+    id: number;
+    /** Unique ID of the entity's prototype */
+    prototype_id?: number | null;
+    /** Dynamic properties */
+    [key: string]: unknown;
+  }`,
+);
+
 const outputPath = join(import.meta.dir, "../src/generated_types.ts");
 
 writeFileSync(outputPath, definitions);
