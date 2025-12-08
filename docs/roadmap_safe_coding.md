@@ -28,7 +28,8 @@ Instead of exposing raw opcodes (`sys.create(cap, ...)`), we expose **Typed Capa
 - **Benefit:**
   - **Discoverability:** `cap.` triggers autocomplete showing exactly what _this_ capability can do.
   - **Safety:** You cannot pass the wrong capability to the wrong opcode. The method _is_ the opcode.
-  - **No Engine Rewrite:** These classes just call the existing `sys.*` opcodes under the hood.
+  - **Strictness:** The raw opcodes (`sys.destroy`, `sys.create`) are **removed** from the public global scope. They become internal primitives accessible only by the SDK classes.
+  - **No Engine Rewrite:** The primitives remain in the kernel, but are "Hidden" from user scripts.
 
 ```typescript
 // Script view
@@ -42,12 +43,21 @@ export class EntityControl {
 }
 ```
 
-### 2. Strict Type Generation for Scripts
+### 2. New Opcode: `std.call_method` (Critical for Polyglot)
+
+- **Problem:** `std.apply(obj.get("method"), args)` loses the `this` context in JS and doesn't map to Lua's `obj:method()` syntax.
+- **Solution:** Introduce `std.call_method(obj, "method", args)`.
+- **Compilation:**
+  - **JS:** `obj["method"](...args)` (Preserves `this`)
+  - **Lua:** `obj:method(...args)`
+- **Benefit:** Allows the SDK to wrap methods correctly in any language.
+
+### 3. Strict Type Generation for Scripts
 
 - **Action:** Auto-generate TypeScript definitions (`.d.ts`) for every available verb and capability in the system.
 - **Result:** The user (or AI) gets red squiggles immediately if they try to call `entity.jump()` on an entity that doesn't have a `jump` verb.
 
-### 3. Static Analysis Linter
+### 4. Static Analysis Linter
 
 - **Action:** Create a targeted linter (or TS plugin) that forbids usage of "Raw" `sys.*` opcodes, forcing usage of the Safe Wrappers.
 
@@ -55,13 +65,13 @@ export class EntityControl {
 
 ## Phase 2: Medium-term (Structural Safety)
 
-### 4. "Result" Pattern for Opcodes
+### 5. "Result" Pattern for Opcodes
 
 - **Problem:** Currently, failures might throw or return null/undefined ambiguously.
 - **Solution:** Standardize on a `Result<T, E>` type for all potentially failing operations.
 - **Enforcement:** compiler forces handling the error case (or explicitly unwrapping).
 
-### 5. Simulator / Dry-Run Mode
+### 6. Simulator / Dry-Run Mode
 
 - **Action:** Expose a `sys.simulate(() => { ... })` context.
 - **Benefit:** Allows scripts to "try" an action to see if it would fail (e.g., check if a capability is valid for a target) without actually committing the side effect. Crucial for AI agents planning actions.
@@ -70,14 +80,17 @@ export class EntityControl {
 
 ## Phase 3: Long-term (The "True" Object-Capability Model)
 
-### 6. Native Class Persistence
+### 7. Type-Tagged Persistence (The Polyglot Approach)
 
-- **Goal:** Move away from "Data + Opcodes" entirely.
-- **Architecture:** The database stores _Objects_ (properties + prototype reference). Capabilities are just objects with sensitive methods.
-- **Refactor:** This requires the `repo.ts` serialization layer to handle hydrating specific classes based on a `_class` discriminator.
-- **Benefit:** Unified mental model. No more "Script vs Engine" duality for capabilities. A capability _is_ just a script object.
+- **Goal:** Unify the mental model while supporting multiple languages.
+- **Architecture:**
+  - **Database:** Stores **Typed Objects** (Structs) with a stable Type ID (e.g., `"viwo.capability.control"`). It does _not_ store language-specific class names.
+  - **Kernel:** Passes Typed Objects to the Scripting Host.
+  - **Scripting Host (SDK):** Responsible for **Hydration**. It maintains a registry mapping Type IDs to Native Classes (TS Class, Lua Table, Python Class).
+- **Refactor:** Requires `repo.ts` to support storing/retrieving the `_type` discriminator.
+- **Benefit:** A `viwo.capability.control` stored in the DB can be loaded as a `class EntityControl` in TypeScript or a `meta_table` in Lua. The data is universal; the behavior is native.
 
-### 7. Formal Verification Hooks
+### 8. Formal Verification Hooks
 
 - **Concept:** Allow defining Invariants on Entities (e.g., `hp >= 0`).
 - **Mechanism:** The runtime checks these invariants after every transaction. If violated, the transaction rolls back.
