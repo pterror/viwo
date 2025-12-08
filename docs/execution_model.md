@@ -11,7 +11,7 @@ Viwo uses a layered architecture to achieve security, determinism, and language 
     - **Languages:** TypeScript, Lua, Python, etc.
     - **Role:** The "Developer Experience" layer.
     - **Artifact:** Developers write code here (e.g., `cap.create_entity()`).
-    - **Compilation:** This code is **compiled (or transpiled)** into S-Expressions (JSON AST). It is _never_ executed directly by the engine.
+    - **Transformation:** This code is **transpiled** into S-Expressions (JSON AST). It is _never_ executed directly by the engine.
 
 2.  **Middle Layer: The Universal Bytecode (S-Expressions)**
 
@@ -24,20 +24,28 @@ Viwo uses a layered architecture to achieve security, determinism, and language 
 
 3.  **Bottom Layer: The Kernel (VM & Opcodes)**
     - **Implementation:** TypeScript (currently), running on Bun/Node.
-    - **Role:** Executes the S-Expressions.
+    - **Execution Modes:**
+      - **Interpreter (`evaluate`):** Walks the JSON tree. Slower, but easy to debug and step through.
+      - **JIT Compiler (`compile`):** converts S-Expressions to a native JS function (e.g., `(ctx) => ops.add.handler(...)`) for speed.
     - **Component:** **Opcodes** (e.g., `sys.create`, `std.if`).
-    - **Responsibility:** Enforces security, gas metering, and state transitions.
+    - **Responsibility:** Enforces security, gas metering, and state transitions. Only the Opcodes have access to the "Real World" (DB, Network).
 
 ---
 
 ## Why Opcodes? (Why not just run JS?)
 
-One might ask: _"If the kernel is written in TS, and we write scripts in TS, why compile to Opcodes? Why not just `eval()` the TS?"_
+The existence of `compiler.ts` (which compiles S-Expressions to JS) often leads to the question: _"Why do we need Opcodes if we end up compiling to JS anyway? Why not just write JS/TS and run it?"_
 
-### 1. Determinism & Security (The Sandbox)
+### 1. The "Sandbox" (Security)
 
-- **No "Escape":** If we ran raw JS `eval()`, a script could potentially access the global `process`, `fs`, or hang the server with `while(true)`.
-- **Gas Metering:** The VM counts every opcode executed. If a script runs too long (infinite loop), the VM kills it. This is impossible with raw `eval()` without using heavy worker threads (which are slow/complex for thousands of entities).
+Even when we use the **JIT Compiler** (`compiler.ts`), we **do not** compile user code into arbitrary JS.
+
+- **User Code:** `while(true) {}`
+- **JIT Output:** `while(true) { checkGas(); }`
+- **User Code:** `fs.delete("/boot")`
+- **JIT Output:** `ops.fs.delete(...)` -> **Throws Security Error**.
+
+The **Opcodes** act as the **System Calls** of our Operating System. Just as a C program must use `syscalls` to talk to the Linux Kernel, our Scripts must use `opcodes` to talk to the Viwo Engine. The JIT compiler ensures that _only_ valid opcodes are generated. Pure JS execution would require heavy sandboxing (like V8 Isolates), which is resource-intensive.
 
 ### 2. State Serialization (Pause/Resume)
 
@@ -74,7 +82,7 @@ const cap = std.arg(0) as EntityControl;
 cap.destroy();
 ```
 
-**2. Compiler Produces (S-Expression):**
+**2. Transpiler Produces (S-Expression):**
 
 ```json
 [
@@ -84,7 +92,7 @@ cap.destroy();
 ]
 ```
 
-**3. Kernel Executes:**
+**3. Kernel Executes (Interpreter or JIT):**
 
 - `std.arg`: Fetches argument (Prototype of EntityControl).
 - `std.call_method`:
