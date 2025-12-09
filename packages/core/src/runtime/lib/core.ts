@@ -5,22 +5,15 @@ import {
   defineFullOpcode,
   evaluate,
 } from "@viwo/scripting";
-import {
-  type Verb,
-  createCapability,
-  createEntity,
-  getEntity,
-  getPrototypeId,
-  getVerb,
-  getVerbs,
-  setPrototypeId,
-  updateEntity,
-} from "../../repo";
+import { type Verb, getEntity, getPrototypeId, getVerb, getVerbs } from "../../repo";
 import { checkCapability, resolveProps } from "../utils";
+import {
+  createEntityLogic,
+  destroyEntityLogic,
+  setPrototypeLogic,
+  updateEntityLogic,
+} from "../logic";
 import type { Entity } from "@viwo/shared/jsonrpc";
-// import { WrappedEntity } from "../wrappers";
-
-import { destroyEntityLogic } from "../logic";
 import { hydrate } from "../hydration";
 import { scheduler } from "../../scheduler";
 
@@ -28,18 +21,7 @@ import { scheduler } from "../../scheduler";
 
 /** Creates a new entity. */
 export const create = defineFullOpcode<[Capability | null, object], number>("create", {
-  handler: ([capability, data], ctx) => {
-    if (!capability) {
-      throw new ScriptError("create: expected capability");
-    }
-
-    checkCapability(capability, ctx.this.id, "sys.create");
-
-    const newId = createEntity(data as never);
-    // Mint entity.control for the new entity and give to creator
-    createCapability(ctx.this.id, "entity.control", { target_id: newId });
-    return newId;
-  },
+  handler: ([capability, data], ctx) => createEntityLogic(capability, data, ctx),
   metadata: {
     category: "action",
     description: "Create a new entity (requires sys.create)",
@@ -214,30 +196,8 @@ export const entity = defineFullOpcode<[number], Entity>("entity", {
 export const setEntity = defineFullOpcode<[Capability | null, Entity, object], Entity>(
   "set_entity",
   {
-    handler: ([capability, entity, updates], ctx) => {
-      if (!capability) {
-        throw new ScriptError("set_entity: expected capability");
-      }
-      if (!entity || typeof (entity as Entity).id !== "number") {
-        throw new ScriptError(`set_entity: expected entity object, got ${JSON.stringify(entity)}`);
-      }
-      if ("id" in updates) {
-        throw new ScriptError("set_entity: cannot update 'id'");
-      }
-      const allowedOwners = [ctx.this.id];
-      if (ctx.caller) {
-        allowedOwners.push(ctx.caller.id);
-      }
-      checkCapability(
-        capability,
-        allowedOwners,
-        "entity.control",
-        (params) => params["target_id"] === (entity as Entity).id,
-      );
-      updateEntity({ id: (entity as Entity).id, ...updates });
-      updateEntity({ id: (entity as Entity).id, ...updates });
-      return { ...entity, ...updates };
-    },
+    handler: ([capability, entity, updates], ctx) =>
+      updateEntityLogic(capability, entity, updates, ctx),
     metadata: {
       category: "action",
       description: "Update entity properties (requires entity.control)",
@@ -283,24 +243,7 @@ export const setPrototype = defineFullOpcode<[Capability | null, Entity, number 
   "set_prototype",
   {
     handler: ([capability, entity, protoId], ctx) => {
-      if (!capability) {
-        throw new ScriptError("set_prototype: expected capability");
-      }
-      if (!entity || typeof entity.id !== "number") {
-        throw new ScriptError(`set_prototype: expected entity, got ${JSON.stringify(entity)}`);
-      }
-      checkCapability(
-        capability,
-        ctx.this.id,
-        "entity.control",
-        (params) => params["target_id"] === entity.id,
-      );
-      if (protoId !== null && typeof protoId !== "number") {
-        throw new ScriptError(
-          `set_prototype: expected number or null for prototype ID, got ${JSON.stringify(protoId)}`,
-        );
-      }
-      setPrototypeId(entity.id, protoId);
+      setPrototypeLogic(capability, entity, protoId, ctx);
       return null;
     },
     metadata: {

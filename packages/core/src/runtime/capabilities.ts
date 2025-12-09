@@ -1,12 +1,14 @@
 import { type Capability, type ScriptContext, ScriptError } from "@viwo/scripting";
+import { destroyEntityLogic, setPrototypeLogic, updateEntityLogic } from "./logic";
 import { deepFreeze } from "./utils";
-import { destroyEntityLogic } from "./logic";
+import { getEntity } from "../repo";
 
 export abstract class BaseCapability implements Capability {
   readonly __brand = "Capability" as const;
   constructor(
     public readonly id: string,
     public readonly ownerId: number,
+    public readonly params: any,
   ) {
     deepFreeze(this);
   }
@@ -37,24 +39,58 @@ export class EntityControl extends BaseCapability {
     destroyEntityLogic(this, targetId, ctx);
     return true;
   }
+
+  update(targetId: number, updates: object, ctx: ScriptContext) {
+    if (!targetId && targetId !== 0) {
+      throw new ScriptError("EntityControl.update: targetId is required");
+    }
+    const entity = getEntity(targetId);
+    if (!entity) {
+      throw new ScriptError(`EntityControl.update: entity ${targetId} not found`);
+    }
+    return updateEntityLogic(this, entity, updates, ctx);
+  }
+
+  setPrototype(targetId: number, protoId: number | null, ctx: ScriptContext) {
+    if (!targetId && targetId !== 0) {
+      throw new ScriptError("EntityControl.setPrototype: targetId is required");
+    }
+    const entity = getEntity(targetId);
+    if (!entity) {
+      throw new ScriptError(`EntityControl.setPrototype: entity ${targetId} not found`);
+    }
+    setPrototypeLogic(this, entity, protoId, ctx);
+    return true;
+  }
 }
 
 // Registry for Hydration
-export const CAPABILITY_CLASSES: Record<
+const CAPABILITY_CLASSES: Record<
   string,
-  new (id: string, ownerId: number) => BaseCapability
+  new (id: string, ownerId: number, params: any) => BaseCapability
 > = {
   [EntityControl.type]: EntityControl,
 };
+
+export function registerCapabilityClass(
+  type: string,
+  Class: new (id: string, ownerId: number, params: any) => BaseCapability,
+) {
+  if (CAPABILITY_CLASSES[type]) {
+    throw new Error(`Capability class for type '${type}' is already registered.`);
+  }
+  CAPABILITY_CLASSES[type] = Class;
+}
 
 export function hydrateCapability(data: {
   id: string;
   owner_id: number;
   type: string;
+  params: any;
 }): BaseCapability {
   const Class = CAPABILITY_CLASSES[data.type];
   if (Class) {
-    return new Class(data.id, data.owner_id);
+    return new Class(data.id, data.owner_id, data.params);
   }
   // Fallback for unknown types? Return raw object?
   // Or generic BaseCapability?

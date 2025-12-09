@@ -18,6 +18,7 @@ export function hydrate(value: unknown): unknown {
     return hydrateCapability({
       id: cap.id,
       owner_id: cap.owner_id,
+      params: cap.params ?? {},
       type: cap.type,
     });
   }
