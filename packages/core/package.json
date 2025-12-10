@@ -13,6 +13,7 @@
     "db:wipe": "rm -f world.sqlite",
     "lint": "oxlint",
     "format": "oxfmt",
+    "check:verbs": "bun scripts/check-verbs.ts",
     "generate:types": "bun scripts/generate-types.ts"
   },
   "dependencies": {

@@ -506,14 +506,6 @@ export function book_search_chapters(this: Entity) {
   );
 }
 
-export function golem_on_hear() {
-  const speaker = std.arg<Entity>(0);
-  const message = std.arg<string>(1);
-  if (str.includes(str.lower(message), "hello")) {
-    call(speaker, "tell", "GREETINGS. I AM GOLEM.");
-  }
-}
-
 export function entity_base_get_llm_prompt(this: Entity) {
   let prompt = `You are ${this["name"]}.`;
   if (this["description"]) {
@@ -809,48 +801,6 @@ export function effect_base_on_remove() {
   // No-op
 }
 
-export function combat_attack(this: Entity) {
-  const attacker = std.arg<Entity>(0);
-  const target = std.arg<Entity>(1);
-
-  const attProps = resolve_props(attacker);
-  const defProps = resolve_props(target);
-
-  const attack = (attProps["attack"] as number) ?? 10;
-  const defense = (defProps["defense"] as number) ?? 0;
-
-  let damage = attack - defense;
-  if (damage < 1) {
-    damage = 1;
-  }
-
-  const hp = (defProps["hp"] as number) ?? 100;
-  const newHp = hp - damage;
-
-  let targetCap = get_capability("entity.control", { target_id: target.id });
-  if (!targetCap) {
-    targetCap = get_capability("entity.control", { "*": true });
-  }
-
-  if (targetCap) {
-    std.call_method(targetCap, "update", target.id, { hp: newHp });
-
-    call(attacker, "tell", `You attack ${defProps["name"]} for ${damage} damage!`);
-    call(target, "tell", `${attProps["name"]} attacks you for ${damage} damage!`);
-
-    if (newHp <= 0) {
-      call(attacker, "tell", `${defProps["name"]} is defeated!`);
-      call(target, "tell", "You are defeated!");
-    }
-  } else {
-    call(
-      attacker,
-      "tell",
-      `You attack ${defProps["name"]}, but it seems invulnerable (no permission).`,
-    );
-  }
-}
-
 export function combat_attack_elemental(this: Entity) {
   const attacker = std.arg<Entity>(0);
   const target = std.arg<Entity>(1);
@@ -910,6 +860,48 @@ export function combat_attack_elemental(this: Entity) {
       "tell",
       `${attProps["name"]} attacks you with ${element} for ${finalDamage} damage!`,
     );
+
+    if (newHp <= 0) {
+      call(attacker, "tell", `${defProps["name"]} is defeated!`);
+      call(target, "tell", "You are defeated!");
+    }
+  } else {
+    call(
+      attacker,
+      "tell",
+      `You attack ${defProps["name"]}, but it seems invulnerable (no permission).`,
+    );
+  }
+}
+
+export function combat_attack(this: Entity) {
+  const attacker = std.arg<Entity>(0);
+  const target = std.arg<Entity>(1);
+
+  const attProps = resolve_props(attacker);
+  const defProps = resolve_props(target);
+
+  const attack = (attProps["attack"] as number) ?? 10;
+  const defense = (defProps["defense"] as number) ?? 0;
+
+  let damage = attack - defense;
+  if (damage < 1) {
+    damage = 1;
+  }
+
+  const hp = (defProps["hp"] as number) ?? 100;
+  const newHp = hp - damage;
+
+  let targetCap = get_capability("entity.control", { target_id: target.id });
+  if (!targetCap) {
+    targetCap = get_capability("entity.control", { "*": true });
+  }
+
+  if (targetCap) {
+    std.call_method(targetCap, "update", target.id, { hp: newHp });
+
+    call(attacker, "tell", `You attack ${defProps["name"]} for ${damage} damage!`);
+    call(target, "tell", `${attProps["name"]} attacks you for ${damage} damage!`);
 
     if (newHp <= 0) {
       call(attacker, "tell", `${defProps["name"]} is defeated!`);
@@ -1290,6 +1282,7 @@ export function quest_get_node(this: Entity) {
   const map = this["nodes_map"] as Record<string, any>;
   return map ? map[nodeId] : undefined;
 }
+
 export function quest_test(this: Entity) {
   const player = std.arg<Entity>(0);
   const questId = std.arg<number>(1);
@@ -1329,4 +1322,12 @@ export function quest_test(this: Entity) {
   call(player, "quest_log");
 
   send("message", "--- Quest Verification End ---");
+}
+
+export function golem_on_hear() {
+  const speaker = std.arg<Entity>(0);
+  const message = std.arg<string>(1);
+  if (str.includes(str.lower(message), "hello")) {
+    call(speaker, "tell", "GREETINGS. I AM GOLEM.");
+  }
 }

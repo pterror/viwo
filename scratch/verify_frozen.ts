@@ -6,7 +6,7 @@ class BaseCapability {
 
 class UnsafeCapability extends BaseCapability {
   // Developer adds stateful property
-  private lastCaller: string = "";
+  private lastCaller = "";
 
   call(caller: string) {
     this.lastCaller = caller;

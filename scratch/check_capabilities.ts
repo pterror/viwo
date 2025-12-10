@@ -1,13 +1,4 @@
-import {
-  SysMint,
-  SysCreate,
-  SysSudo,
-  EntityControl,
-  hydrateCapability,
-} from "../packages/core/src/runtime/capabilities";
-import { FsRead, FsWrite } from "../plugins/fs/src/lib";
-import { NetHttp } from "../plugins/net/src/lib";
-import { strict as assert } from "assert";
+import { SysMint, hydrateCapability } from "../packages/core/src/runtime/capabilities";
 
 console.log("Checking capability classes...");
 
@@ -16,8 +7,8 @@ try {
   const mintCap = hydrateCapability({
     id: "mint-cap",
     ownerId: 0,
-    type: "sys.mint",
     params: { namespace: "test" },
+    type: "sys.mint",
   }) as unknown as SysMint;
 
   if (mintCap instanceof SysMint) {
@@ -31,8 +22,8 @@ try {
   } else {
     console.error("SysMint.mint is missing");
   }
-} catch (e) {
-  console.error("SysMint test failed", e);
+} catch (error) {
+  console.error("SysMint test failed", error);
 }
 
 console.log("Finished checks.");

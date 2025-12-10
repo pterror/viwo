@@ -648,7 +648,19 @@ export function seed() {
     waterElementalProtoId,
   );
 
+  // Use basic attack for testing
+  addVerb(combatManagerId, "basic_attack", transpile(extractVerb(verbsPath, "combat_attack")));
+
   addVerb(combatManagerId, "test", transpile(extractVerb(verbsPath, "combat_test")));
+  addVerb(directorId, "test_quest", transpile(extractVerb(verbsPath, "quest_test")));
+
+  // 10a. Create Golem
+  const golemId = createEntity({
+    description: "A large stone construct.",
+    location: lobbyId,
+    name: "Golem",
+  });
+  addVerb(golemId, "on_hear", transpile(extractVerb(verbsPath, "golem_on_hear")));
 
   // 11. Quest Engine Seeds
   const questBaseId = createEntity({

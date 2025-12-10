@@ -1,9 +1,9 @@
 import * as KernelLib from "./runtime/lib/kernel";
-import { db } from ".";
 import { MathLib, ObjectLib, StdLib } from "@viwo/scripting";
 import { addVerb, createCapability, createEntity, getEntity } from "./repo";
 import { beforeAll, describe, expect, it } from "bun:test";
 import { GameOpcodes } from "./runtime/opcodes";
+import { db } from ".";
 import { scheduler } from "./scheduler";
 
 describe("Scheduler Verification", () => {
