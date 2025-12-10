@@ -2,7 +2,6 @@ import { addVerb, createCapability, createEntity, getEntity, updateEntity } from
 import { db } from "./db";
 import { extractVerb } from "./verb_loader";
 import { resolve } from "node:path";
-import { seedHotel } from "./seeds/hotel";
 import { seedItems } from "./seeds/items";
 import { transpile } from "@viwo/scripting";
 
@@ -535,9 +534,6 @@ export function seed() {
   );
   // 5. Create Items
   seedItems(voidId);
-
-  // 6. Create Hotel
-  seedHotel(lobbyId, voidId, entityBaseId);
 
   // 7. Director AI
   const directorId = createEntity({

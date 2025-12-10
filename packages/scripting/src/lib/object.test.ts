@@ -65,6 +65,11 @@ createLibraryTester(ObjectLib, "Object Library", (test) => {
     }
   });
 
+  test("obj.get with default", async () => {
+    expect(await evaluate(ObjectLib.objGet({ a: 1 }, "b", "default"), ctx)).toBe("default");
+    expect(await evaluate(ObjectLib.objGet({ a: 1 }, "b", ListLib.listNew()), ctx)).toEqual([]);
+  });
+
   test("obj.set", async () => {
     const localCtx = { ...ctx, locals: {} };
     await evaluate(StdLib.let("o", { a: 1 }), localCtx);
