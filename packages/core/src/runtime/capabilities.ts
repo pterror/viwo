@@ -209,19 +209,30 @@ export class SysSudo extends BaseCapability {
 }
 
 // Registry for Hydration
-const CAPABILITY_CLASSES: Record<
-  string,
-  new (id: string, ownerId: number, params: any) => BaseCapability
-> = {};
+export interface CapabilityRegistry {
+  [EntityControl.type]: typeof EntityControl;
+  [SysMint.type]: typeof SysMint;
+  [SysCreate.type]: typeof SysCreate;
+  [SysSudo.type]: typeof SysSudo;
+}
 
-export function registerCapabilityClass(
-  type: string,
-  Class: new (id: string, ownerId: number, params: any) => BaseCapability,
+export const CAPABILITY_CLASSES: CapabilityRegistry = {} as CapabilityRegistry;
+
+function getKey<Type, Key extends keyof Type>(type: Type, key: Key) {
+  return type[key];
+}
+
+function setKey<Type, Key extends keyof Type>(type: Type, key: Key, value: Type[Key]) {
+  type[key] = value;
+}
+
+export function registerCapabilityClass<Key extends keyof CapabilityRegistry>(
+  Class: CapabilityRegistry[Key] & { type: Key },
 ) {
-  if (CAPABILITY_CLASSES[type]) {
-    throw new Error(`Capability class for type '${type}' is already registered.`);
+  if (getKey(CAPABILITY_CLASSES, Class.type)) {
+    throw new Error(`Capability class for type '${Class.type}' is already registered.`);
   }
-  CAPABILITY_CLASSES[type] = Class;
+  setKey(CAPABILITY_CLASSES, Class.type as Key, Class);
 }
 
 function createCapabilityProxy(capability: BaseCapability): BaseCapability {
@@ -234,7 +245,8 @@ function createCapabilityProxy(capability: BaseCapability): BaseCapability {
           if (ctx && typeof ctx === "object" && "this" in ctx) {
             checkCapability(
               target,
-              ctx.caller.id,
+              // Check if caller OR execution context owns the capability
+              [ctx.caller.id, ctx.this.id],
               (target.constructor as typeof BaseCapability).type,
             );
           }
@@ -252,7 +264,7 @@ export function hydrateCapability(data: {
   type: string;
   params: any;
 }): BaseCapability {
-  const Class = CAPABILITY_CLASSES[data.type];
+  const Class = (CAPABILITY_CLASSES as any)[data.type];
   if (Class) {
     const instance = new Class(data.id, data.ownerId, data.params);
     return createCapabilityProxy(instance);
@@ -262,7 +274,7 @@ export function hydrateCapability(data: {
   return { ...data, __brand: "Capability" } as any;
 }
 
-registerCapabilityClass(EntityControl.type, EntityControl);
-registerCapabilityClass(SysMint.type, SysMint);
-registerCapabilityClass(SysCreate.type, SysCreate);
-registerCapabilityClass(SysSudo.type, SysSudo);
+registerCapabilityClass(EntityControl);
+registerCapabilityClass(SysMint);
+registerCapabilityClass(SysCreate);
+registerCapabilityClass(SysSudo);

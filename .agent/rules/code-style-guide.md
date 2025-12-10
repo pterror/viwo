@@ -18,6 +18,7 @@ description: General Guidelines
 # Style
 - Avoid one-letter names. `i` -> `idx`; `e` -> `event`; `a, b` -> `left, right`; `parameters.map(p => p)` -> `parameters.map(parameter => parameter)`
 - Avoid `++` and `--`. Use `+= 1` and `-= 1` instead.
+- We do `bun check:types`, not `bun typecheck`
 
 # Stack
 - bun (`bun test`; `bun install <package>` etc)

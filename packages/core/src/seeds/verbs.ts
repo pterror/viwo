@@ -8,7 +8,7 @@ export function bot_sudo() {
   const targetId = std.arg<number>(0);
   const verb = std.arg<string>(1);
   const argsList = std.arg<any[]>(2);
-  sudo(get_capability("sys.sudo", {})!, entity(targetId), verb, argsList);
+  std.call_method(get_capability("sys.sudo", {})!, "exec", entity(targetId), verb, argsList);
 }
 
 export function system_get_available_verbs() {
@@ -245,14 +245,14 @@ export function player_dig() {
     if (createCap && controlCap) {
       const newRoomData: Record<string, any> = {};
       newRoomData["name"] = roomName;
-      const newRoomId = create(createCap, newRoomData);
+      const newRoomId = std.call_method(createCap, "create", newRoomData);
 
       const exitData: Record<string, any> = {};
       exitData["name"] = direction;
       exitData["location"] = std.caller()["location"];
       exitData["direction"] = direction;
       exitData["destination"] = newRoomId;
-      const exitId = create(createCap, exitData);
+      const exitId = std.call_method(createCap, "create", exitData);
 
       // The original code used template literals to inject the ID.
       // We can't do that with a static file unless we do a replace after extraction.
@@ -273,7 +273,7 @@ export function player_dig() {
       backExitData["location"] = newRoomId;
       backExitData["direction"] = "back";
       backExitData["destination"] = std.caller()["location"];
-      const backExitId = create(createCap, backExitData);
+      const backExitId = std.call_method(createCap, "create", backExitData);
 
       const newRoom = entity(newRoomId);
       const newExits: number[] = [];
@@ -324,7 +324,7 @@ export function player_create() {
       const itemData: Record<string, any> = {};
       itemData["name"] = name;
       itemData["location"] = std.caller()["location"];
-      const itemId = create(createCap, itemData);
+      const itemId = std.call_method(createCap, "create", itemData);
       std.call_method(controlCap, "setPrototype", itemId, ENTITY_BASE_ID_PLACEHOLDER);
 
       const room = entity(std.caller()["location"] as number);
@@ -571,7 +571,7 @@ export function elevator_go(this: Entity) {
         lobbyData["name"] = `Floor ${currentFloor} Lobby`;
         lobbyData["location"] = ENTITY_BASE_ID_PLACEHOLDER; // Void
         lobbyData["description"] = `The lobby for the ${currentFloor}th floor.`;
-        const lobbyId = create(createCap, lobbyData);
+        const lobbyId = std.call_method(createCap, "create", lobbyData);
         std.call_method(createCap, "setPrototype", lobbyId, ENTITY_BASE_ID_PLACEHOLDER);
 
         // 2. Create West Wing
@@ -579,7 +579,7 @@ export function elevator_go(this: Entity) {
         westData["name"] = `Floor ${currentFloor} West Wing`;
         westData["location"] = lobbyId;
         westData["description"] = `The West Wing of floor ${currentFloor}.`;
-        const westId = create(createCap, westData);
+        const westId = std.call_method(createCap, "create", westData);
         std.call_method(createCap, "setPrototype", westId, WING_PROTO_ID_PLACEHOLDER);
 
         // 3. Create East Wing
@@ -587,7 +587,7 @@ export function elevator_go(this: Entity) {
         eastData["name"] = `Floor ${currentFloor} East Wing`;
         eastData["location"] = lobbyId;
         eastData["description"] = `The East Wing of floor ${currentFloor}.`;
-        const eastId = create(createCap, eastData);
+        const eastId = std.call_method(createCap, "create", eastData);
         std.call_method(createCap, "setPrototype", eastId, WING_PROTO_ID_PLACEHOLDER);
 
         // 4. Link Lobby -> West
@@ -596,7 +596,7 @@ export function elevator_go(this: Entity) {
         westExitData["location"] = lobbyId;
         westExitData["direction"] = "west";
         westExitData["destination"] = westId;
-        const westExitId = create(createCap, westExitData);
+        const westExitId = std.call_method(createCap, "create", westExitData);
 
         // 5. Link West -> Lobby
         const westBackExitData: Record<string, any> = {};
@@ -604,7 +604,7 @@ export function elevator_go(this: Entity) {
         westBackExitData["location"] = westId;
         westBackExitData["direction"] = "back";
         westBackExitData["destination"] = lobbyId;
-        const westBackExitId = create(createCap, westBackExitData);
+        const westBackExitId = std.call_method(createCap, "create", westBackExitData);
 
         // 6. Link Lobby -> East
         const eastExitData: Record<string, any> = {};
@@ -612,7 +612,7 @@ export function elevator_go(this: Entity) {
         eastExitData["location"] = lobbyId;
         eastExitData["direction"] = "east";
         eastExitData["destination"] = eastId;
-        const eastExitId = create(createCap, eastExitData);
+        const eastExitId = std.call_method(createCap, "create", eastExitData);
 
         // 7. Link East -> Lobby
         const eastBackExitData: Record<string, any> = {};
@@ -620,7 +620,7 @@ export function elevator_go(this: Entity) {
         eastBackExitData["location"] = eastId;
         eastBackExitData["direction"] = "back";
         eastBackExitData["destination"] = lobbyId;
-        const eastBackExitId = create(createCap, eastBackExitData);
+        const eastBackExitId = std.call_method(createCap, "create", eastBackExitData);
 
         // 8. Link Lobby -> Elevator
         const elevatorExitData: Record<string, any> = {};
@@ -628,7 +628,7 @@ export function elevator_go(this: Entity) {
         elevatorExitData["location"] = lobbyId;
         elevatorExitData["direction"] = "elevator";
         elevatorExitData["destination"] = this.id;
-        const elevatorExitId = create(createCap, elevatorExitData);
+        const elevatorExitId = std.call_method(createCap, "create", elevatorExitData);
 
         // Update Lobby Exits
         // lobby variable unused now
@@ -647,7 +647,7 @@ export function elevator_go(this: Entity) {
         std.call_method(eastCap, "update", eastId, { exits: [eastBackExitId] });
 
         destId = lobbyId;
-        floors[`${currentFloor}`] = destId;
+        floors[`${currentFloor}`] = destId as number;
         // this["floors"] = floors;
         std.call_method(controlCap, "update", this.id, { floors });
 
@@ -771,7 +771,7 @@ export function wing_enter_room(this: Entity) {
     const controlCap = get_capability("entity.control", { target_id: this.id });
 
     if (createCap && controlCap) {
-      roomId = create(createCap, {
+      roomId = std.call_method(createCap, "create", {
         description: "A standard hotel room.",
         name: `Room ${roomNumber}`,
         owner: undefined,
@@ -781,7 +781,7 @@ export function wing_enter_room(this: Entity) {
       std.call_method(createCap, "setPrototype", roomId, HOTEL_ROOM_PROTO_ID_PLACEHOLDER);
 
       // Link Room -> Wing (out)
-      const outExitId = create(createCap, {
+      const outExitId = std.call_method(createCap, "create", {
         destination: this.id,
         direction: "out",
         location: roomId,
@@ -966,7 +966,7 @@ export function combat_start(this: Entity) {
   sessionData["round"] = 1;
   sessionData["location"] = this["location"];
 
-  const sessionId = create(createCap, sessionData);
+  const sessionId = std.call_method(createCap, "create", sessionData);
   return sessionId;
 }
 

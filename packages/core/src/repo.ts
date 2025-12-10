@@ -88,10 +88,8 @@ export function updateEntity(...entities: readonly Entity[]) {
     return;
   }
 
-  console.log("updateEntity called with", entities.length, "entities");
   const transaction = db.transaction(() => {
     for (const { id, ...updates } of entities) {
-      console.log("Updating entity", id, "updates", updates);
       // 1. Fetch current raw props and prototype_id
       const row = db
         .query<{ props: string; prototype_id: number | null }, [number]>(

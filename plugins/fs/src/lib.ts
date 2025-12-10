@@ -94,5 +94,12 @@ export class FsWrite extends BaseCapability {
   }
 }
 
-registerCapabilityClass(FsRead.type, FsRead);
-registerCapabilityClass(FsWrite.type, FsWrite);
+declare module "@viwo/core" {
+  interface CapabilityRegistry {
+    [FsRead.type]: typeof FsRead;
+    [FsWrite.type]: typeof FsWrite;
+  }
+}
+
+registerCapabilityClass(FsRead);
+registerCapabilityClass(FsWrite);

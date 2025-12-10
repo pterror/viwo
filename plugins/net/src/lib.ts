@@ -65,7 +65,13 @@ export class NetHttp extends BaseCapability {
   }
 }
 
-registerCapabilityClass(NetHttp.type, NetHttp);
+declare module "@viwo/core" {
+  interface CapabilityRegistry {
+    [NetHttp.type]: typeof NetHttp;
+  }
+}
+
+registerCapabilityClass(NetHttp);
 
 export interface HttpResponse {
   ok: boolean;
