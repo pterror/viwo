@@ -1,5 +1,6 @@
 import { pluginManager, scheduler, seed, startServer } from "@viwo/core";
 import { AiPlugin } from "@viwo/plugin-ai";
+import { DiffusersPlugin } from "@viwo/plugin-diffusers";
 import { FsPlugin } from "@viwo/plugin-fs";
 import { MemoryPlugin } from "@viwo/plugin-memory";
 import { NetPlugin } from "@viwo/plugin-net";
@@ -10,6 +11,7 @@ async function main() {
 
   // Load plugins
   await pluginManager.loadPlugin(new AiPlugin());
+  await pluginManager.loadPlugin(new DiffusersPlugin());
   await pluginManager.loadPlugin(new MemoryPlugin());
   await pluginManager.loadPlugin(new NetPlugin());
   await pluginManager.loadPlugin(new FsPlugin());

@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "lib": ["ESNext"],
+    "moduleResolution": "bundler",
+    "types": ["bun-types"],
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "paths": {
+      "@viwo/core": ["../../../packages/core/src/index.ts"],
+      "@viwo/scripting": ["../../../packages/scripting/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*"]
+}
