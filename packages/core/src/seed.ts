@@ -653,7 +653,7 @@ export function seed() {
   // Already attached above.
 
   // 10a. Create Golem
-  const golemDef = loadEntityDefinition(resolve(__dirname, "seeds/definitions/Items.ts"), "Golem");
+  const golemDef = loadEntityDefinition(resolve(__dirname, "seeds/definitions/Golem.ts"), "Golem");
   const golemId = createEntity({
     description: "A large stone construct.",
     location: lobbyId,
@@ -665,7 +665,7 @@ export function seed() {
 
   // 11. Quest Engine Seeds
   const questBaseDef = loadEntityDefinition(
-    resolve(__dirname, "seeds/definitions/Items.ts"),
+    resolve(__dirname, "seeds/definitions/Quest.ts"),
     "QuestBase",
   );
   const questBaseId = createEntity({

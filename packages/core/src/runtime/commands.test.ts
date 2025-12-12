@@ -252,6 +252,9 @@ describe("Recursive Move Check", () => {
         "SELECT id FROM entities WHERE json_extract(props, '$.name') = 'The Void'",
       )
       .get();
+    if (!voidEntity) {
+      throw new Error("Void not found");
+    }
     console.log("DEBUG: Void Entity:", voidEntity);
     const freshVoid = getEntity(voidEntity.id);
     console.log("DEBUG: Void Prototype:", freshVoid?.prototype_id);

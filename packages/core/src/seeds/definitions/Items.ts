@@ -154,15 +154,6 @@ Generate a single sentence of atmospheric prose describing a subtle event in thi
   }
 }
 
-export class Golem extends EntityBase {
-  on_hear() {
-    // Placeholder for golem_on_hear
-    // It was used to test reacting to speech.
-    const msg = std.arg<string>(0);
-    send("message", `Golem heard: ${msg}`);
-  }
-}
-
 export class CombatManager extends EntityBase {
   start(participants: Entity[]) {
     if (!participants || list.len(participants) < 2) {
@@ -462,20 +453,6 @@ export class Regen extends EffectBase {
 
     controlCap.update(target.id, { hp: newHp });
     call(target, "tell", `You regenerate ${magnitude} HP.`);
-  }
-}
-
-export class QuestBase extends EntityBase {
-  get_structure() {
-    return this["structure"];
-  }
-
-  get_node(nodeId: string) {
-    const map = this["nodes_map"] as Record<string, any>;
-    if (map) {
-      return map[nodeId];
-    }
-    return null;
   }
 }
 

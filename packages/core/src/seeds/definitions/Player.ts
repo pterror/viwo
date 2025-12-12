@@ -229,16 +229,219 @@ export class Player extends EntityBase {
   }
 
   // Quest verbs
-  quest_start(questName: string) {
-    // Placeholder logic as per original
-    send("message", `Started quest: ${questName}`);
+  quest_start() {
+    const questId = std.arg<number>(0);
+    const player = std.caller();
+
+    if (!questId) {
+      send("message", "Quest ID required.");
+      return;
+    }
+
+    // Need control to update player state
+    let controlCap = get_capability("entity.control", { target_id: player.id });
+    if (!controlCap) {
+      controlCap = get_capability("entity.control", { "*": true });
+    }
+
+    if (!controlCap) {
+      send("message", "Permission denied: Cannot modify player quest state.");
+      return;
+    }
+
+    // Fetch quest structure
+    const questEnt = entity(questId);
+    const structure = call(questEnt, "get_structure") as any;
+    if (!structure) {
+      send("message", "Invalid quest: No structure defined.");
+      return;
+    }
+
+    const quests = (player["quests"] as Record<string, any>) ?? {};
+
+    if (quests[String(questId)] && quests[String(questId)].status !== "completed") {
+      send("message", "Quest already started.");
+      return;
+    }
+
+    // Initialize state
+    const questState: any = {
+      started_at: time.to_timestamp(time.now()),
+      status: "active",
+      tasks: {},
+    };
+
+    const rootId = structure.id;
+    questState.tasks[rootId] = { status: "active" };
+    quests[String(questId)] = questState;
+    controlCap.update(player.id, { quests });
+    send("message", `Quest Started: ${structure.description || questEnt["name"]}`);
+
+    call(player, "quest_update", questId, rootId, "active");
   }
 
-  quest_update(questName: string, status: string) {
-    send("message", `Quest ${questName} updated to ${status}`);
+  quest_update() {
+    const questId = std.arg<number>(0);
+    const taskId = std.arg<string>(1);
+    const status = std.arg<string>(2); // "active" or "completed"
+    const player = std.caller();
+
+    let controlCap = get_capability("entity.control", { target_id: player.id });
+    if (!controlCap) {
+      controlCap = get_capability("entity.control", { "*": true });
+    }
+
+    if (!controlCap) {
+      return;
+    }
+
+    const quests = (player["quests"] as Record<string, any>) ?? {};
+    const qState = quests[String(questId)];
+    if (!qState || qState.status !== "active") {
+      return;
+    }
+
+    const currentTaskState = qState.tasks[taskId] || {};
+
+    if (currentTaskState.status === status) {
+      return;
+    }
+
+    qState.tasks[taskId] = { ...currentTaskState, status: status };
+
+    controlCap.update(player.id, { quests });
+
+    const questEnt = entity(questId);
+    const structure = call(questEnt, "get_structure") as any;
+    const node = call(questEnt, "get_node", taskId) as any;
+
+    if (!node) {
+      return;
+    }
+
+    if (status === "active") {
+      if (node.type === "sequence") {
+        if (node.children && list.len(node.children) > 0) {
+          call(player, "quest_update", questId, node.children[0], "active");
+        } else {
+          call(player, "quest_update", questId, taskId, "completed");
+        }
+      } else if (node.type === "parallel_all" || node.type === "parallel_any") {
+        if (node.children) {
+          for (const childId of node.children) {
+            call(player, "quest_update", questId, childId, "active");
+          }
+        }
+      }
+    } else if (status === "completed") {
+      if (node.parent_id) {
+        const parentNode = call(questEnt, "get_node", node.parent_id) as any;
+        if (parentNode) {
+          if (parentNode.type === "sequence") {
+            let nextChildId;
+            let found = false;
+            for (const childId of parentNode.children) {
+              if (found) {
+                nextChildId = childId;
+                break;
+              }
+              if (childId === taskId) {
+                found = true;
+              }
+            }
+
+            if (nextChildId) {
+              call(player, "quest_update", questId, nextChildId, "active");
+            } else {
+              call(player, "quest_update", questId, parentNode.id, "completed");
+            }
+          } else if (parentNode.type === "parallel_all") {
+            let allComplete = true;
+            const freshPlayer = std.caller();
+            const freshQuests = freshPlayer["quests"] as any;
+            const freshQState = freshQuests[String(questId)];
+
+            for (const childId of parentNode.children) {
+              const childTask = freshQState.tasks[childId];
+              if (!childTask || childTask.status !== "completed") {
+                allComplete = false;
+                break;
+              }
+            }
+
+            if (allComplete) {
+              call(player, "quest_update", questId, parentNode.id, "completed");
+            }
+          } else if (parentNode.type === "parallel_any") {
+            call(player, "quest_update", questId, parentNode.id, "completed");
+          }
+        }
+      } else {
+        if (taskId === structure.id) {
+          qState.status = "completed";
+          qState.completed_at = time.to_timestamp(time.now());
+          controlCap.update(player.id, { quests });
+          send("message", `Quest Completed: ${structure.description || questEnt["name"]}!`);
+        }
+      }
+    }
   }
 
   quest_log() {
-    send("message", "Quest Log: (Empty)");
+    const player = std.caller();
+    const quests = (player["quests"] as Record<string, any>) ?? {};
+
+    if (list.len(obj.keys(quests)) === 0) {
+      send("message", "No active quests.");
+      return;
+    }
+
+    let output = "Quest Log:\n";
+
+    for (const qId of obj.keys(quests)) {
+      const qState = quests[qId];
+      if (qState.status !== "active") {
+        continue;
+      }
+
+      const questEnt = entity(std.int(qId));
+      const structure = call(questEnt, "get_structure") as any;
+
+      output = str.concat(output, `\n[${questEnt["name"]}]\n`);
+
+      const stack: any[] = [{ depth: 0, id: structure.id }];
+
+      while (list.len(stack) > 0) {
+        const item = list.pop(stack);
+        const node = call(questEnt, "get_node", item.id) as any;
+        const taskState = qState.tasks[item.id] || { status: "locked" };
+
+        let indent = "";
+        let idx = 0;
+        while (idx < item.depth) {
+          indent = str.concat(indent, "  ");
+          idx += 1;
+        }
+
+        let mark = "[ ]";
+        if (taskState.status === "completed") {
+          mark = "[x]";
+        } else if (taskState.status === "active") {
+          mark = "[>]";
+        }
+
+        output = str.concat(output, `${indent}${mark} ${node.description}\n`);
+
+        if (node.children) {
+          let idx = list.len(node.children) - 1;
+          while (idx >= 0) {
+            list.push(stack, { depth: item.depth + 1, id: node.children[idx] });
+            idx -= 1;
+          }
+        }
+      }
+    }
+
+    call(player, "tell", output);
   }
 }
