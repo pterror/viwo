@@ -8,12 +8,12 @@ export function seedHotel(voidId: number, lobbyId: number) {
 
   // Load Hotel Definitions
   const managerDef = loadEntityDefinition(
-    resolve(__dirname, "../definitions/Hotel.ts"),
+    resolve(__dirname, "./definitions/Hotel.ts"),
     "HotelManager",
   );
 
   const roomProtoDef = loadEntityDefinition(
-    resolve(__dirname, "../definitions/Hotel.ts"),
+    resolve(__dirname, "./definitions/Hotel.ts"),
     "HotelRoomPrototype",
   );
 
