@@ -350,7 +350,7 @@ export function getCapabilities(ownerId: number): Capability[] {
 
 export function getCapabilitiesByType(ownerId: number, type: string): Capability[] {
   const rows = db
-    .query<Capability, SQLQueryBindings>(
+    .query<Capability, [number, string]>(
       "SELECT * FROM capabilities WHERE owner_id = ? AND type = ?",
     )
     .all(ownerId, type);

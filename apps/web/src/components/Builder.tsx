@@ -210,7 +210,6 @@ export default function Builder() {
         <div class="builder__script-panel">
           <div class="builder__toolbar">
             <select
-              class="builder__input"
               class="builder__input builder__input--narrow"
               onChange={(event) => setSelectedEntityId(Number(event.currentTarget.value))}
               value={selectedEntityId() || ""}
@@ -228,7 +227,6 @@ export default function Builder() {
             </select>
             <input
               type="text"
-              class="builder__input"
               class="builder__input builder__input--narrower"
               placeholder="Verb Name (e.g. interact)"
               value={verbName()}
