@@ -39,3 +39,5 @@ cache/
 
 # debugging text files
 *.txt
+
+*.cpuprofile
