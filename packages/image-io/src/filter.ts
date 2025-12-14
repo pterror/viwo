@@ -14,7 +14,8 @@ export async function filterImage(
       return pipeline.sharpen().toBuffer();
     }
     case "grayscale": {
-      return pipeline.grayscale().toBuffer();
+      // Use toColorspace to actually convert to grayscale (reduces channels)
+      return pipeline.toColorspace("b-w").toBuffer();
     }
   }
 }

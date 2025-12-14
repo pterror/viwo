@@ -1,55 +1,76 @@
 import sharp from "sharp";
+import ExifReader from "exifreader";
 
-export function embedMetadata(
+/**
+ * Embed custom metadata into an image using EXIF UserComment
+ */
+export async function embedMetadata(
   image: Buffer,
   format: "png" | "jpeg" | "webp",
   metadata: object,
 ): Promise<Buffer> {
   const metadataStr = JSON.stringify(metadata);
 
-  if (format === "png") {
-    // Use PNG tEXt chunks via EXIF
-    return sharp(image)
-      .png({ compressionLevel: 9 })
-      .withMetadata({
-        exif: {
-          IFD0: {
-            ImageDescription: metadataStr,
-          },
-        },
-      })
-      .toBuffer();
+  let pipeline = sharp(image);
+
+  switch (format) {
+    case "png": {
+      pipeline = pipeline.png({ compressionLevel: 9 });
+      break;
+    }
+    case "jpeg": {
+      pipeline = pipeline.jpeg();
+      break;
+    }
+    case "webp": {
+      pipeline = pipeline.webp();
+      break;
+    }
   }
 
-  // JPEG/WebP use EXIF
-  return sharp(image)
-    .withMetadata({
-      exif: {
-        IFD0: {
-          ImageDescription: metadataStr,
-        },
+  // Use EXIF UserComment which is widely supported
+  return pipeline
+    .withExif({
+      IFD0: {
+        UserComment: metadataStr,
       },
     })
     .toBuffer();
 }
 
+/**
+ * Read custom metadata from an image
+ */
 export async function readMetadata(image: Buffer): Promise<object | null> {
-  const metadata = await sharp(image).metadata();
+  try {
+    const tags = ExifReader.load(image);
 
-  if (metadata.exif) {
-    try {
-      // Try to parse ImageDescription from EXIF
-      const buffer = metadata.exif as Buffer;
-      const exifStr = buffer.toString();
-      // Look for ImageDescription in the EXIF data
-      const match = exifStr.match(/ImageDescription[^\u0000]*\u0000([^\u0000]+)/);
-      if (match?.[1]) {
-        return JSON.parse(match[1]);
+    // Try to read UserComment
+    if (tags.UserComment?.value) {
+      try {
+        let value: string;
+        if (typeof tags.UserComment.value === "string") {
+          value = tags.UserComment.value;
+        } else if (Array.isArray(tags.UserComment.value)) {
+          // UserComment is often an array of character codes
+          // Skip the first 8 bytes (character code specification)
+          const charCodes = tags.UserComment.value.slice(8);
+          value = String.fromCharCode(...charCodes);
+        } else {
+          return null;
+        }
+
+        // Trim null bytes
+        value = value.replace(/\u0000/g, "");
+
+        return JSON.parse(value);
+      } catch {
+        return null;
       }
-    } catch {
-      return null;
     }
-  }
 
-  return null;
+    return null;
+  } catch {
+    return null;
+  }
 }
