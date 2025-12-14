@@ -7,6 +7,7 @@ export default defineConfig({
     target: "esnext",
   },
   plugins: [solidPlugin()],
+  publicDir: "public",
   server: {
     port: 3002,
   },

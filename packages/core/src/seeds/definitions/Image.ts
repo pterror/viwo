@@ -1,5 +1,6 @@
 // oxlint-disable-next-line no-unassigned-import
-import "../../generated_types";
+import "../../generated types";
+import { compositeImages, filterImage, transformImage } from "@viwo/image-io";
 import { EntityBase } from "./EntityBase";
 
 /**
@@ -81,5 +82,74 @@ export class ImageEntity extends EntityBase {
       metadata: JSON.stringify(newMetadata),
     });
     send("message", "Metadata updated successfully");
+  }
+
+  /**
+   * Transform the image (rotate, scale)
+   * Runs server-side for security
+   */
+  async transform(rotation: number, scale: number) {
+    const imageData = this.image as string;
+    if (!imageData?.includes("base64,")) {
+      send("message", "Invalid image data");
+      return;
+    }
+
+    const imageBuffer = Buffer.from(imageData.split(",")[1], "base64");
+
+    const transformed = await transformImage(imageBuffer, rotation, scale);
+    const newDataUrl = `data:image/png;base64,${transformed.toString("base64")}`;
+
+    this.update_image(newDataUrl);
+    send("message", `Image transformed (rotation: ${rotation}°, scale: ${scale}x)`);
+  }
+
+  /**
+   * Apply filter to the image
+   * Runs server-side for security
+   */
+  async filter(type: "blur" | "sharpen" | "grayscale") {
+    const imageData = this.image as string;
+    if (!imageData?.includes("base64,")) {
+      send("message", "Invalid image data");
+      return;
+    }
+
+    const imageBuffer = Buffer.from(imageData.split(",")[1], "base64");
+
+    const filtered = await filterImage(imageBuffer, type);
+    const newDataUrl = `data:image/png;base64,${filtered.toString("base64")}`;
+
+    this.update_image(newDataUrl);
+    send("message", `Filter applied: ${type}`);
+  }
+
+  /**
+   * Composite another image on top of this one
+   * Runs server-side for security
+   */
+  async composite(overlayEntityId: string, x: number, y: number) {
+    const overlayEntity = kernel.repo.getEntity(overlayEntityId);
+    if (!overlayEntity?.image) {
+      send("message", "Overlay image not found");
+      return;
+    }
+
+    const baseData = this.image as string;
+    const overlayData = overlayEntity.image as string;
+
+    if (!baseData?.includes("base64,") || !overlayData?.includes("base64,")) {
+      send("message", "Invalid image data");
+      return;
+    }
+
+    const baseBuffer = Buffer.from(baseData.split(",")[1], "base64");
+    const overlayBuffer = Buffer.from(overlayData.split(",")[1], "base64");
+
+    const composited = await compositeImages(baseBuffer, overlayBuffer, x, y);
+    const newDataUrl = `data:image/png;base64,${composited.toString("base64")}`;
+
+    this.update_image(newDataUrl);
+    send("message", `Composited with ${overlayEntity.name} at (${x}, ${y})`);
   }
 }

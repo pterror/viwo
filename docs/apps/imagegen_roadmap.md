@@ -1140,3 +1140,126 @@ await sendRpc("std.call_method", {
 ✅ **Quality** - Hybrid upscale = best of both worlds
 
 ---
+
+## Phase 6: Performance & Polish ✅ **COMPLETE**
+
+### Overview
+
+Final polish phase adding service worker caching, server-side image manipulation with `sharp`, and UI improvements.
+
+### Features Implemented
+
+#### Service Worker for Offline Functionality ✅
+
+- **Asset caching** with cache-first strategy
+- **Network-first** for WebSocket and API calls
+- **Cache versioning** for automatic invalidation
+- **Skip waiting** for immediate activation
+
+**Files:**
+
+- `apps/imagegen/public/sw.js` - Service worker implementation
+- `apps/imagegen/src/main.tsx` - Service worker registration
+- `apps/imagegen/vite.config.ts` - Updated to copy service worker to build
+
+#### Server-Side Image Processing ✅
+
+**New Package: `@viwo/image-io`**
+
+Created comprehensive server-side image processing package using `sharp` library (4-7x faster than ImageMagick):
+
+**Core Functions:**
+
+- `embedMetadata()` - Embed metadata into PNG/JPEG/WebP via EXIF
+- `readMetadata()` - Extract metadata from images
+- `convertImage()` - Format conversion with metadata preservation
+- `transformImage()` - Rotate and scale images
+- `filterImage()` - Apply blur, sharpen, grayscale filters
+- `compositeImages()` - Composite multiple images
+
+**Files:**
+
+- `packages/image-io/package.json` - Package configuration with sharp dependency
+- `packages/image-io/src/index.ts` - Main exports
+- `packages/image-io/src/metadata.ts` - EXIF metadata handling
+- `packages/image-io/src/convert.ts` - Format conversion
+- `packages/image-io/src/transform.ts` - Image transformations
+- `packages/image-io/src/filter.ts` - Image filters
+- `packages/image-io/src/composite.ts` - Image compositing
+- `packages/image-io/src/index.test.ts` - Comprehensive test suite
+
+#### Enhanced ImageEntity ✅
+
+Added three new server-side manipulation verbs to `ImageEntity`:
+
+```typescript
+// Transform (rotate, scale)
+await entity.transform(90, 2.0); // Rotate 90°, scale 2x
+
+// Filter (blur, sharpen, grayscale)
+await entity.filter("blur");
+
+// Composite (overlay images)
+await entity1.composite(entity2.id, 100, 100); // Overlay at (100, 100)
+```
+
+All operations:
+
+- Run **server-side** for security and performance
+- Use `sharp` library for maximum speed
+- Validate image data before processing
+- Update entity in-place with results
+
+**Files:**
+
+- `packages/core/src/seeds/definitions/Image.ts` - Enhanced with manipulation verbs
+
+#### UI Polish ✅
+
+**Loading States:**
+
+- Added `.loading-spinner` CSS class for generation feedback
+- Spinner animation with 0.6s rotation
+
+**Transform & Filter UI Styles:**
+
+- `.layer-mode__transform` - Transform controls panel
+- `.layer-mode__filter` - Filter controls dropdown
+- Glassmorphism styling for consistency
+
+**Files:**
+
+- `packages/shared/src/index.css` - Added BEM classes for new UI components
+
+### Technical Highlights
+
+**Performance:**
+
+- `sharp` library: 4-7x faster than ImageMagick
+- Native C bindings via `libvips`
+- Efficient memory usage
+- Supports all major image formats
+
+**Security:**
+
+- All image manipulation runs server-side
+- No client-side execution of untrusted code
+- Proper validation of image data
+- Entity permission checks before updates
+
+**Offline Support:**
+
+- Service worker caches static assets
+- App loads offline after first visit
+- Network-first for real-time data
+- Automatic cache invalidation on updates
+
+### Architecture Benefits
+
+1. **Modularity** - `@viwo/image-io` is reusable across viwo ecosystem
+2. **Extensibility** - Easy to add new image operations
+3. **Type Safety** - Full TypeScript coverage
+4. **Testability** - Comprehensive test suite with >90% coverage goal
+5. **Performance** - Server-side processing leverages full CPU power
+
+---

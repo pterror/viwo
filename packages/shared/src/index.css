@@ -1322,6 +1322,57 @@ body {
   color: var(--text-muted);
 }
 
+/* Phase 6: Image Manipulation UI */
+
+/* Transform controls */
+.layer-mode__transform {
+  padding: 1rem;
+  margin: 0.5rem 0;
+}
+
+.layer-mode__transform label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.layer-mode__transform input[type="range"] {
+  width: 100%;
+  margin: 0.25rem 0;
+}
+
+/* Filter controls */
+.layer-mode__filter {
+  padding: 1rem;
+  margin: 0.5rem 0;
+}
+
+.layer-mode__filter select {
+  width: 100%;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: white;
+}
+
+/* Loading spinner */
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Entity Save/Load Components */
 .layer-mode__entity-save {
   padding: 1rem;
