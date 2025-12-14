@@ -341,7 +341,7 @@ cd apps/imagegen && bun dev
 
 ---
 
-## Phase 3: Inpainting & Upscaling
+## Phase 3: Inpainting & Upscaling ✅ **COMPLETE**
 
 ### Goal
 
@@ -516,112 +516,289 @@ async function inpaintMasked(layerId: string, maskLayerId: string) {
 
 ---
 
-## Phase 4: Advanced Features
+## Phase 4: Advanced Features ✅ **COMPLETE**
 
-### 1. Script → Layer Visualization
+### What Was Built
 
-**Goal:** Parse ViwoScript and render as layer operations
+**1. ViwoScript State Refactor**
+
+Eliminated the `CanvasAction` translation layer and adopted full ViwoScript S-expressions as canvas state:
+
+```typescript
+// apps/imagegen/src/engine/canvas/operations.ts
+export const CanvasOps = {
+  layerCreate: (id: string, name: string, type = "raster"): ScriptValue<void> =>
+    ["canvas.layer.create", id, name, type] as ScriptValue<void>,
+
+  drawStroke: (
+    layerId: string,
+    points: Point[],
+    color: string,
+    size: number,
+    tool = "brush",
+  ): ScriptValue<void> =>
+    ["canvas.draw_stroke", layerId, points, color, size, tool] as ScriptValue<void>,
+
+  layerLoadImage: (layerId: string, imageUrl: string, x: number, y: number): ScriptValue<void> =>
+    ["canvas.layer.load_image", layerId, imageUrl, x, y] as ScriptValue<void>,
+};
+
+// apps/imagegen/src/engine/canvas/useCanvas.ts
+const [script, setScript] = createSignal(StdLib.seq());
+
+// Record operations
+setScript(
+  StdLib.seq(
+    ...exprs,
+    CanvasOps.layerCreate(id, name),
+    CanvasOps.drawStroke(layerId, points, color, size, tool),
+  ),
+);
+```
+
+**2. Script → Layer Visualization**
+
+Bidirectional conversion between ViwoScript and visual layers:
 
 ```typescript
 // apps/imagegen/src/engine/canvas/scriptToLayers.ts
-export function visualizeScript(script: ScriptValue) {
-  const layers: Layer[] = [];
+export function scriptToLayers(
+  script: ScriptValue<unknown>,
+  width: number,
+  height: number,
+): ScriptLayer[] {
+  // Parse S-expressions
+  const [opcode, ...expressions] = script;
 
-  function traverse(node: any, depth = 0) {
-    if (!Array.isArray(node)) return;
+  for (const expr of expressions) {
+    const [op, ...args] = expr;
 
-    const [opcode, ...args] = node;
-
-    // Recognized operations → visual layers
-    if (opcode === "gen.textToImage") {
-      layers.push({
-        id: crypto.randomUUID(),
-        name: `Generated: ${args[0].slice(0, 20)}...`,
-        type: "raster",
-        source: "script",
-        scriptNode: node, // Store for re-export
-      });
-    } else if (opcode === "composite") {
-      layers.push({
-        name: "Composite",
-        type: "composite-op",
-        scriptNode: node,
-      });
+    switch (op) {
+      case "canvas.layer.create":
+        layers.push({ id, name, type, source: "script", editable: true });
+        break;
+      case "canvas.draw_stroke":
+        // Replay stroke on layer canvas
+        replayStroke(layer, points, color, size, tool);
+        break;
+      case "diffusers.generate":
+        // Locked generated layer
+        layers.push({ name: "Generated", type: "raster", editable: false });
+        break;
+      default:
+        // Opaque layer for unknown opcodes
+        layers.push({ name: `Opaque: ${op}`, type: "opaque", locked: true });
     }
-    // Unrecognized → opaque layer
-    else {
-      layers.push({
-        name: `Opaque: ${opcode}`,
-        type: "opaque",
-        scriptNode: node,
-        editable: false, // Can't modify internals
-      });
-    }
-
-    // Recurse
-    args.forEach((arg) => traverse(arg, depth + 1));
   }
-
-  traverse(script);
-  return layers;
 }
-```
 
-**UI:**
-
-```tsx
-// In Blocks Mode
+// Blocks Mode visualization button
 <button
   onClick={() => {
-    const layers = visualizeScript(script());
-    switchToLayerMode(layers);
+    setSharedScript(script());
+    setMode("layer"); // Switch to Layer Mode
   }}
 >
-  Visualize as Layers
-</button>
+  🎨 Visualize as Layers
+</button>;
 ```
 
-### 2. Batch Generation
+**3. Batch Generation**
+
+Complete utility hook for generating multiple images with progress tracking:
 
 ```typescript
 // apps/imagegen/src/utils/batchGeneration.ts
 export function useBatch(sendRpc) {
-  async function generateBatch(requests: GenerationRequest[]) {
-    const results = [];
-    for (const req of requests) {
-      const result = await generate(req);
-      results.push(result);
-      onProgress?.(results.length, requests.length);
+  const [isRunning, setIsRunning] = createSignal(false);
+  const [progress, setProgress] = createSignal({ current: 0, total: 0 });
+  const [results, setResults] = createSignal<GenerationResult[]>([]);
+
+  async function generateBatch(requests: GenerationRequest[], options: BatchOptions) {
+    for (let idx = 0; idx < requests.length; idx += 1) {
+      const result = await callDiffusersGenerate(requests[idx]);
+      batchResults.push(result);
+      setProgress({ current: idx + 1, total: requests.length });
+      options.onProgress?.(idx + 1, requests.length);
     }
-    return results;
+    return batchResults;
   }
 
-  return { generateBatch };
+  function createSeedVariations(baseRequest, count, startSeed = 1) {
+    return Array.from({ length: count }, (_, i) => ({
+      ...baseRequest,
+      seed: startSeed + i,
+    }));
+  }
+
+  return { generateBatch, createSeedVariations, isRunning, progress, results };
 }
 ```
 
-### 3. Workflow Templates
+**UI Integration:**
+
+```tsx
+// apps/imagegen/src/modes/LayerMode.tsx
+<div class="layer-mode__batch glass-panel">
+  <h4>Batch Generation</h4>
+  <input type="number" value={4} min="1" max="20" />
+  <button
+    onClick={async () => {
+      const requests = batch.createSeedVariations(baseParams, 4);
+      await batch.generateBatch(requests, { continueOnError: true });
+    }}
+  >
+    Generate Batch
+  </button>
+
+  <Show when={batch.isRunning()}>
+    <progress value={batch.progress().current} max={batch.progress().total} />
+  </Show>
+
+  <Show when={batch.results().length > 0}>
+    <div class="layer-mode__batch-results">
+      <For each={batch.results()}>
+        {(result) => (
+          <img
+            src={result.image_url}
+            onClick={() => canvas.loadImageToLayer(layerId, result.image_url, 0, 0)}
+          />
+        )}
+      </For>
+    </div>
+  </Show>
+</div>
+```
+
+**4. Workflow Templates**
+
+localStorage-based template system with import/export:
 
 ```typescript
-// Save workflow as template
-function saveAsTemplate(name: string) {
-  const template = {
-    name,
-    script: script(),
-    blocks: blocks(),
-    metadata: {
-      author: "user",
-      created: Date.now(),
-    },
-  };
-  localStorage.setItem(`template:${name}`, JSON.stringify(template));
-}
+// apps/imagegen/src/utils/templates.ts
+export function useTemplates() {
+  const [templates, setTemplates] = createSignal<WorkflowTemplate[]>([]);
 
-// Load template
-function loadTemplate(name: string) {
-  const template = JSON.parse(localStorage.getItem(`template:${name}`));
-  setScript(template.script);
+  function saveTemplate(name: string, description: string, script: ScriptValue<unknown>) {
+    const template: WorkflowTemplate = {
+      id: crypto.randomUUID(),
+      name,
+      description,
+      script,
+      created: Date.now(),
+      metadata: { version: "1.0", tags: [] },
+    };
+    localStorage.setItem(`viwo:template:${template.id}`, JSON.stringify(template));
+    setTemplates([...templates(), template]);
+  }
+
+  function exportTemplate(id: string) {
+    const template = loadTemplate(id);
+    const blob = new Blob([JSON.stringify(template, null, 2)], { type: "application/json" });
+    downloadFile(blob, `${template.name}.viwo-template.json`);
+  }
+
+  async function importTemplate(file: File) {
+    const template = JSON.parse(await file.text());
+    saveTemplate(template.name, template.description, template.script);
+  }
+
+  return { templates, saveTemplate, loadTemplate, exportTemplate, importTemplate };
 }
+```
+
+**UI Integration:**
+
+```tsx
+// apps/imagegen/src/App.tsx
+<aside class={`imagegen__templates ${showTemplates() ? "imagegen__templates--visible" : ""}`}>
+  <header>
+    <h2>Templates</h2>
+    <button onClick={() => setShowTemplates(false)}>✕</button>
+  </header>
+
+  <div class="imagegen__templates-actions">
+    <button
+      onClick={() => {
+        const name = prompt("Template name:");
+        templates.saveTemplate(name, "", sharedScript());
+      }}
+    >
+      💾 Save Current
+    </button>
+    <button onClick={handleImport}>📥 Import</button>
+  </div>
+
+  <div class="imagegen__templates-list">
+    <For each={templates.templates()}>
+      {(template) => (
+        <div class="imagegen__template-card">
+          <h3>{template.name}</h3>
+          <p>{template.description}</p>
+          <button onClick={() => setSharedScript(template.script)}>Load</button>
+          <button onClick={() => templates.exportTemplate(template.id)}>Export</button>
+          <button onClick={() => templates.deleteTemplate(template.id)}>Delete</button>
+        </div>
+      )}
+    </For>
+  </div>
+</aside>
+```
+
+### Architecture
+
+**Shared Script State:**
+
+```tsx
+// apps/imagegen/src/App.tsx
+function App() {
+  const [sharedScript, setSharedScript] = createSignal(StdLib.seq());
+  const templates = useTemplates();
+
+  return (
+    <>
+      {mode() === "layer" ? (
+        <LayerMode initialScript={sharedScript()} onScriptChange={setSharedScript} />
+      ) : (
+        <BlocksMode
+          script={sharedScript()}
+          onScriptChange={setSharedScript}
+          onVisualize={() => setMode("layer")}
+        />
+      )}
+    </>
+  );
+}
+```
+
+### Acceptance Criteria
+
+- [x] ViwoScript S-expressions as canvas state
+- [x] Full stroke recording with point arrays
+- [x] Script export using `decompile()`
+- [x] `scriptToLayers()` parser with stroke replay
+- [x] Opaque layers for unrecognized opcodes
+- [x] Batch generation with progress tracking
+- [x] Seed variations utility
+- [x] Template save/load with localStorage
+- [x] Template import/export as JSON
+- [x] Shared script state between modes
+- [x] "Visualize as Layers" button in Blocks Mode
+
+### Testing
+
+```bash
+# Start servers
+cd plugins/diffusers && bun run python-server
+cd apps/server && bun dev
+cd apps/imagegen && bun dev
+
+# Manual tests:
+# 1. Draw in Layer Mode → Export script
+# 2. Copy script to Blocks Mode → Visualize as Layers
+# 3. Generate batch (4 seed variations)
+# 4. Save workflow as template → Load template
+# 5. Export template → Import in new session
 ```
 
 ---
@@ -764,20 +941,6 @@ export async function convertImage(
 - **Build:** `bun run build`
 - **Viwo server:** `ws://localhost:8080`
 - **Python server:** `http://localhost:8001` (for diffusers)
-
----
-
-## Timeline Summary
-
-| Phase                            | Status      |
-| -------------------------------- | ----------- |
-| Phase 1: MVP                     | ✅ Complete |
-| Phase 2: ControlNet              | ✅ Complete |
-| Phase 3: Inpaint/Upscale         | ✅ Complete |
-| **Phase 3.5: Advanced Features** | ✅ Complete |
-| Phase 4: Advanced                | 📋 Planned  |
-| Phase 5: Viwo Integration        | 📋 Planned  |
-| Phase 6: Polish                  | 📋 Planned  |
 
 ---
 

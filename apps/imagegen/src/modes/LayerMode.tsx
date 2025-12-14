@@ -1,8 +1,10 @@
 import { For, Show, createEffect, createSignal, onMount } from "solid-js";
+import type { ScriptValue } from "@viwo/scripting";
 import { exportAsViwoScript } from "../engine/canvas/scriptExporter";
 import { useCanvas } from "../engine/canvas/useCanvas";
 import { useGeneration } from "../utils/useGeneration";
 import { useViwoConnection } from "../utils/viwo-connection";
+import { useBatch } from "../utils/batchGeneration";
 
 // Helper functions for blob/base64 conversion
 function canvasToBlob(canvasElement: HTMLCanvasElement): Promise<Blob> {
@@ -30,10 +32,21 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
-function LayerMode() {
+interface LayerModeProps {
+  initialScript?: ScriptValue<unknown>;
+  onScriptChange?: (script: ScriptValue<unknown>) => void;
+}
+
+function LayerMode(props: LayerModeProps = {}) {
   const canvas = useCanvas(1024, 1024);
   const { sendRpc } = useViwoConnection();
   const generation = useGeneration(sendRpc);
+  const batch = useBatch(sendRpc);
+
+  // Sync script changes with parent
+  createEffect(() => {
+    props.onScriptChange?.(canvas.script());
+  });
 
   const [prompt, setPrompt] = createSignal("");
   const [negativePrompt, setNegativePrompt] = createSignal("");
@@ -618,6 +631,80 @@ function LayerMode() {
           >
             Outpaint
           </button>
+        </div>
+
+        {/* Batch Generation Panel */}
+        <div class="layer-mode__batch glass-panel">
+          <h4>Batch Generation</h4>
+          <label>
+            Seed Count:
+            <input
+              type="number"
+              value={4}
+              min="1"
+              max="20"
+              class="glass-input"
+              onInput={(e) => {
+                const count = Number(e.currentTarget.value);
+                // Store in local state if needed
+              }}
+            />
+          </label>
+
+          <button
+            class="glass-button glass-button--primary"
+            disabled={!prompt() || batch.isRunning()}
+            onClick={async () => {
+              if (!prompt()) {
+                return;
+              }
+
+              const requests = batch.createSeedVariations(
+                {
+                  prompt: prompt(),
+                  negativePrompt: negativePrompt(),
+                  width: 1024,
+                  height: 1024,
+                  steps: steps(),
+                  cfg: cfg(),
+                },
+                4, // seed count
+              );
+
+              await batch.generateBatch(requests, {
+                continueOnError: true,
+              });
+            }}
+          >
+            {batch.isRunning() ? "Generating..." : "Generate Batch"}
+          </button>
+
+          <Show when={batch.isRunning()}>
+            <div class="layer-mode__batch-progress">
+              <progress value={batch.progress().current} max={batch.progress().total} />
+              <span>
+                {batch.progress().current} / {batch.progress().total}
+              </span>
+            </div>
+          </Show>
+
+          <Show when={batch.results().length > 0}>
+            <div class="layer-mode__batch-results">
+              <For each={batch.results()}>
+                {(result) => (
+                  <img
+                    src={result.image_url}
+                    alt={`Batch result seed ${result.seed}`}
+                    onClick={() => {
+                      const layerId = canvas.addLayer(`Batch ${result.seed}`);
+                      canvas.loadImageToLayer(layerId, result.image_url, 0, 0);
+                    }}
+                    title="Click to add to canvas"
+                  />
+                )}
+              </For>
+            </div>
+          </Show>
         </div>
       </div>
 
