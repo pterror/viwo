@@ -4,6 +4,32 @@ import { useCanvas } from "../engine/canvas/useCanvas";
 import { useGeneration } from "../utils/useGeneration";
 import { useViwoConnection } from "../utils/viwo-connection";
 
+// Helper functions for blob/base64 conversion
+function canvasToBlob(canvasElement: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvasElement.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+      } else {
+        reject(new Error("Failed to convert canvas to blob"));
+      }
+    });
+  });
+}
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("loadend", () => {
+      resolve((reader.result as string).replace(/^[^,+],/, ""));
+    });
+    reader.addEventListener("error", () => {
+      reject(reader.error);
+    });
+    reader.readAsDataURL(blob);
+  });
+}
+
 function LayerMode() {
   const canvas = useCanvas(1024, 1024);
   const { sendRpc } = useViwoConnection();
@@ -16,6 +42,52 @@ function LayerMode() {
   >([]);
   const [outpaintDir, setOutpaintDir] = createSignal<"left" | "right" | "top" | "bottom">("right");
   const [outpaintPixels, setOutpaintPixels] = createSignal(256);
+
+  // Model selection and advanced parameters
+  const [currentModel, setCurrentModel] = createSignal("runwayml/stable-diffusion-v1-5");
+  const isSDXL = () => currentModel().toLowerCase().includes("xl");
+
+  // Multi-prompts (with smart defaults)
+  const [useMultiPrompts, setUseMultiPrompts] = createSignal(false);
+  const [prompt2, setPrompt2] = createSignal("");
+  const [negativePrompt2, setNegativePrompt2] = createSignal("");
+
+  // Auto-fill prompt_2 when enabled
+  createEffect(() => {
+    if (useMultiPrompts() && !prompt2()) {
+      setPrompt2(prompt());
+    }
+  });
+  createEffect(() => {
+    if (useMultiPrompts() && !negativePrompt2()) {
+      setNegativePrompt2(negativePrompt());
+    }
+  });
+
+  // Advanced parameters
+  const [showAdvanced, setShowAdvanced] = createSignal(false);
+  const [strength, setStrength] = createSignal(0.8);
+  const [steps, setSteps] = createSignal(50);
+  const [cfg, setCfg] = createSignal(7.5);
+
+  // Upscale mode
+  const [upscaleMode, setUpscaleMode] = createSignal<"esrgan" | "traditional" | "img2img">(
+    "traditional",
+  );
+  const [upscaleMethod, setUpscaleMethod] = createSignal<
+    "nearest" | "bilinear" | "bicubic" | "lanczos" | "area"
+  >("lanczos");
+  const [upscaleFactor, setUpscaleFactor] = createSignal<2 | 4>(2);
+
+  // Compute tracking
+  const [maxCompute, setMaxCompute] = createSignal(100);
+  const computeCost = () => {
+    const box = canvas.bbox();
+    if (!box) {
+      return 0;
+    }
+    return (box.width * box.height * steps()) / 1_000_000;
+  };
 
   // oxlint-disable-next-line no-unassigned-vars
   let canvasRef: HTMLCanvasElement | undefined;
@@ -151,35 +223,6 @@ function LayerMode() {
     }
   }
 
-  // Helper functions for blob/base64 conversion
-  function canvasToBlob(canvasElement: HTMLCanvasElement): Promise<Blob> {
-    return new Promise((resolve, reject) => {
-      canvasElement.toBlob((blob) => {
-        if (blob) {
-          resolve(blob);
-        } else {
-          reject(new Error("Failed to convert canvas to blob"));
-        }
-      });
-    });
-  }
-
-  function blobToBase64(blob: Blob): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.addEventListener("loadend", () => {
-        const result = reader.result as string;
-        // Remove data:image/png;base64, prefix
-        const [, base64] = result.split(",");
-        resolve(base64);
-      });
-      reader.addEventListener("error", () => {
-        reject(reader.error);
-      });
-      reader.readAsDataURL(blob);
-    });
-  }
-
   function hasMaskLayer() {
     return canvas.layers().some((l) => l.type === "mask");
   }
@@ -201,9 +244,33 @@ function LayerMode() {
       const imageB64 = await blobToBase64(imageBlob);
       const maskB64 = await blobToBase64(maskBlob);
 
+      // Build params object
+      const params: any = {
+        guidance_scale: cfg(),
+        model_id: currentModel(),
+        num_inference_steps: steps(),
+        strength: strength(),
+      };
+
+      if (negativePrompt()) {
+        params.negative_prompt = negativePrompt();
+      }
+
+      // Add SDXL multi-prompts if enabled
+      if (isSDXL() && useMultiPrompts()) {
+        if (prompt2()) {
+          params.prompt_2 = prompt2();
+        }
+        if (negativePrompt2()) {
+          params.negative_prompt_2 = negativePrompt2();
+        }
+      }
+
+      params.max_compute = maxCompute();
+
       const capability = await sendRpc("get_capability", { type: "diffusers.inpaint" });
       const result = await sendRpc("std.call_method", {
-        args: [imageB64, maskB64, prompt(), 0.8],
+        args: [imageB64, maskB64, prompt(), params],
         method: "inpaint",
         object: capability,
       });
@@ -228,9 +295,33 @@ function LayerMode() {
       const imageBlob = await canvasToBlob(activeLayer.canvas);
       const imageB64 = await blobToBase64(imageBlob);
 
+      // Build params object
+      const params: any = {
+        guidance_scale: cfg(),
+        model_id: currentModel(),
+        num_inference_steps: steps(),
+        strength: strength(),
+      };
+
+      if (negativePrompt()) {
+        params.negative_prompt = negativePrompt();
+      }
+
+      // Add SDXL multi-prompts if enabled
+      if (isSDXL() && useMultiPrompts()) {
+        if (prompt2()) {
+          params.prompt_2 = prompt2();
+        }
+        if (negativePrompt2()) {
+          params.negative_prompt_2 = negativePrompt2();
+        }
+      }
+
+      params.max_compute = maxCompute();
+
       const capability = await sendRpc("get_capability", { type: "diffusers.inpaint" });
       const result = await sendRpc("std.call_method", {
-        args: [imageB64, outpaintDir(), outpaintPixels(), prompt()],
+        args: [imageB64, outpaintDir(), outpaintPixels(), prompt(), params],
         method: "outpaint",
         object: capability,
       });
@@ -256,14 +347,59 @@ function LayerMode() {
       const imageB64 = await blobToBase64(imageBlob);
 
       const capability = await sendRpc("get_capability", { type: "diffusers.upscale" });
-      const result = await sendRpc("std.call_method", {
-        args: [imageB64, "realesrgan", factor],
-        method: "upscale",
-        object: capability,
-      });
+      let result;
+      let methodLabel = "";
+
+      if (upscaleMode() === "traditional") {
+        // Traditional upscaling (fast)
+        result = await sendRpc("std.call_method", {
+          args: [
+            imageB64,
+            {
+              factor: upscaleFactor(),
+              method: upscaleMethod(),
+            },
+          ],
+          method: "upscaleTraditional",
+          object: capability,
+        });
+        methodLabel = `${upscaleMethod()} ${upscaleFactor()}x`;
+      } else if (upscaleMode() === "img2img") {
+        // Hybrid img2img upscaling
+        if (!prompt()) {
+          alert("Img2img upscaling requires a prompt");
+          return;
+        }
+        result = await sendRpc("std.call_method", {
+          args: [
+            imageB64,
+            prompt(),
+            {
+              denoise_strength: 0.3,
+              factor: upscaleFactor(),
+              guidance_scale: cfg(),
+              model_id: currentModel(),
+              negative_prompt: negativePrompt(),
+              num_inference_steps: 20,
+              upscale_method: upscaleMethod(),
+            },
+          ],
+          method: "upscaleImg2Img",
+          object: capability,
+        });
+        methodLabel = `Hybrid ${upscaleFactor()}x`;
+      } else {
+        // ESRGAN (diffusion-based)
+        result = await sendRpc("std.call_method", {
+          args: [imageB64, "realesrgan", factor],
+          method: "upscale",
+          object: capability,
+        });
+        methodLabel = `${upscaleMode().toUpperCase()} ${factor}x`;
+      }
 
       // Create new layer with upscaled result
-      const newLayerId = canvas.addLayer(`${layer.name} (${factor}x)`);
+      const newLayerId = canvas.addLayer(`${layer.name} (${methodLabel})`);
       const resultImg = `data:image/png;base64,${result.image}`;
       canvas.loadImageToLayer(newLayerId, resultImg, 0, 0);
     } catch (error) {
@@ -359,15 +495,106 @@ function LayerMode() {
         <Show when={hasMaskLayer()}>
           <div class="layer-mode__generation glass-panel">
             <h4>Inpaint</h4>
+
+            {/* Model selection */}
+            <select
+              class="glass-select"
+              value={currentModel()}
+              onChange={(e) => setCurrentModel(e.currentTarget.value)}
+            >
+              <option value="runwayml/stable-diffusion-v1-5">SD 1.5</option>
+              <option value="runwayml/stable-diffusion-inpainting">SD 1.5 Inpaint</option>
+              <option value="stabilityai/stable-diffusion-xl-base-1.0">SDXL</option>
+              <option value="stabilityai/stable-diffusion-xl-inpainting">SDXL Inpaint</option>
+            </select>
+
             <textarea
               class="layer-mode__prompt"
-              placeholder="Enter your prompt..."
+              placeholder="Prompt..."
               value={prompt()}
               onInput={(e) => setPrompt(e.currentTarget.value)}
             />
+            <textarea
+              class="layer-mode__prompt"
+              placeholder="Negative prompt (optional)..."
+              value={negativePrompt()}
+              onInput={(e) => setNegativePrompt(e.currentTarget.value)}
+            />
+
+            {/* SDXL Multi-prompt toggle */}
+            <Show when={isSDXL()}>
+              <label class="layer-mode__checkbox">
+                <input
+                  type="checkbox"
+                  checked={useMultiPrompts()}
+                  onChange={(e) => setUseMultiPrompts(e.currentTarget.checked)}
+                />
+                Use 2nd prompts (SDXL)
+              </label>
+
+              <Show when={useMultiPrompts()}>
+                <textarea
+                  class="layer-mode__prompt"
+                  placeholder="Prompt 2 (defaults to primary)..."
+                  value={prompt2()}
+                  onInput={(e) => setPrompt2(e.currentTarget.value)}
+                />
+                <textarea
+                  class="layer-mode__prompt"
+                  placeholder="Negative 2 (defaults to primary)..."
+                  value={negativePrompt2()}
+                  onInput={(e) => setNegativePrompt2(e.currentTarget.value)}
+                />
+              </Show>
+            </Show>
+
+            {/* Advanced parameters toggle */}
+            <button class="glass-button" onClick={() => setShowAdvanced(!showAdvanced())}>
+              {showAdvanced() ? "▼" : "▶"} Advanced (Compute: {computeCost().toFixed(2)} /{" "}
+              {maxCompute()})
+            </button>
+
+            <Show when={showAdvanced()}>
+              <div class="layer-mode__advanced">
+                <label>
+                  Strength: {strength().toFixed(2)}
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={strength()}
+                    onInput={(e) => setStrength(Number(e.currentTarget.value))}
+                  />
+                </label>
+                <label>
+                  Steps: {steps()}
+                  <input
+                    type="range"
+                    min="10"
+                    max="100"
+                    step="5"
+                    value={steps()}
+                    onInput={(e) => setSteps(Number(e.currentTarget.value))}
+                  />
+                </label>
+                <label>
+                  CFG Scale: {cfg().toFixed(1)}
+                  <input
+                    type="range"
+                    min="1"
+                    max="20"
+                    step="0.5"
+                    value={cfg()}
+                    onInput={(e) => setCfg(Number(e.currentTarget.value))}
+                  />
+                </label>
+              </div>
+            </Show>
+
             <button
               class="glass-button glass-button--primary"
-              disabled={!prompt() || generation.generating()}
+              disabled={!prompt() || generation.generating() || computeCost() > maxCompute()}
               onClick={handleInpaint}
             >
               {generation.generating() ? "Inpainting..." : "Inpaint"}
@@ -485,12 +712,55 @@ function LayerMode() {
                   >
                     {layer.visible ? "👁️" : "🚫"}
                   </button>
+                  {/* Upscale button with mode selector */}
+                  <select
+                    class="layer-mode__upscale-mode"
+                    value={upscaleMode()}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setUpscaleMode(e.currentTarget.value as any);
+                    }}
+                  >
+                    <option value="traditional">Fast</option>
+                    <option value="img2img">Hybrid</option>
+                    <option value="esrgan">ESRGAN</option>
+                  </select>
+                  <Show when={upscaleMode() === "traditional"}>
+                    <select
+                      class="layer-mode__upscale-method"
+                      value={upscaleMethod()}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setUpscaleMethod(e.currentTarget.value as any);
+                      }}
+                    >
+                      <option value="lanczos">Lanczos</option>
+                      <option value="bicubic">Bicubic</option>
+                      <option value="bilinear">Bilinear</option>
+                      <option value="nearest">Nearest</option>
+                      <option value="area">Area</option>
+                    </select>
+                  </Show>
+                  <select
+                    class="layer-mode__upscale-factor"
+                    value={upscaleFactor()}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setUpscaleFactor(Number(e.currentTarget.value) as 2 | 4);
+                    }}
+                  >
+                    <option value="2">2x</option>
+                    <option value="4">4x</option>
+                  </select>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleUpscale(layer.id, 2);
+                      handleUpscale(layer.id, upscaleFactor());
                     }}
-                    title="Upscale 2x"
+                    title={`Upscale ${upscaleFactor()}x (${upscaleMode()})`}
                   >
                     🔍
                   </button>
