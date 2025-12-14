@@ -769,11 +769,149 @@ export async function convertImage(
 
 ## Timeline Summary
 
-| Phase                     | Status      |
-| ------------------------- | ----------- |
-| Phase 1: MVP              | ✅ Complete |
-| Phase 2: ControlNet       | ✅ Complete |
-| Phase 3: Inpaint/Upscale  | ✅ Complete |
-| Phase 4: Advanced         | 📋 Planned  |
-| Phase 5: Viwo Integration | 📋 Planned  |
-| Phase 6: Polish           | 📋 Planned  |
+| Phase                            | Status      |
+| -------------------------------- | ----------- |
+| Phase 1: MVP                     | ✅ Complete |
+| Phase 2: ControlNet              | ✅ Complete |
+| Phase 3: Inpaint/Upscale         | ✅ Complete |
+| **Phase 3.5: Advanced Features** | ✅ Complete |
+| Phase 4: Advanced                | 📋 Planned  |
+| Phase 5: Viwo Integration        | 📋 Planned  |
+| Phase 6: Polish                  | 📋 Planned  |
+
+---
+
+## Phase 3.5: Advanced Parameters & ComfyUI-Level Features ✅ COMPLETE
+
+### Overview
+
+Enhanced Phase 3 with runtime parameter passing, SDXL multi-prompt support, compute limits, traditional upscaling methods, and hybrid img2img upscaling to achieve ComfyUI-level flexibility.
+
+### Features Implemented
+
+#### Runtime Parameter Passing ✅
+
+- **No capability minting required** - All parameters passed via method args
+- Params object as 4th argument to capability methods
+- Dynamic model selection, steps, CFG, strength, etc.
+
+#### SDXL Multi-Prompt Support ✅
+
+- `prompt_2` and `negative_prompt_2` for dual text encoders
+- Auto-detection based on model ID (checks for "xl")
+- Smart UI with optional toggle (hidden by default)
+- Auto-fills from primary prompt when enabled
+- Applies to both positive and negative conditioning
+
+#### Compute Budget System ✅
+
+- Formula: `(width × height × steps) / 1,000,000`
+- Validation before generation
+- Display in UI with real-time cost calculation
+- Prevents excessive resource usage
+
+#### Traditional Upscaling Methods ✅
+
+- **5 interpolation methods:**
+  - `lanczos` - High quality (default)
+  - `bicubic` - Better quality
+  - `bilinear` - Basic smoothing
+  - `nearest` - Fast, pixelated
+  - `area` - CV2 INTER_AREA
+- Fast, no diffusion required
+- 2x and 4x factor support
+
+#### Hybrid Img2Img Upscaling ✅
+
+- **ComfyUI-equivalent quality**
+- Step 1: Traditional upscale (fast)
+- Step 2: img2img refinement with low denoise (0.2-0.4)
+- Configurable denoise strength
+- Uses existing SD models
+
+#### Advanced UI Controls ✅
+
+- Model selection dropdown (SD 1.5, SDXL, Inpaint variants)
+- Collapsible advanced parameters panel
+- Strength, steps, CFG sliders
+- Upscale mode selector (Fast/Hybrid/ESRGAN)
+- Method selector for traditional upscaling
+- Factor selector (2x/4x)
+- Compute cost display
+
+### Backend Changes
+
+**Python Files:**
+
+- `plugins/diffusers/server/inpaint.py` - Multi-prompts, compute validation
+- `plugins/diffusers/server/upscale_traditional.py` - NEW: 5 traditional methods + hybrid upscaler
+- `plugins/diffusers/server/main.py` - Updated request models, 2 new endpoints
+
+**TypeScript Files:**
+
+- `plugins/diffusers/src/inpaint.ts` - Runtime params via params object
+- `plugins/diffusers/src/upscale.ts` - Added `upscaleTraditional()` and `upscaleImg2Img()`
+
+**Frontend Files:**
+
+- `apps/imagegen/src/modes/LayerMode.tsx` - Full UI with smart multi-prompts
+
+### API Enhancements
+
+**New Endpoints:**
+
+- `POST /upscale/traditional` - Fast interpolation upscaling
+- `POST /upscale/img2img` - Hybrid upscale with refinement
+
+**Updated Endpoints:**
+
+- `/inpaint` - Now accepts `prompt_2`, `negative_prompt_2`, `max_compute`
+- `/outpaint` - Same additions
+
+### Usage Examples
+
+```typescript
+// Inpaint with SDXL multi-prompts
+await sendRpc("std.call_method", {
+  object: inpaintCap,
+  method: "inpaint",
+  args: [
+    imageB64,
+    maskB64,
+    "beautiful landscape",
+    {
+      model_id: "stabilityai/stable-diffusion-xl-inpainting",
+      prompt_2: "masterpiece, ultra detailed",
+      negative_prompt_2: "low quality, artifacts",
+      num_inference_steps: 50,
+      guidance_scale: 7.5,
+      max_compute: 100,
+    },
+  ],
+});
+
+// Hybrid upscaling (ComfyUI quality)
+await sendRpc("std.call_method", {
+  object: upscaleCap,
+  method: "upscaleImg2Img",
+  args: [
+    imageB64,
+    "high resolution, sharp",
+    {
+      factor: 2,
+      denoise_strength: 0.3,
+      upscale_method: "lanczos",
+    },
+  ],
+});
+```
+
+### Key Achievements
+
+✅ **ComfyUI Feature Parity** - Matches quality and flexibility  
+✅ **Smart Defaults** - Multi-prompts auto-fill, minimize clutter  
+✅ **Runtime Flexibility** - No capability minting required  
+✅ **Performance** - Traditional upscale = instant  
+✅ **Quality** - Hybrid upscale = best of both worlds
+
+---
