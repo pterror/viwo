@@ -1,5 +1,5 @@
 import { For, Show, createEffect, createSignal, onMount } from "solid-js";
-import { exportAsViwoScript } from "../engine/canvas/actionRecorder";
+import { exportAsViwoScript } from "../engine/canvas/scriptExporter";
 import { useCanvas } from "../engine/canvas/useCanvas";
 import { useGeneration } from "../utils/useGeneration";
 import { useViwoConnection } from "../utils/viwo-connection";
@@ -205,18 +205,6 @@ function LayerMode() {
 
       const layerId = canvas.addLayer("Generated");
       canvas.loadImageToLayer(layerId, imageUrl, box.x, box.y);
-
-      // Record generation action
-      canvas.setActions([
-        ...canvas.actions(),
-        {
-          bbox: box,
-          layerId,
-          negativePrompt: negativePrompt(),
-          prompt: prompt(),
-          type: "generate",
-        },
-      ]);
     } catch (error) {
       console.error("Generation error:", error);
       alert(`Generation failed: ${error}`);
@@ -681,11 +669,7 @@ function LayerMode() {
           </select>
         </Show>
 
-        <button
-          class="glass-button"
-          onClick={() => exportAsViwoScript(canvas.actions())}
-          disabled={canvas.actions().length === 0}
-        >
+        <button class="glass-button" onClick={() => exportAsViwoScript(canvas.script())}>
           📥 Export Script
         </button>
 

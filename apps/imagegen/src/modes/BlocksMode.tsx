@@ -1,9 +1,16 @@
 import { createSignal, onMount } from "solid-js";
+import type { ScriptValue } from "@viwo/scripting";
 import { ScriptEditor } from "@viwo/web-editor";
 import { useViwoConnection } from "../utils/viwo-connection";
 
-function BlocksMode() {
-  const [script, setScript] = createSignal(["seq"]);
+interface BlocksModeProps {
+  script: ScriptValue<unknown>;
+  onScriptChange: (script: ScriptValue<unknown>) => void;
+  onVisualize: () => void;
+}
+
+function BlocksMode(props: BlocksModeProps) {
+  const [script, setScript] = createSignal(props.script);
   const { capabilities, connected, sendRpc } = useViwoConnection();
   const [coreOpcodes, setCoreOpcodes] = createSignal<any[]>([]);
 
@@ -42,12 +49,28 @@ function BlocksMode() {
     return blocks;
   };
 
+  function handleScriptChange(newScript: ScriptValue<unknown>) {
+    setScript(newScript);
+    props.onScriptChange(newScript);
+  }
+
   return (
     <div class="blocks-mode">
       {!connected() ? (
         <div class="blocks-mode__connecting">Connecting to viwo server...</div>
       ) : (
-        <ScriptEditor opcodes={opcodes()} value={script()} onChange={setScript} />
+        <>
+          <div class="blocks-mode__toolbar">
+            <button
+              class="glass-button glass-button--primary"
+              onClick={props.onVisualize}
+              title="Visualize this script as layers in Layer Mode"
+            >
+              🎨 Visualize as Layers
+            </button>
+          </div>
+          <ScriptEditor opcodes={opcodes()} value={script()} onChange={handleScriptChange} />
+        </>
       )}
     </div>
   );

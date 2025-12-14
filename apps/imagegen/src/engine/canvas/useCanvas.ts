@@ -1,12 +1,16 @@
-import type { CanvasAction } from "./actionRecorder";
 import { createSignal } from "solid-js";
+import { CanvasOps, type Point } from "./operations";
+import { StdLib } from "@viwo/scripting";
 
 export interface Layer {
   id: string;
   name: string;
-  type: "raster" | "control" | "mask";
+  type: "raster" | "control" | "mask" | "composite-op" | "opaque";
   controlType?: string;
   maskFor?: string; // ID of layer this is a mask for
+  source?: "script" | "user"; // NEW: Track origin
+  scriptNode?: unknown; // NEW: Original S-expression
+  editable?: boolean; // NEW: Whether layer can be edited
   visible: boolean;
   opacity: number;
   canvas: HTMLCanvasElement;
@@ -28,7 +32,8 @@ export function useCanvas(width: number, height: number) {
   const [color, setColor] = createSignal("#ffffff");
   const [bbox, setBbox] = createSignal<BoundingBox | null>(null);
   const [bboxDraft, setBboxDraft] = createSignal<BoundingBox | null>(null);
-  const [actions, setActions] = createSignal<CanvasAction[]>([]);
+  const [script, setScript] = createSignal(StdLib.seq());
+  const [currentStroke, setCurrentStroke] = createSignal<Point[]>([]);
 
   let compositeCanvas: HTMLCanvasElement | null = null;
   let isDrawing = false;
@@ -57,7 +62,11 @@ export function useCanvas(width: number, height: number) {
     const layer = createLayer(name);
     setLayers([...layers(), layer]);
     setActiveLayerId(layer.id);
-    setActions([...actions(), { layerId: layer.id, name, type: "layer.create" }]);
+
+    // Record operation
+    const [, ...exprs] = script() as any[];
+    setScript(StdLib.seq(...exprs, CanvasOps.layerCreate(layer.id, name)));
+
     return layer.id;
   }
 
@@ -66,10 +75,11 @@ export function useCanvas(width: number, height: number) {
     layer.controlType = controlType;
     setLayers([...layers(), layer]);
     setActiveLayerId(layer.id);
-    setActions([
-      ...actions(),
-      { controlType, layerId: layer.id, name, type: "layer.create_control" },
-    ]);
+
+    // Record operation
+    const [, ...exprs] = script() as any[];
+    setScript(StdLib.seq(...exprs, CanvasOps.layerCreate(layer.id, name, "control")));
+
     return layer.id;
   }
 
@@ -78,10 +88,11 @@ export function useCanvas(width: number, height: number) {
     layer.maskFor = targetLayerId;
     setLayers([...layers(), layer]);
     setActiveLayerId(layer.id);
-    setActions([
-      ...actions(),
-      { layerId: layer.id, maskFor: targetLayerId, name, type: "layer.create_mask" },
-    ]);
+
+    // Record operation
+    const [, ...exprs] = script() as any[];
+    setScript(StdLib.seq(...exprs, CanvasOps.layerCreate(layer.id, name, "mask")));
+
     return layer.id;
   }
 
@@ -155,6 +166,9 @@ export function useCanvas(width: number, height: number) {
     isDrawing = true;
     lastX = x;
     lastY = y;
+
+    // Start new stroke
+    setCurrentStroke([{ x, y }]);
   }
 
   function draw(x: number, y: number) {
@@ -191,6 +205,9 @@ export function useCanvas(width: number, height: number) {
     lastX = x;
     lastY = y;
 
+    // Add point to stroke
+    setCurrentStroke([...currentStroke(), { x, y }]);
+
     // Update composite
     if (compositeCanvas) {
       composite(compositeCanvas);
@@ -198,7 +215,31 @@ export function useCanvas(width: number, height: number) {
   }
 
   function stopDrawing() {
+    if (!isDrawing) {
+      return;
+    }
+
     isDrawing = false;
+
+    // Record complete stroke if it has points
+    const layer = getActiveLayer();
+    if (layer && currentStroke().length > 0) {
+      const [, ...exprs] = script() as any[];
+      setScript(
+        StdLib.seq(
+          ...exprs,
+          CanvasOps.drawStroke(
+            layer.id,
+            currentStroke(),
+            color(),
+            brushSize(),
+            tool() as "brush" | "eraser",
+          ),
+        ),
+      );
+    }
+
+    setCurrentStroke([]);
   }
 
   function clear() {
@@ -245,10 +286,13 @@ export function useCanvas(width: number, height: number) {
       }
     });
     img.src = imageUrl;
+
+    // Record operation
+    const [, ...exprs] = script() as any[];
+    setScript(StdLib.seq(...exprs, CanvasOps.layerLoadImage(layerId, imageUrl, x, y)));
   }
 
   return {
-    actions,
     activeLayerId,
     addControlLayer,
     addLayer,
@@ -263,13 +307,14 @@ export function useCanvas(width: number, height: number) {
     layers,
     loadImageToLayer,
     removeLayer,
-    setActions,
+    script, // NEW: Export script instead of actions
     setActiveLayerId,
     setBbox,
     setBboxDraft,
     setBrushSize,
     setColor,
     setCompositeCanvas,
+    setScript, // NEW: For importing scripts
     setTool,
     startDrawing,
     stopDrawing,
