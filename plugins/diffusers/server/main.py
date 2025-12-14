@@ -24,6 +24,7 @@ from io import BytesIO
 from controlnet import ControlNetManager
 from inpaint import InpaintManager
 from upscale import UpscaleManager
+from upscale_traditional import Img2ImgUpscaler, traditional_upscale
 
 
 # Pipeline cache to avoid reloading models
@@ -33,6 +34,7 @@ pipeline_cache: dict[str, DiffusionPipeline] = {}
 controlnet_manager = ControlNetManager()
 inpaint_manager = InpaintManager()
 upscale_manager = UpscaleManager()
+img2img_upscaler = Img2ImgUpscaler()
 
 
 @asynccontextmanager
@@ -164,7 +166,10 @@ class InpaintRequest(BaseModel):
     num_inference_steps: int = 50
     guidance_scale: float = 7.5
     negative_prompt: str | None = None
+    prompt_2: str | None = None  # SDXL
+    negative_prompt_2: str | None = None  # SDXL
     seed: int | None = None
+    max_compute: float | None = None
 
 
 class OutpaintRequest(BaseModel):
@@ -177,6 +182,32 @@ class OutpaintRequest(BaseModel):
     model_id: str = "runwayml/stable-diffusion-inpainting"
     strength: float = 0.8
     num_inference_steps: int = 50
+    guidance_scale: float = 7.5
+    negative_prompt: str | None = None
+    prompt_2: str | None = None  # SDXL
+    negative_prompt_2: str | None = None  # SDXL
+    seed: int | None = None
+    max_compute: float | None = None
+
+
+class TraditionalUpscaleRequest(BaseModel):
+    """Request model for traditional upscaling."""
+
+    image: str  # base64 encoded
+    method: str = "lanczos"  # nearest, bilinear, bicubic, lanczos, area
+    factor: int = 2  # 2 or 4
+
+
+class Img2ImgUpscaleRequest(BaseModel):
+    """Request model for hybrid img2img upscaling."""
+
+    image: str  # base64 encoded
+    prompt: str
+    model_id: str = "runwayml/stable-diffusion-v1-5"
+    factor: int = 2
+    denoise_strength: float = 0.3
+    upscale_method: str = "lanczos"
+    num_inference_steps: int = 20
     guidance_scale: float = 7.5
     negative_prompt: str | None = None
     seed: int | None = None
@@ -398,7 +429,10 @@ async def inpaint(req: InpaintRequest) -> ImageResponse:
             num_inference_steps=req.num_inference_steps,
             guidance_scale=req.guidance_scale,
             negative_prompt=req.negative_prompt,
+            prompt_2=req.prompt_2,
+            negative_prompt_2=req.negative_prompt_2,
             seed=req.seed,
+            max_compute=req.max_compute,
         )
 
         # Convert to base64
@@ -451,7 +485,10 @@ async def outpaint(req: OutpaintRequest) -> ImageResponse:
             num_inference_steps=req.num_inference_steps,
             guidance_scale=req.guidance_scale,
             negative_prompt=req.negative_prompt,
+            prompt_2=req.prompt_2,
+            negative_prompt_2=req.negative_prompt_2,
             seed=req.seed,
+            max_compute=req.max_compute,
         )
 
         # Convert to base64
@@ -558,6 +595,113 @@ async def face_restore(req: FaceRestoreRequest) -> ImageResponse:
     except Exception as error:
         raise HTTPException(
             status_code=500, detail=f"Face restoration failed: {error!s}"
+        ) from error
+
+
+@app.post("/upscale/traditional", response_model=ImageResponse)
+async def upscale_traditional_endpoint(req: TraditionalUpscaleRequest) -> ImageResponse:
+    """
+    Traditional interpolation upscaling.
+
+    Args:
+        req: Request containing image, method, and factor
+
+    Returns:
+        ImageResponse with upscaled image
+
+    Raises:
+        HTTPException: If upscaling fails
+    """
+    try:
+        # Decode image
+        image = base64_to_image(req.image)
+
+        # Validate method and factor
+        valid_methods = {"nearest", "bilinear", "bicubic", "lanczos", "area"}
+        if req.method not in valid_methods:
+            raise ValueError(f"Method must be one of {valid_methods}")
+        if req.factor not in (2, 4):
+            raise ValueError("Factor must be 2 or 4")
+
+        # Upscale
+        result_image = traditional_upscale(
+            image=image,
+            method=req.method,  # type: ignore
+            factor=req.factor,
+        )
+
+        # Convert to base64
+        image_b64 = image_to_base64(result_image)
+
+        return ImageResponse(
+            image=image_b64,
+            width=result_image.width,
+            height=result_image.height,
+            format="png",
+        )
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=f"Invalid request: {error!s}") from error
+    except Exception as error:
+        raise HTTPException(
+            status_code=500, detail=f"Traditional upscale failed: {error!s}"
+        ) from error
+
+
+@app.post("/upscale/img2img", response_model=ImageResponse)
+async def upscale_img2img_endpoint(req: Img2ImgUpscaleRequest) -> ImageResponse:
+    """
+    Hybrid upscale: traditional + img2img low-denoise refinement.
+
+    Args:
+        req: Request containing image, prompt, and parameters
+
+    Returns:
+        ImageResponse with upscaled and  refined image
+
+    Raises:
+        HTTPException: If upscaling fails
+    """
+    try:
+        # Decode image
+        image = base64_to_image(req.image)
+
+        # Validate factor and method
+        if req.factor not in (2, 4):
+            raise ValueError("Factor must be 2 or 4")
+        valid_methods = {"nearest", "bilinear", "bicubic", "lanczos", "area"}
+        if req.upscale_method not in valid_methods:
+            raise ValueError(f"Upscale method must be one of {valid_methods}")
+
+        # Upscale with img2img refinement
+        result_image = img2img_upscaler.upscale(
+            image=image,
+            prompt=req.prompt,
+            model_id=req.model_id,
+            factor=req.factor,
+            denoise_strength=req.denoise_strength,
+            upscale_method=req.upscale_method,  # type: ignore
+            num_inference_steps=req.num_inference_steps,
+            guidance_scale=req.guidance_scale,
+            negative_prompt=req.negative_prompt,
+            seed=req.seed,
+        )
+
+        # Convert to base64
+        image_b64 = image_to_base64(result_image)
+
+        return ImageResponse(
+            image=image_b64,
+            width=result_image.width,
+            height=result_image.height,
+            format="png",
+        )
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=f"Invalid request: {error!s}") from error
+    except Exception as error:
+        raise HTTPException(
+            status_code=500, detail=f"Img2img upscale failed: {error!s}"
         ) from error
 
 

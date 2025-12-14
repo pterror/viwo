@@ -4,7 +4,25 @@ import { ScriptError } from "@viwo/scripting";
 export class InpaintCapability extends BaseCapability {
   static override readonly type = "diffusers.inpaint";
 
-  async inpaint(image: string, mask: string, prompt: string, strength = 0.8, ctx?: any) {
+  async inpaint(
+    image: string,
+    mask: string,
+    prompt: string,
+    params: {
+      model_id?: string;
+      strength?: number;
+      width?: number;
+      height?: number;
+      num_inference_steps?: number;
+      guidance_scale?: number;
+      negative_prompt?: string;
+      prompt_2?: string;
+      negative_prompt_2?: string;
+      seed?: number;
+      max_compute?: number;
+    } = {},
+    ctx?: any,
+  ) {
     // Check capability ownership
     if (this.ownerId !== ctx.this.id) {
       throw new ScriptError("diffusers.inpaint: missing capability");
@@ -28,30 +46,24 @@ export class InpaintCapability extends BaseCapability {
       throw new ScriptError("diffusers.inpaint: prompt must be a string");
     }
 
-    // Get options from params
-    const modelId = this.params["model_id"] ?? "runwayml/stable-diffusion-inpainting";
-    const width = this.params["width"] as number | undefined;
-    const height = this.params["height"] as number | undefined;
-    const numInferenceSteps = this.params["num_inference_steps"] ?? 50;
-    const guidanceScale = this.params["guidance_scale"] ?? 7.5;
-    const negativePrompt = this.params["negative_prompt"] as string | undefined;
-    const seed = this.params["seed"] as number | undefined;
-
     // Make HTTP request to server
     try {
       const response = await fetch(`${serverUrl}/inpaint`, {
         body: JSON.stringify({
-          guidance_scale: guidanceScale,
-          height,
+          guidance_scale: params.guidance_scale ?? 7.5,
+          height: params.height,
           image,
           mask,
-          model_id: modelId,
-          negative_prompt: negativePrompt,
-          num_inference_steps: numInferenceSteps,
+          max_compute: params.max_compute,
+          model_id: params.model_id ?? "runwayml/stable-diffusion-inpainting",
+          negative_prompt: params.negative_prompt,
+          negative_prompt_2: params.negative_prompt_2,
+          num_inference_steps: params.num_inference_steps ?? 50,
           prompt,
-          seed,
-          strength,
-          width,
+          prompt_2: params.prompt_2,
+          seed: params.seed,
+          strength: params.strength ?? 0.8,
+          width: params.width,
         }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
@@ -74,6 +86,17 @@ export class InpaintCapability extends BaseCapability {
     direction: "left" | "right" | "top" | "bottom",
     pixels: number,
     prompt: string,
+    params: {
+      model_id?: string;
+      strength?: number;
+      num_inference_steps?: number;
+      guidance_scale?: number;
+      negative_prompt?: string;
+      prompt_2?: string;
+      negative_prompt_2?: string;
+      seed?: number;
+      max_compute?: number;
+    } = {},
     ctx?: any,
   ) {
     // Check capability ownership
@@ -102,28 +125,23 @@ export class InpaintCapability extends BaseCapability {
       throw new ScriptError("diffusers.outpaint: prompt must be a string");
     }
 
-    // Get options from params
-    const modelId = this.params["model_id"] ?? "runwayml/stable-diffusion-inpainting";
-    const strength = this.params["strength"] ?? 0.8;
-    const numInferenceSteps = this.params["num_inference_steps"] ?? 50;
-    const guidanceScale = this.params["guidance_scale"] ?? 7.5;
-    const negativePrompt = this.params["negative_prompt"] as string | undefined;
-    const seed = this.params["seed"] as number | undefined;
-
     // Make HTTP request to server
     try {
       const response = await fetch(`${serverUrl}/outpaint`, {
         body: JSON.stringify({
           direction,
-          guidance_scale: guidanceScale,
+          guidance_scale: params.guidance_scale ?? 7.5,
           image,
-          model_id: modelId,
-          negative_prompt: negativePrompt,
-          num_inference_steps: numInferenceSteps,
+          max_compute: params.max_compute,
+          model_id: params.model_id ?? "runwayml/stable-diffusion-inpainting",
+          negative_prompt: params.negative_prompt,
+          negative_prompt_2: params.negative_prompt_2,
+          num_inference_steps: params.num_inference_steps ?? 50,
           pixels,
           prompt,
-          seed,
-          strength,
+          prompt_2: params.prompt_2,
+          seed: params.seed,
+          strength: params.strength ?? 0.8,
         }),
         headers: { "Content-Type": "application/json" },
         method: "POST",

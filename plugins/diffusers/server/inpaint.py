@@ -57,7 +57,10 @@ class InpaintManager:
         num_inference_steps: int = 50,
         guidance_scale: float = 7.5,
         negative_prompt: str | None = None,
+        prompt_2: str | None = None,
+        negative_prompt_2: str | None = None,
         seed: int | None = None,
+        max_compute: float | None = None,
     ) -> Image.Image:
         """
         Inpaint masked region of an image.
@@ -73,18 +76,27 @@ class InpaintManager:
             num_inference_steps: Number of denoising steps
             guidance_scale: Classifier-free guidance scale
             negative_prompt: Negative prompt (optional)
+            prompt_2: Second prompt for SDXL (optional)
+            negative_prompt_2: Second negative prompt for SDXL (optional)
             seed: Random seed (optional)
+            max_compute: Maximum compute budget (optional)
 
         Returns:
             Inpainted PIL Image
         """
-        pipeline = self._load_pipeline(model_id)
-
         # Use input image dimensions if not specified
         if width is None:
             width = image.width
         if height is None:
             height = image.height
+
+        # Validate compute budget
+        if max_compute is not None:
+            cost = (width * height * num_inference_steps) / 1_000_000
+            if cost > max_compute:
+                raise ValueError(
+                    f"Compute cost {cost:.2f} exceeds limit {max_compute:.2f}"
+                )
 
         # Resize image and mask to match requested dimensions
         if image.width != width or image.height != height:
@@ -92,12 +104,18 @@ class InpaintManager:
         if mask.width != width or mask.height != height:
             mask = mask.resize((width, height), Image.LANCZOS)
 
+        # Load pipeline
+        pipeline = self._load_pipeline(model_id)
+
         # Set random seed
         generator = None
         if seed is not None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
             generator = torch.Generator(device=device)
             generator.manual_seed(seed)
+
+        # Detect if model is SDXL
+        is_sdxl = "xl" in model_id.lower()
 
         # Build generation kwargs
         kwargs: dict[str, Any] = {
@@ -112,6 +130,13 @@ class InpaintManager:
 
         if negative_prompt is not None:
             kwargs["negative_prompt"] = negative_prompt
+
+        # Add SDXL-specific prompts
+        if is_sdxl:
+            if prompt_2 is not None:
+                kwargs["prompt_2"] = prompt_2
+            if negative_prompt_2 is not None:
+                kwargs["negative_prompt_2"] = negative_prompt_2
 
         # Generate
         result = pipeline(**kwargs)
@@ -138,7 +163,10 @@ class InpaintManager:
         num_inference_steps: int = 50,
         guidance_scale: float = 7.5,
         negative_prompt: str | None = None,
+        prompt_2: str | None = None,
+        negative_prompt_2: str | None = None,
         seed: int | None = None,
+        max_compute: float | None = None,
     ) -> Image.Image:
         """
         Extend canvas in the specified direction with generated content.
@@ -153,7 +181,10 @@ class InpaintManager:
             num_inference_steps: Number of denoising steps
             guidance_scale: Classifier-free guidance scale
             negative_prompt: Negative prompt (optional)
+            prompt_2: Second prompt for SDXL (optional)
+            negative_prompt_2: Second negative prompt for SDXL (optional)
             seed: Random seed (optional)
+            max_compute: Maximum compute budget (optional)
 
         Returns:
             Extended PIL Image
@@ -198,5 +229,8 @@ class InpaintManager:
             num_inference_steps=num_inference_steps,
             guidance_scale=guidance_scale,
             negative_prompt=negative_prompt,
+            prompt_2=prompt_2,
+            negative_prompt_2=negative_prompt_2,
             seed=seed,
+            max_compute=max_compute,
         )
