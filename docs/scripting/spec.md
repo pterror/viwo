@@ -13,12 +13,7 @@ Example:
   "seq",
   ["log", "Hello World"],
   ["let", "x", 10],
-  [
-    "if",
-    [">", ["var", "x"], 5],
-    ["log", "x is greater than 5"],
-    ["log", "x is small"]
-  ]
+  ["if", [">", ["var", "x"], 5], ["log", "x is greater than 5"], ["log", "x is small"]]
 ]
 ```
 
@@ -134,9 +129,11 @@ All comparison operators support chaining (e.g., `["<", 1, 2, 3]` checks `1 < 2`
 - `[">", a, b, ...]`: Greater than.
 - `["<=", a, b, ...]`: Less than or equal.
 - `[">=", a, b, ...]`: Greater than or equal.
-- `["and", ...args]`: Logical AND.
-- `["or", ...args]`: Logical OR.
-- `["not", arg]`: Logical NOT.
+- `["and", ...args]`: Logical AND. Returns `true` if all arguments are true, `false` otherwise.
+- `["or", ...args]`: Logical OR. Returns `true` if at least one argument is true, `false` otherwise.
+- `["not", arg]`: Logical NOT. Returns the opposite boolean value.
+- `["guard", ...args]`: Short-circuiting AND. Returns the first falsy value or the last value. Similar to JavaScript's `&&` operator.
+- `["nullish", ...args]`: Nullish coalescing. Returns the first non-null/undefined value. Similar to JavaScript's `??` operator.
 
 ## Core Library (DB & Entity)
 
@@ -250,6 +247,105 @@ _Defined in: `packages/scripting/src/lib/time.ts`_
 - `["time.from_timestamp", number]`: Converts number to ISO string.
 - `["time.to_timestamp", datetime]`: Converts ISO string to number.
 - `["time.offset", amount, unit, base?]`: Adds an offset to a date.
+
+## Practical Examples
+
+This section demonstrates common patterns and real-world usage of ViwoScript opcodes.
+
+### Default Values with Nullish Coalescing
+
+Use `nullish` to provide default values when a variable might be `null` or `undefined`:
+
+```json
+["let", "theme", ["nullish", ["arg", 0], "modern"]]
+```
+
+This sets `theme` to the first argument if provided, otherwise defaults to `"modern"`.
+
+### Conditional Execution with Guard
+
+Use `guard` for conditional execution that short-circuits on falsy values:
+
+```json
+[
+  "guard",
+  ["get_capability", "fs.write", ["obj.new", ["path", "/data"]]],
+  ["fs.write", ["var", "cap"], "/data/config.json", ["var", "content"]]
+]
+```
+
+This only executes the `fs.write` if the capability is successfully retrieved.
+
+### Chained Comparisons
+
+Comparison operators support chaining for readable range checks:
+
+```json
+[
+  "if",
+  ["<", 0, ["var", "health"], 100],
+  ["log", "Health is in valid range"],
+  ["log", "Health is out of bounds"]
+]
+```
+
+This checks if `0 < health < 100` in a single expression.
+
+### Working with Capabilities
+
+Getting a capability and using it safely:
+
+```json
+[
+  "seq",
+  ["let", "httpCap", ["get_capability", "net.http", ["obj.new", ["domain", "api.example.com"]]]],
+  [
+    "if",
+    ["var", "httpCap"],
+    [
+      "seq",
+      [
+        "let",
+        "response",
+        ["net.http.fetch", ["var", "httpCap"], "https://api.example.com/data", ["obj.new"]]
+      ],
+      ["let", "data", ["net.http.response_json", ["var", "response"]]],
+      ["log", "Fetched data:", ["var", "data"]]
+    ],
+    ["warn", "Missing net.http capability"]
+  ]
+]
+```
+
+### Iteration with List Operations
+
+Mapping over a list with a lambda function:
+
+```json
+["let", "numbers", ["list.new", 1, 2, 3, 4, 5]],
+["let", "doubled",
+  ["list.map", ["var", "numbers"],
+    ["lambda", ["n"], ["*", ["var", "n"], 2]]
+  ]
+]
+```
+
+### Error Handling
+
+Using `try` for safe operations:
+
+```json
+[
+  "try",
+  [
+    "seq",
+    ["let", "data", ["json.parse", ["var", "jsonString"]]],
+    ["log", "Parsed successfully:", ["var", "data"]]
+  ],
+  "error",
+  ["log", "Failed to parse JSON:", ["var", "error"]]
+]
+```
 
 ## Permissions
 
