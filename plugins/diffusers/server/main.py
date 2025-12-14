@@ -22,13 +22,17 @@ import base64
 from io import BytesIO
 
 from controlnet import ControlNetManager
+from inpaint import InpaintManager
+from upscale import UpscaleManager
 
 
 # Pipeline cache to avoid reloading models
 pipeline_cache: dict[str, DiffusionPipeline] = {}
 
-# ControlNet manager
+# Feature managers
 controlnet_manager = ControlNetManager()
+inpaint_manager = InpaintManager()
+upscale_manager = UpscaleManager()
 
 
 @asynccontextmanager
@@ -145,6 +149,52 @@ class ControlTypesResponse(BaseModel):
     """Response model for available control types."""
 
     types: list[dict[str, str]]
+
+
+class InpaintRequest(BaseModel):
+    """Request model for inpainting."""
+
+    image: str  # base64 encoded
+    mask: str  # base64 encoded, white = inpaint
+    prompt: str
+    model_id: str = "runwayml/stable-diffusion-inpainting"
+    strength: float = 0.8
+    width: int | None = None
+    height: int | None = None
+    num_inference_steps: int = 50
+    guidance_scale: float = 7.5
+    negative_prompt: str | None = None
+    seed: int | None = None
+
+
+class OutpaintRequest(BaseModel):
+    """Request model for outpainting."""
+
+    image: str  # base64 encoded
+    direction: str  # "left", "right", "top", or "bottom"
+    pixels: int
+    prompt: str
+    model_id: str = "runwayml/stable-diffusion-inpainting"
+    strength: float = 0.8
+    num_inference_steps: int = 50
+    guidance_scale: float = 7.5
+    negative_prompt: str | None = None
+    seed: int | None = None
+
+
+class UpscaleRequest(BaseModel):
+    """Request model for upscaling."""
+
+    image: str  # base64 encoded
+    model: str = "realesrgan"  # "esrgan" or "realesrgan"
+    factor: int = 2  # 2 or 4
+
+
+class FaceRestoreRequest(BaseModel):
+    """Request model for face restoration."""
+
+    image: str  # base64 encoded
+    strength: float = 1.0
 
 
 @app.get("/health")
@@ -315,6 +365,200 @@ async def text_to_image(req: TextToImageRequest) -> ImageResponse:
 
     except Exception as error:
         raise HTTPException(status_code=500, detail=f"Generation failed: {error!s}") from error
+
+
+@app.post("/inpaint", response_model=ImageResponse)
+async def inpaint(req: InpaintRequest) -> ImageResponse:
+    """
+    Inpaint masked region of an image.
+
+    Args:
+        req: Request containing image, mask, prompt, and parameters
+
+    Returns:
+        ImageResponse with inpainted image
+
+    Raises:
+        HTTPException: If inpainting fails
+    """
+    try:
+        # Decode images
+        image = base64_to_image(req.image)
+        mask = base64_to_image(req.mask)
+
+        # Inpaint
+        result_image = inpaint_manager.inpaint(
+            image=image,
+            mask=mask,
+            prompt=req.prompt,
+            model_id=req.model_id,
+            strength=req.strength,
+            width=req.width,
+            height=req.height,
+            num_inference_steps=req.num_inference_steps,
+            guidance_scale=req.guidance_scale,
+            negative_prompt=req.negative_prompt,
+            seed=req.seed,
+        )
+
+        # Convert to base64
+        image_b64 = image_to_base64(result_image)
+
+        return ImageResponse(
+            image=image_b64,
+            width=result_image.width,
+            height=result_image.height,
+            format="png",
+        )
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=f"Invalid request: {error!s}") from error
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=f"Inpainting failed: {error!s}") from error
+
+
+@app.post("/outpaint", response_model=ImageResponse)
+async def outpaint(req: OutpaintRequest) -> ImageResponse:
+    """
+    Extend canvas in the specified direction with generated content.
+
+    Args:
+        req: Request containing image, direction, pixels, and parameters
+
+    Returns:
+        ImageResponse with extended image
+
+    Raises:
+        HTTPException: If outpainting fails
+    """
+    try:
+        # Decode image
+        image = base64_to_image(req.image)
+
+        # Validate direction
+        valid_directions = {"left", "right", "top", "bottom"}
+        if req.direction not in valid_directions:
+            raise ValueError(f"Direction must be one of {valid_directions}")
+
+        # Outpaint
+        result_image = inpaint_manager.outpaint(
+            image=image,
+            direction=req.direction,  # type: ignore
+            pixels=req.pixels,
+            prompt=req.prompt,
+            model_id=req.model_id,
+            strength=req.strength,
+            num_inference_steps=req.num_inference_steps,
+            guidance_scale=req.guidance_scale,
+            negative_prompt=req.negative_prompt,
+            seed=req.seed,
+        )
+
+        # Convert to base64
+        image_b64 = image_to_base64(result_image)
+
+        return ImageResponse(
+            image=image_b64,
+            width=result_image.width,
+            height=result_image.height,
+            format="png",
+        )
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=f"Invalid request: {error!s}") from error
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=f"Outpainting failed: {error!s}") from error
+
+
+@app.post("/upscale", response_model=ImageResponse)
+async def upscale_image(req: UpscaleRequest) -> ImageResponse:
+    """
+    Upscale an image using RealESRGAN or ESRGAN.
+
+    Args:
+        req: Request containing image, model, and factor
+
+    Returns:
+        ImageResponse with upscaled image
+
+    Raises:
+        HTTPException: If upscaling fails
+    """
+    try:
+        # Decode image
+        image = base64_to_image(req.image)
+
+        # Validate model and factor
+        if req.model not in ("esrgan", "realesrgan"):
+            raise ValueError("Model must be 'esrgan' or 'realesrgan'")
+        if req.factor not in (2, 4):
+            raise ValueError("Factor must be 2 or 4")
+
+        # Upscale
+        result_image = upscale_manager.upscale(
+            image=image,
+            model=req.model,  # type: ignore
+            factor=req.factor,  # type: ignore
+        )
+
+        # Convert to base64
+        image_b64 = image_to_base64(result_image)
+
+        return ImageResponse(
+            image=image_b64,
+            width=result_image.width,
+            height=result_image.height,
+            format="png",
+        )
+
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=f"Invalid request: {error!s}") from error
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=f"Upscaling failed: {error!s}") from error
+
+
+@app.post("/face-restore", response_model=ImageResponse)
+async def face_restore(req: FaceRestoreRequest) -> ImageResponse:
+    """
+    Restore faces in an image using GFPGAN.
+
+    Args:
+        req: Request containing image and strength
+
+    Returns:
+        ImageResponse with face-restored image
+
+    Raises:
+        HTTPException: If face restoration fails
+    """
+    try:
+        # Decode image
+        image = base64_to_image(req.image)
+
+        # Restore faces
+        result_image = upscale_manager.face_restore(
+            image=image,
+            strength=req.strength,
+        )
+
+        # Convert to base64
+        image_b64 = image_to_base64(result_image)
+
+        return ImageResponse(
+            image=image_b64,
+            width=result_image.width,
+            height=result_image.height,
+            format="png",
+        )
+
+    except ImportError as error:
+        raise HTTPException(
+            status_code=501, detail=f"GFPGAN not installed: {error!s}"
+        ) from error
+    except Exception as error:
+        raise HTTPException(
+            status_code=500, detail=f"Face restoration failed: {error!s}"
+        ) from error
 
 
 if __name__ == "__main__":

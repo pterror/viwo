@@ -4,8 +4,9 @@ import { createSignal } from "solid-js";
 export interface Layer {
   id: string;
   name: string;
-  type: "raster" | "control";
+  type: "raster" | "control" | "mask";
   controlType?: string;
+  maskFor?: string; // ID of layer this is a mask for
   visible: boolean;
   opacity: number;
   canvas: HTMLCanvasElement;
@@ -72,6 +73,18 @@ export function useCanvas(width: number, height: number) {
     return layer.id;
   }
 
+  function addMaskLayer(name: string, targetLayerId?: string) {
+    const layer = createLayer(name, "mask");
+    layer.maskFor = targetLayerId;
+    setLayers([...layers(), layer]);
+    setActiveLayerId(layer.id);
+    setActions([
+      ...actions(),
+      { layerId: layer.id, maskFor: targetLayerId, name, type: "layer.create_mask" },
+    ]);
+    return layer.id;
+  }
+
   function removeLayer(id: string) {
     setLayers(layers().filter((l) => l.id !== id));
     if (activeLayerId() === id) {
@@ -113,6 +126,16 @@ export function useCanvas(width: number, height: number) {
         ctx.drawImage(layer.canvas, 0, 0);
         ctx.globalCompositeOperation = "source-atop";
         ctx.fillStyle = "rgba(100, 150, 255, 0.2)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
+      // Apply red overlay to mask layers
+      else if (layer.type === "mask") {
+        ctx.save();
+        ctx.globalCompositeOperation = "source-over";
+        ctx.drawImage(layer.canvas, 0, 0);
+        ctx.globalCompositeOperation = "source-atop";
+        ctx.fillStyle = "rgba(255, 50, 50, 0.3)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.restore();
       } else {
@@ -229,6 +252,7 @@ export function useCanvas(width: number, height: number) {
     activeLayerId,
     addControlLayer,
     addLayer,
+    addMaskLayer,
     bbox,
     bboxDraft,
     brushSize,

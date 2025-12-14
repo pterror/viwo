@@ -3,6 +3,8 @@ import type { Plugin, PluginContext } from "@viwo/core";
 
 export { DiffusersGenerate } from "./lib";
 export { ControlNetCapability } from "./controlnet";
+export { InpaintCapability } from "./inpaint";
+export { UpscaleCapability } from "./upscale";
 
 export class DiffusersPlugin implements Plugin {
   name = "diffusers";

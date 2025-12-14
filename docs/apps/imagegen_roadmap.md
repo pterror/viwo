@@ -772,8 +772,8 @@ export async function convertImage(
 | Phase                     | Status      |
 | ------------------------- | ----------- |
 | Phase 1: MVP              | ✅ Complete |
-| Phase 2: ControlNet       | 📋 Planned  |
-| Phase 3: Inpaint/Upscale  | 📋 Planned  |
+| Phase 2: ControlNet       | ✅ Complete |
+| Phase 3: Inpaint/Upscale  | ✅ Complete |
 | Phase 4: Advanced         | 📋 Planned  |
 | Phase 5: Viwo Integration | 📋 Planned  |
 | Phase 6: Polish           | 📋 Planned  |
