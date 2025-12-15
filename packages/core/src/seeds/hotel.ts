@@ -3,7 +3,7 @@ import { loadEntityDefinition } from "./loader";
 import { resolve } from "node:path";
 import { transpile } from "@viwo/scripting";
 
-export function seedHotel(voidId: number, lobbyId: number) {
+export function seedHotel(voidId: number, lobbyId: number, entityBaseId: number) {
   // 12. Hotel Seed (Stage 1)
 
   // Load Hotel Definitions
@@ -43,10 +43,13 @@ export function seedHotel(voidId: number, lobbyId: number) {
     addVerb(hotelRoomProtoId, name, code);
   }
 
-  const hotelLobbyProtoId = createEntity({
-    description: "Points to the Hotel Manager.",
-    name: "Hotel Lobby Prototype",
-  });
+  const hotelLobbyProtoId = createEntity(
+    {
+      description: "Points to the Hotel Manager.",
+      name: "Hotel Lobby Prototype",
+    },
+    entityBaseId,
+  );
 
   // Configure Manager with Prototypes
   updateEntity({

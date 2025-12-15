@@ -8,6 +8,7 @@ import { seed } from "../seed";
 
 describe("Hotel Seed Stage 1", () => {
   let manager: Entity;
+  let player: Entity;
   let send: (type: string, payload: unknown) => void;
   let sentMessages: any[] = [];
   let mockTime = 1_677_648_000_000; // Arbitrary timestamp (2023-03-01)
@@ -35,6 +36,12 @@ describe("Hotel Seed Stage 1", () => {
       )
       .get()!;
     manager = getEntity(managerRow.id)!;
+
+    // Find Player (Guest) - needed for teleport verb access
+    const playerRow = db
+      .query<Entity, []>("SELECT id FROM entities WHERE json_extract(props, '$.name') = 'Guest'")
+      .get()!;
+    player = getEntity(playerRow.id)!;
   });
 
   const createOps = () => {
@@ -67,8 +74,8 @@ describe("Hotel Seed Stage 1", () => {
   };
 
   it("should create a lobby if checking in", async () => {
-    // Simulate enter
-    await runVerb(manager, "enter");
+    // Simulate enter - player is the caller
+    await runVerb(manager, "enter", [], player);
 
     const freshManager = getEntity(manager.id)!;
     const lobbyId = freshManager["lobby_id"] as number;

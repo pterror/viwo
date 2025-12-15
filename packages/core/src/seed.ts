@@ -726,7 +726,7 @@ export function seed() {
 
   // 12. Hotel Seed (Stage 1)
   // 12. Hotel Seed (Stage 1)
-  seedHotel(voidId, lobbyId);
+  seedHotel(voidId, lobbyId, entityBaseId);
 
   // 13. Chat Tree Seed
   seedChatTree(playerId);

@@ -54,7 +54,9 @@ describe("Scheduler Verification", () => {
 
   it("should process due tasks", async () => {
     // Wait for task to be due
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 150);
+    });
 
     await scheduler.process();
 
