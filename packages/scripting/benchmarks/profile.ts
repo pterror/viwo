@@ -1,6 +1,6 @@
-import * as std from "../src/lib/std";
 import * as boolean from "../src/lib/boolean";
 import * as math from "../src/lib/math";
+import * as std from "../src/lib/std";
 import {
   createOpcodeRegistry,
   createScriptContext,
@@ -21,21 +21,18 @@ function createContext() {
 }
 
 // Simple workload for profiling
-const script = [
-  "std.seq",
-  ["std.let", "sum", 0],
-  ["std.let", "idx", 0],
-  [
-    "std.while",
-    ["<", ["std.var", "idx"], 1000],
-    [
-      "std.seq",
-      ["std.set", "sum", ["+", ["std.var", "sum"], ["std.var", "idx"]]],
-      ["std.set", "idx", ["+", ["std.var", "idx"], 1]],
-    ],
-  ],
-  ["std.var", "sum"],
-];
+const script = std.seq(
+  std.let("sum", 0),
+  std.let("idx", 0),
+  std.while(
+    boolean.lt(std.var("idx"), 1000),
+    std.seq(
+      std.set("sum", math.add(std.var("sum"), std.var("idx"))),
+      std.set("idx", math.add(std.var("idx"), 1)),
+    ),
+  ),
+  std.var("sum"),
+);
 
 console.log("=".repeat(60));
 console.log("INTERPRETER PROFILING");

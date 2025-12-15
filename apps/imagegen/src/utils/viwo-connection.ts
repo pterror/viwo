@@ -130,9 +130,7 @@ function sendRpc(method: string, params: any, signal?: AbortSignal): Promise<any
   });
 }
 
-/**
- * Convert a Blob to base64 data URL
- */
+/** Convert a Blob to base64 data URL */
 export function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

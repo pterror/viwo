@@ -84,6 +84,5 @@ function extractLiteral(node: ts.Node): any {
   if (ts.isArrayLiteralExpression(node)) {
     return node.elements.map(extractLiteral).filter((value) => value !== undefined);
   }
-  // TODO: Add object literal support if needed
   return undefined;
 }

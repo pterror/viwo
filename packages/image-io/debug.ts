@@ -1,5 +1,5 @@
-import sharp from "sharp";
 import { embedMetadata } from "./src/metadata";
+import sharp from "sharp";
 
 async function debug() {
   // Create a test image
@@ -27,4 +27,4 @@ async function debug() {
   console.log("\nXMP:", after.xmp?.toString());
 }
 
-debug();
+await debug();

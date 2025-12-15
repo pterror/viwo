@@ -1,5 +1,5 @@
-import sharp from "sharp";
 import { embedMetadata, readMetadata } from "./metadata";
+import sharp from "sharp";
 
 export async function convertImage(
   image: Buffer,

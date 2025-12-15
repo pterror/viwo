@@ -17,9 +17,7 @@ export function exportAsViwoScript(script: ScriptValue<unknown>): void {
   URL.revokeObjectURL(url);
 }
 
-/**
- * Pretty-print a script for display (non-download)
- */
+/** Pretty-print a script for display (non-download) */
 export function scriptToString(script: ScriptValue<unknown>): string {
   return decompile(script);
 }

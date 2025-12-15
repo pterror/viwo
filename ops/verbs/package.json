@@ -1,6 +1,0 @@
-{
-  "name": "@viwo/op-verbs",
-  "scripts": {
-    "check": "bun --cwd ../.. check:verbs"
-  }
-}

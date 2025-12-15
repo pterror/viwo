@@ -1,5 +1,3 @@
-import { beforeEach, describe, expect, it } from "bun:test";
-import { createScriptContext, evaluate } from "@viwo/scripting";
 import {
   addVerb,
   createCapability,
@@ -9,11 +7,13 @@ import {
   getVerb,
   updateEntity,
 } from "../repo";
+import { beforeEach, describe, expect, it } from "bun:test";
+import { createScriptContext, evaluate } from "@viwo/scripting";
 import type { Entity } from "@viwo/shared/jsonrpc";
 import { GameOpcodes } from "./opcodes";
 import { db } from "../db";
-import { seed } from "../seed";
 import { scheduler } from "../scheduler";
+import { seed } from "../seed";
 
 /**
  * Semi-E2E tests for the game loop.
@@ -105,6 +105,7 @@ describe("Game Loop E2E", () => {
     createCapability(player2Id, "entity.control", { "*": true });
   });
 
+  // oxlint-disable-next-line max-params
   const runVerb = async (
     entity: Entity,
     verbName: string,
@@ -209,7 +210,9 @@ describe("Game Loop E2E", () => {
       expect(messages1.length).toBe(0);
 
       // Wait for the delay
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      await new Promise((resolve) => {
+        setTimeout(resolve, 150);
+      });
 
       // Process again
       await scheduler.process();
@@ -232,7 +235,9 @@ describe("Game Loop E2E", () => {
       scheduler.schedule(player2.id, "task2", [], 50);
 
       // Wait and process
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => {
+        setTimeout(resolve, 100);
+      });
       await scheduler.process();
 
       // Both should have executed
@@ -317,7 +322,7 @@ describe("Game Loop E2E", () => {
       expect(finalCounter["counter"]).toBe(3);
     });
 
-    it("should handle location changes properly", async () => {
+    it("should handle location changes properly", () => {
       // Create a container
       const containerId = createEntity({
         location: room.id,

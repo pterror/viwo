@@ -261,10 +261,10 @@ export class ChatTree extends EntityBase {
     // Walk from each branch head
     const branch_names = obj.keys(branches);
     for (const branch_name of branch_names) {
-      let current_id: string | number | null = obj.get(branches, branch_name, null);
+      let current_id: string | number | null = obj.get(branches, branch_name, null!);
 
       while (current_id !== null && current_id !== undefined) {
-        const id_str = String(current_id);
+        const id_str = String(current_id) as string;
         if (obj.get(reachable, id_str, false)) {
           break; // Already processed this path
         }

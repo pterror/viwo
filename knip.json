@@ -14,7 +14,13 @@
       "project": ["src/**/*.ts"]
     },
     "packages/core": {
-      "entry": ["src/index.ts", "src/seeds/verbs.ts", "src/benchmark_compiler.ts"],
+      "entry": [
+        "src/index.ts",
+        "src/seeds/definitions/*.ts",
+        "src/benchmark_compiler.ts",
+        "src/plugin_types.ts",
+        "src/verb_loader.ts"
+      ],
       "project": ["src/**/*.ts"]
     },
     "packages/shared": {

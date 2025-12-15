@@ -42,8 +42,10 @@
 - [ ] **Core**: Solve transactional updates for multiple entities with capabilities in `packages/core/src/runtime/lib/core.ts`.
 - [ ] **Core**: Atomic multi-entity moves (e.g. moving item from room A to room B atomically).
 - [ ] **Core**: Add capability-based permissions for verbs
+- [ ] **Core**: Re-add verb checking if it makes sense (removed `ops/verbs` and `check:verbs` script due to failures)
 - [ ] **Scripting**: Add async support to compiler
 - [ ] **Seed**: Make sure mailbox uses capability based permissions. (And add it back, I guess, and add _new_ tests in `mailbox.test.ts` to verify that functionality works)
+- [ ] **Seed**: Add object literal support to `extractLiteral` in `packages/core/src/seeds/loader.ts` (currently only supports strings, numbers, booleans, null, and arrays)
 - [ ] **Transpiler**: Handle all compiler constructs
 - [ ] **Transpiler**: Support ES6 shorthand property syntax (`{ content, role }` currently drops properties)
 - [ ] **Transpiler**: Support native array methods (`.push()`, `.reverse()` currently not transpiled)

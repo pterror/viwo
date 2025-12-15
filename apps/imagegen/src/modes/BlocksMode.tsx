@@ -1,6 +1,6 @@
 import { createSignal, onMount } from "solid-js";
-import type { ScriptValue } from "@viwo/scripting";
 import { ScriptEditor } from "@viwo/web-editor";
+import type { ScriptValue } from "@viwo/scripting";
 import { useViwoConnection } from "../utils/viwo-connection";
 
 interface BlocksModeProps {

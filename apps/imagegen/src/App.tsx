@@ -65,7 +65,7 @@ function App() {
               const input = document.createElement("input");
               input.type = "file";
               input.accept = ".json";
-              input.onchange = async (e) => {
+              input.addEventListener("change", async (e) => {
                 const file = (e.target as HTMLInputElement).files?.[0];
                 if (file) {
                   try {
@@ -75,7 +75,7 @@ function App() {
                     alert(`Import failed: ${error}`);
                   }
                 }
-              };
+              });
               input.click();
             }}
           >

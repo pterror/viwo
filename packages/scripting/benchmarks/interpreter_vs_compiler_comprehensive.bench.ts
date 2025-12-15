@@ -1,8 +1,8 @@
 import * as boolean from "../src/lib/boolean";
 import * as math from "../src/lib/math";
 import * as std from "../src/lib/std";
-import { compile } from "../src/compiler";
 import { createOpcodeRegistry, createScriptContext, evaluate } from "../src/interpreter";
+import { compile } from "../src/compiler";
 
 // Create opcode registry
 const opcodes = createOpcodeRegistry(std, boolean, math);

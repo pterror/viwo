@@ -169,17 +169,17 @@ describe("transpiler", () => {
     expect(forLoopResult[1]).toEqual(StdLib.let("i", 0));
 
     // Verify while loop structure
-    const whileLoop = forLoopResult[2];
+    const { 2: whileLoop } = forLoopResult;
     expect(Array.isArray(whileLoop) && whileLoop[0] === "std.while").toBe(true);
     expect(whileLoop[1]).toEqual(BooleanLib.lt(StdLib.var("i"), 10));
 
     // Verify body contains: seq(seq(i), seq(let tmp, set i, var tmp))
-    const whileBody = whileLoop[2];
+    const { 2: whileBody } = whileLoop;
     expect(whileBody[0]).toBe("std.seq");
     expect(whileBody[1]).toEqual(StdLib.seq(StdLib.var("i")));
 
     // Check i++ structure
-    const incrementPart = whileBody[2];
+    const { 2: incrementPart } = whileBody;
     expect(incrementPart[0]).toBe("std.seq");
     expect(incrementPart[1][0]).toBe("std.let"); // let tmp
     expect(incrementPart[2]).toEqual(StdLib.set("i", MathLib.add(StdLib.var("i"), 1)));
@@ -189,12 +189,12 @@ describe("transpiler", () => {
     expect(Array.isArray(forLoopResult2) && forLoopResult2[0] === "std.seq").toBe(true);
     expect(forLoopResult2[1]).toEqual(StdLib.let("i", 10));
 
-    const whileLoop2 = forLoopResult2[2];
+    const { 2: whileLoop2 } = forLoopResult2;
     expect(whileLoop2[1]).toEqual(BooleanLib.gt(StdLib.var("i"), 0));
 
     // Similar structure check for i--
-    const whileBody2 = whileLoop2[2];
-    const decrementPart = whileBody2[2];
+    const { 2: whileBody2 } = whileLoop2;
+    const { 2: decrementPart } = whileBody2;
     expect(decrementPart[0]).toBe("std.seq");
     expect(decrementPart[1][0]).toBe("std.let"); // let tmp
     expect(decrementPart[2]).toEqual(StdLib.set("i", MathLib.sub(StdLib.var("i"), 1)));
@@ -265,11 +265,11 @@ describe("transpiler", () => {
     expect(result[1]).toEqual(StdLib.let("x", 5));
 
     // Verify y assignment includes a seq with let (temp), set (increment), var (return temp)
-    const yAssignment = result[2];
+    const { 2: yAssignment } = result;
     expect(Array.isArray(yAssignment) && yAssignment[0] === "std.let").toBe(true);
     expect(yAssignment[1]).toBe("y");
 
-    const yValue = yAssignment[2];
+    const { 2: yValue } = yAssignment;
     expect(Array.isArray(yValue) && yValue[0] === "std.seq").toBe(true);
 
     // Check the sequence structure: let tmp = x, set x = x + 1, return tmp
@@ -279,7 +279,7 @@ describe("transpiler", () => {
     expect(yValue[3][0]).toBe("std.var"); // return tmp
 
     // Verify tmp names match
-    const tmpName = yValue[1][1];
+    const [, [, tmpName]] = yValue;
     expect(yValue[3][1]).toBe(tmpName); // returned value should be same tmp
 
     // i-- should return the OLD value before decrementing
@@ -287,8 +287,8 @@ describe("transpiler", () => {
     expect(Array.isArray(result2) && result2[0] === "std.seq").toBe(true);
     expect(result2[1]).toEqual(StdLib.let("x", 5));
 
-    const yAssignment2 = result2[2];
-    const yValue2 = yAssignment2[2];
+    const { 2: yAssignment2 } = result2;
+    const { 2: yValue2 } = yAssignment2;
     expect(yValue2[1][0]).toBe("std.let"); // let tmp
     expect(yValue2[2][0]).toBe("std.set"); // set x -= 1
     expect(yValue2[3][0]).toBe("std.var"); // return tmp

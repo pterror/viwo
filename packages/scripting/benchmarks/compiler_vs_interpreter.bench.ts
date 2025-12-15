@@ -1,8 +1,8 @@
 import * as boolean from "../src/lib/boolean";
 import * as math from "../src/lib/math";
 import * as std from "../src/lib/std";
-import { compile } from "../src/compiler";
 import { createOpcodeRegistry, createScriptContext, evaluate } from "../src/interpreter";
+import { compile } from "../src/compiler";
 
 // Create opcode registry
 const opcodes = createOpcodeRegistry(std, boolean, math);
@@ -47,50 +47,39 @@ console.log("=".repeat(70));
 console.log();
 
 // Test script: loop with break
-const breakScript = [
-  "std.seq",
-  ["std.let", "count", 0],
-  [
-    "std.while",
+const breakScript = std.seq(
+  std.let("count", 0),
+  std.while(
     true,
-    [
-      "std.seq",
-      ["std.set", "count", ["+", ["std.var", "count"], 1]],
-      ["std.if", ["==", ["std.var", "count"], 100], ["std.break"]],
-    ],
-  ],
-  ["std.var", "count"],
-];
+    std.seq(
+      std.set("count", math.add(std.var("count"), 1)),
+      std.if(boolean.eq(std.var("count"), 100), std.break()),
+    ),
+  ),
+  std.var("count"),
+);
 
 // Test script: loop with continue
-const continueScript = [
-  "std.seq",
-  ["std.let", "count", 0],
-  ["std.let", "sum", 0],
-  [
-    "std.while",
-    ["<", ["std.var", "count"], 100],
-    [
-      "std.seq",
-      ["std.set", "count", ["+", ["std.var", "count"], 1]],
-      ["std.if", ["==", ["%", ["std.var", "count"], 2], 0], ["std.continue"]],
-      ["std.set", "sum", ["+", ["std.var", "sum"], ["std.var", "count"]]],
-    ],
-  ],
-  ["std.var", "sum"],
-];
+const continueScript = std.seq(
+  std.let("count", 0),
+  std.let("sum", 0),
+  std.while(
+    boolean.lt(std.var("count"), 100),
+    std.seq(
+      std.set("count", math.add(std.var("count"), 1)),
+      std.if(boolean.eq(math.mod(std.var("count"), 2), 0), std.continue()),
+      std.set("sum", math.add(std.var("sum"), std.var("count"))),
+    ),
+  ),
+  std.var("sum"),
+);
 
 // Baseline: simple loop without break/continue
-const baselineScript = [
-  "std.seq",
-  ["std.let", "count", 0],
-  [
-    "std.while",
-    ["<", ["std.var", "count"], 100],
-    ["std.set", "count", ["+", ["std.var", "count"], 1]],
-  ],
-  ["std.var", "count"],
-];
+const baselineScript = std.seq(
+  std.let("count", 0),
+  std.while(boolean.lt(std.var("count"), 100), std.set("count", math.add(std.var("count"), 1))),
+  std.var("count"),
+);
 
 console.log("TEST 1: Loop with break (100 iterations)");
 console.log("-".repeat(70));

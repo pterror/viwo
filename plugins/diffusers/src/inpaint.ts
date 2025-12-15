@@ -4,6 +4,7 @@ import { ScriptError } from "@viwo/scripting";
 export class InpaintCapability extends BaseCapability {
   static override readonly type = "diffusers.inpaint";
 
+  // oxlint-disable-next-line max-params
   async inpaint(
     image: string,
     mask: string,
@@ -81,6 +82,7 @@ export class InpaintCapability extends BaseCapability {
     }
   }
 
+  // oxlint-disable-next-line max-params
   async outpaint(
     image: string,
     direction: "left" | "right" | "top" | "bottom",

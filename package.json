@@ -34,7 +34,6 @@
     "benchmark": "bun packages/core/src/benchmark_compiler.ts",
     "check:test": "bun test --only-failures",
     "check:lint": "bun lint",
-    "check:verbs": "bun --filter @viwo/core check:verbs",
     "check:format": "bun format --check",
     "check:types": "bun --filter '*' check:types",
     "check:opcodes": "bun --filter @viwo/scripting check:opcodes",

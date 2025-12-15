@@ -1,4 +1,3 @@
-import { describe, expect, test } from "bun:test";
 import {
   compositeImages,
   convertImage,
@@ -7,10 +6,11 @@ import {
   readMetadata,
   transformImage,
 } from "./index";
+import { describe, expect, test } from "bun:test";
 import sharp from "sharp";
 
 // Helper to create a test image
-async function createTestImage(
+function createTestImage(
   width = 100,
   height = 100,
   format: "png" | "jpeg" | "webp" = "png",

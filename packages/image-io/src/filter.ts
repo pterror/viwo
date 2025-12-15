@@ -1,6 +1,6 @@
 import sharp from "sharp";
 
-export async function filterImage(
+export function filterImage(
   image: Buffer,
   type: "blur" | "sharpen" | "grayscale",
 ): Promise<Buffer> {
