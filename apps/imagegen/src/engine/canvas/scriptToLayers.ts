@@ -1,6 +1,3 @@
-// NOTE: This file is not currently used. It was part of Phase 4 implementation
-// for script-to-layer visualization. When ready to integrate, export the functions below.
-
 import type { Layer } from "./useCanvas";
 import type { Point } from "./operations";
 import type { ScriptValue } from "@viwo/scripting";
@@ -189,25 +186,4 @@ export function scriptToLayers(
   }
 
   return layers;
-}
-
-/**
- * Replay a script to rebuild canvas state.
- * This is used when importing a script to restore the exact canvas state.
- */
-export function replayScript(
-  script: ScriptValue<unknown>,
-  onLayerCreate: (layer: ScriptLayer) => void,
-  onProgress?: (current: number, total: number) => void,
-): void {
-  const layers = scriptToLayers(script, 1024, 1024);
-
-  for (let idx = 0; idx < layers.length; idx += 1) {
-    const layer = layers[idx];
-    if (!layer) {
-      continue;
-    }
-    onLayerCreate(layer);
-    onProgress?.(idx + 1, layers.length);
-  }
 }

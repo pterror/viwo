@@ -7,6 +7,7 @@ import {
 } from "../utils/viwo-connection";
 import type { ScriptValue } from "@viwo/scripting";
 import { exportAsViwoScript } from "../engine/canvas/scriptExporter";
+import { scriptToLayers } from "../engine/canvas/scriptToLayers";
 import { useBatch } from "../utils/batchGeneration";
 import { useCanvas } from "../engine/canvas/useCanvas";
 import { useEntityImages } from "../utils/useEntityImages";
@@ -126,6 +127,65 @@ function LayerMode(props: LayerModeProps = {}) {
       setControlTypes(types);
     } catch (error) {
       console.error("Failed to fetch ControlNet types:", error);
+    }
+  });
+
+  // Watch for initialScript changes (from Blocks Mode or template loading)
+  createEffect(() => {
+    const script = props.initialScript;
+    if (!script || !Array.isArray(script)) {
+      return;
+    }
+
+    // Only import if script is non-empty (has operations beyond just "seq")
+    if (script.length <= 1) {
+      return;
+    }
+
+    // Clear existing layers and import from script
+    const importedLayers = scriptToLayers(script, 1024, 1024);
+    if (importedLayers.length > 0) {
+      // Clear all layers first (keep Background if it exists)
+      const backgroundLayer = canvas.layers().find((l) => l.name === "Background");
+      if (backgroundLayer) {
+        // Remove all other layers
+        for (const layer of canvas.layers()) {
+          if (layer.id !== backgroundLayer.id) {
+            canvas.removeLayer(layer.id);
+          }
+        }
+      }
+
+      // Add imported layers
+      for (const importedLayer of importedLayers) {
+        // Create a new layer in canvas with matching properties
+        const newLayerId =
+          importedLayer.type === "control"
+            ? canvas.addControlLayer(importedLayer.name, importedLayer.controlType ?? "scribble")
+            : importedLayer.type === "mask"
+              ? canvas.addMaskLayer(importedLayer.name, importedLayer.maskFor)
+              : canvas.addLayer(importedLayer.name);
+
+        // Copy canvas content from imported layer
+        const newLayer = canvas.layers().find((l) => l.id === newLayerId);
+        if (newLayer) {
+          const ctx = newLayer.canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(importedLayer.canvas, 0, 0);
+          }
+
+          // Update other properties
+          canvas.updateLayer(newLayerId, {
+            locked: importedLayer.locked,
+            opacity: importedLayer.opacity,
+            visible: importedLayer.visible,
+          });
+        }
+      }
+
+      // Update the script
+      canvas.setScript(script);
+      canvas.composite();
     }
   });
 
