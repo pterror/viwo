@@ -280,46 +280,80 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
 
   if (ts.isPostfixUnaryExpression(node)) {
     if (node.operator === ts.SyntaxKind.PlusPlusToken) {
-      // i++ -> (let tmp = i, i += 1, tmp)
-      // But if it's a statement (result ignored), we can just do i += 1
-      // For now, let's implement the full semantics using a temp var if needed?
-      // Or just i += 1 and return the NEW value if we don't care about the return value in for loops?
-      // The test expects `i++` to be `i = i + 1` in the loop incrementor.
-      // But strictly `i++` evaluates to `i`.
-      // Let's implement strict semantics:
-      // let tmp = i; i = i + 1; tmp
+      // i++ -> (seq (let tmp (var i)) (set i (+ (var i) 1)) (var tmp))
+      // This ensures i++ returns the OLD value before incrementing
       const operand = transpileNode(node.operand, scope);
+
       if (Array.isArray(operand) && operand[0] === "std.var") {
-        // Optimization for simple vars:
-        // (seq (let tmp (var x)) (set x (+ (var x) 1)) (var tmp))
-        // But wait, if we are in a for loop incrementor, the return value is dropped.
-        // We can't easily know if the return value is dropped here.
-        // However, for the specific test case `for (...; i++)`, `i++` is the incrementor.
-        // The transpiler for `for` wraps it in `seq`.
-        // So `seq(..., (let tmp ...))` is fine.
-        // BUT, my test expectation was:
-        // Std.set("i", MathLib.add(Std.var("i"), 1))
-        // This returns the NEW value.
-        // `i++` should return the OLD value.
-        // So my test expectation for `i++` in the loop was actually assuming `++i` semantics or ignoring the return value.
-        // The test wrote: `Std.set("i", MathLib.add(Std.var("i"), 1))`
-        // This is the result of `i += 1` or `++i`.
-        // If I implement `i++` as `i += 1`, it returns the new value.
-        // This is technically incorrect for `i++` as an expression, but correct for side effect.
-        // Given the test expectation, I will implement `i++` as `i += 1` for now, noting the deviation.
-        // Actually, I should probably fix the test expectation if I want correct semantics.
-        // But `i++` is extremely common in loops.
-        // Let's stick to `i += 1` for now and maybe add a TODO for correct expression semantics.
-        return transpileArithmeticAssignment(ts.SyntaxKind.PlusEqualsToken, operand, 1);
+        // Simple variable case: i++
+        const [, varName] = operand;
+        const tmp = generateTempVar();
+        return StdLib.seq(
+          StdLib.let(tmp, StdLib.var(varName)),
+          StdLib.set(varName, MathLib.add(StdLib.var(varName), 1)),
+          StdLib.var(tmp),
+        );
       }
-      return transpileArithmeticAssignment(ts.SyntaxKind.PlusEqualsToken, operand, 1);
+
+      if (Array.isArray(operand) && operand[0] === "obj.get") {
+        // Property access case: obj.prop++ or obj[key]++
+        const [, obj, key] = operand;
+        const tmpObj = generateTempVar();
+        const tmpKey = generateTempVar();
+        const tmpVal = generateTempVar();
+
+        return StdLib.seq(
+          StdLib.let(tmpObj, obj),
+          StdLib.let(tmpKey, key),
+          StdLib.let(tmpVal, ObjectLib.objGet(StdLib.var(tmpObj), StdLib.var(tmpKey))),
+          ObjectLib.objSet(
+            StdLib.var(tmpObj),
+            StdLib.var(tmpKey),
+            MathLib.add(StdLib.var(tmpVal), 1),
+          ),
+          StdLib.var(tmpVal),
+        );
+      }
+
+      throw new Error(`Unsupported postfix increment operand: ${JSON.stringify(operand)}`);
     }
+
     if (node.operator === ts.SyntaxKind.MinusMinusToken) {
-      return transpileArithmeticAssignment(
-        ts.SyntaxKind.MinusEqualsToken,
-        transpileNode(node.operand, scope),
-        1,
-      );
+      // i-- -> (seq (let tmp (var i)) (set i (- (var i) 1)) (var tmp))
+      const operand = transpileNode(node.operand, scope);
+
+      if (Array.isArray(operand) && operand[0] === "std.var") {
+        // Simple variable case: i--
+        const [, varName] = operand;
+        const tmp = generateTempVar();
+        return StdLib.seq(
+          StdLib.let(tmp, StdLib.var(varName)),
+          StdLib.set(varName, MathLib.sub(StdLib.var(varName), 1)),
+          StdLib.var(tmp),
+        );
+      }
+
+      if (Array.isArray(operand) && operand[0] === "obj.get") {
+        // Property access case: obj.prop-- or obj[key]--
+        const [, obj, key] = operand;
+        const tmpObj = generateTempVar();
+        const tmpKey = generateTempVar();
+        const tmpVal = generateTempVar();
+
+        return StdLib.seq(
+          StdLib.let(tmpObj, obj),
+          StdLib.let(tmpKey, key),
+          StdLib.let(tmpVal, ObjectLib.objGet(StdLib.var(tmpObj), StdLib.var(tmpKey))),
+          ObjectLib.objSet(
+            StdLib.var(tmpObj),
+            StdLib.var(tmpKey),
+            MathLib.sub(StdLib.var(tmpVal), 1),
+          ),
+          StdLib.var(tmpVal),
+        );
+      }
+
+      throw new Error(`Unsupported postfix decrement operand: ${JSON.stringify(operand)}`);
     }
   }
 
@@ -868,7 +902,46 @@ function buildChain(base: any, parts: ChainPart[]): any {
   const part = parts[0]!;
   const remaining = parts.slice(1);
 
-  // If this part is optional, we need to check if base is nullish
+  // Check if this is a property/element access followed by a call
+  // If so, fuse them into std.call_method to preserve `this` context
+  if (
+    (part.kind === "prop" || part.kind === "elem") &&
+    remaining.length > 0 &&
+    remaining[0]!.kind === "call"
+  ) {
+    const callPart = remaining[0]!;
+    const restRemaining = remaining.slice(1);
+    const methodName = part.key;
+    const args = callPart.args || [];
+
+    // Handle optional chaining: if either the access or call is optional
+    if (part.optional || callPart.optional) {
+      if (!isSimpleNode(base)) {
+        const tmp = generateTempVar();
+        const tmpVar = StdLib.var(tmp);
+
+        return StdLib.seq(
+          StdLib.let(tmp, base),
+          StdLib.if(
+            BooleanLib.neq(tmpVar, null),
+            buildChain(StdLib.callMethod(tmpVar, methodName, ...args), restRemaining),
+            null,
+          ),
+        );
+      }
+
+      return StdLib.if(
+        BooleanLib.neq(base, null),
+        buildChain(StdLib.callMethod(base, methodName, ...args), restRemaining),
+        null,
+      );
+    }
+
+    // Non-optional case: just call the method
+    return buildChain(StdLib.callMethod(base, methodName, ...args), restRemaining);
+  }
+
+  // Original logic for non-fused cases
   if (part.optional) {
     // If base is complex, cache it in a temp var
     if (!isSimpleNode(base)) {

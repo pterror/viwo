@@ -140,11 +140,23 @@ describe("transpiler optional chaining", () => {
 
   test("nested optional call", () => {
     // a?.b()
-    // if (a != null) a.b() else null
+    // Should use std.call_method to preserve `this` context
     const code = "a?.b()";
     const expected = StdLib.if(
       BooleanLib.neq(StdLib.var("a"), null),
-      StdLib.apply(ObjectLib.objGet(StdLib.var("a"), "b")),
+      StdLib.callMethod(StdLib.var("a"), "b"),
+      null,
+    );
+    expect(transpile(code)).toEqual(expected);
+  });
+
+  test("optional method call with argument", () => {
+    // a?.b(x)
+    // Should use std.call_method with argument
+    const code = "a?.b(x)";
+    const expected = StdLib.if(
+      BooleanLib.neq(StdLib.var("a"), null),
+      StdLib.callMethod(StdLib.var("a"), "b", StdLib.var("x")),
       null,
     );
     expect(transpile(code)).toEqual(expected);
@@ -234,11 +246,13 @@ describe("transpiler optional chaining", () => {
   });
 
   test("mixed chain a.b?.()", () => {
+    // a.b?.()
+    // Should fuse b and () into call_method
     const code = "a.b?.()";
-    const tmp = "__tmp_";
-    const expected = StdLib.seq(
-      StdLib.let(tmp, ObjectLib.objGet(StdLib.var("a"), "b")),
-      StdLib.if(BooleanLib.neq(StdLib.var(tmp), null), StdLib.apply(StdLib.var(tmp)), null),
+    const expected = StdLib.if(
+      BooleanLib.neq(StdLib.var("a"), null),
+      StdLib.callMethod(StdLib.var("a"), "b"),
+      null,
     );
     expect(transpile(code)).toEqual(expected);
   });
