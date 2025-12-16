@@ -27,7 +27,7 @@ Embed metadata into an image using EXIF tags.
 - `format` ("png" | "jpeg" | "webp"): Image format
 - `metadata` (object): Metadata to embed
 
-**Returns:** Promise<Buffer> - Image with embedded metadata
+**Returns:** `Promise<Buffer>` - Image with embedded metadata
 
 **Example:**
 
@@ -52,7 +52,7 @@ Extract metadata from an image.
 - `image` (Buffer): Image buffer
 - `format` (string): Image format
 
-**Returns:** Promise<object> - Parsed metadata object
+**Returns:** `Promise<object>` - Parsed metadata object
 
 **Example:**
 
@@ -78,7 +78,7 @@ Convert image between formats with optional metadata preservation.
   - `quality` (number): Output quality 1-100 (for lossy formats)
   - `preserveMetadata` (boolean): Whether to preserve EXIF metadata
 
-**Returns:** Promise<Buffer> - Converted image
+**Returns:** `Promise<Buffer>` - Converted image
 
 **Example:**
 
@@ -112,7 +112,7 @@ Rotate and scale images.
   - `rotation` (number): Rotation angle in degrees (0, 90, 180, 270)
   - `scale` (number): Scale factor (e.g., 2.0 for 2x)
 
-**Returns:** Promise<Buffer> - Transformed image
+**Returns:** `Promise<Buffer>` - Transformed image
 
 **Example:**
 
@@ -150,7 +150,7 @@ Apply image filters.
 - `format` (string): Image format
 - `filterType` ("blur" | "sharpen" | "grayscale"): Filter to apply
 
-**Returns:** Promise<Buffer> - Filtered image
+**Returns:** `Promise<Buffer>` - Filtered image
 
 **Example:**
 
@@ -182,7 +182,7 @@ Overlay one image on top of another.
   - `x` (number): X position of overlay
   - `y` (number): Y position of overlay
 
-**Returns:** Promise<Buffer> - Composited image
+**Returns:** `Promise<Buffer>` - Composited image
 
 **Example:**
 

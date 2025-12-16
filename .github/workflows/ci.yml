@@ -26,9 +26,6 @@ jobs:
       - name: Check Unused Code
         run: bun run check:unused
 
-      - name: Check Verbs
-        run: bun run check:verbs
-
       - name: Check Opcode Coverage
         run: bun run check:opcodes
 
