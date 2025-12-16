@@ -193,6 +193,5 @@ apps/imagegen/
 
 ## See Also
 
-- [Implementation Roadmap](./imagegen_roadmap.md) - Detailed development phases
 - [Diffusers Plugin](../plugins/diffusers.md) - Image generation backend
 - [Image I/O Package](../packages/image-io.md) - Server-side image processing
