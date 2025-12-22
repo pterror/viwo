@@ -110,6 +110,77 @@ export const mint = defineFullOpcode<
   },
 });
 
+/**
+ * Validates that a child value is a valid restriction of a parent value.
+ * Returns true if child is equal to or more restrictive than parent.
+ *
+ * LIMITATION: String restriction semantics are determined by key name conventions:
+ * - "path": child must be a subpath of parent (e.g., "/home/user" -> "/home/user/docs")
+ * - "domain": child must be subdomain or equal (e.g., "example.com" -> "api.example.com")
+ * - "namespace": child must be more specific prefix (e.g., "user" -> "user.123")
+ * - Other strings: require exact match
+ *
+ * Future improvement: Capability types could define their own restriction schemas.
+ */
+function isValidRestriction(parentValue: unknown, childValue: unknown, key: string): boolean {
+  // Same value is always valid
+  if (JSON.stringify(parentValue) === JSON.stringify(childValue)) {
+    return true;
+  }
+
+  // Wildcard: parent "*" allows anything, but child can't add "*" if parent lacks it
+  if (key === "*") {
+    // Parent has wildcard - child can remove it (more restrictive) or keep it
+    if (parentValue === true) {
+      return childValue === true || childValue === false;
+    }
+    // Parent lacks wildcard - child cannot add it
+    return false;
+  }
+
+  // Arrays: child must be subset of parent (e.g., method: ["GET", "POST"] -> ["GET"])
+  if (Array.isArray(parentValue) && Array.isArray(childValue)) {
+    return childValue.every((item) => parentValue.includes(item));
+  }
+
+  // Path-like strings: child path must be under parent path
+  if (key === "path" && typeof parentValue === "string" && typeof childValue === "string") {
+    // Normalize paths: ensure they end consistently for prefix comparison
+    const normalizedParent = parentValue.endsWith("/") ? parentValue : parentValue + "/";
+    const normalizedChild = childValue.endsWith("/") ? childValue : childValue + "/";
+    return normalizedChild.startsWith(normalizedParent) || childValue === parentValue;
+  }
+
+  // Domain strings: child must be subdomain or equal
+  if (key === "domain" && typeof parentValue === "string" && typeof childValue === "string") {
+    return childValue === parentValue || childValue.endsWith("." + parentValue);
+  }
+
+  // Namespace strings: child namespace must be equal or more specific prefix
+  if (key === "namespace" && typeof parentValue === "string" && typeof childValue === "string") {
+    if (parentValue === "*") {
+      return true; // Parent allows all namespaces
+    }
+    return childValue.startsWith(parentValue);
+  }
+
+  // Numbers (like target_id): must match exactly, cannot change target
+  if (typeof parentValue === "number" && typeof childValue === "number") {
+    return parentValue === childValue;
+  }
+
+  // Booleans: for restrictive flags, can only make MORE restrictive
+  // e.g., readonly: false -> readonly: true is OK, but true -> false is NOT
+  if (typeof parentValue === "boolean" && typeof childValue === "boolean") {
+    // If parent is restrictive (true), child cannot be less restrictive (false)
+    // If parent is permissive (false), child can be either
+    return parentValue === false || childValue === true;
+  }
+
+  // Unknown types: require exact match for safety
+  return false;
+}
+
 export const delegate = defineFullOpcode<
   [parent: Capability | null, restrictions: object],
   Capability
@@ -124,19 +195,43 @@ export const delegate = defineFullOpcode<
       throw new ScriptError("delegate: invalid parent capability");
     }
 
-    // SECURITY ISSUE: This implementation allows privilege ESCALATION, not just restriction.
-    // Spreading restrictions OVER parentCap.params means child can OVERRIDE parent values.
-    // Example: parent { readonly: true } + restrictions { readonly: false } = { readonly: false }
-    //
-    // Proper implementation should validate each restriction is actually MORE restrictive:
-    // - Numeric: new value should be narrower range or equal
-    // - Boolean flags: if parent is restrictive, child cannot be less restrictive
-    // - Target IDs: child cannot access targets parent cannot access
-    // - Wildcards: if parent lacks wildcard, child cannot add wildcard
-    //
-    // For now, delegation just creates a new capability with same type but potentially modified params
-    // TODO: Implement proper subset validation
-    const newParams = { ...parentCap.params, ...(restrictions as object) };
+    const restrictionsObj = restrictions as Record<string, unknown>;
+    const parentParams = parentCap.params as Record<string, unknown>;
+    const parentHasWildcard = parentParams["*"] === true;
+
+    // Validate that each restriction is actually MORE restrictive (subset validation)
+    for (const [key, childValue] of Object.entries(restrictionsObj)) {
+      const parentValue = parentParams[key];
+
+      // Check if child is adding a new key that parent doesn't have
+      if (!(key in parentParams)) {
+        // Special case: never allow adding wildcard (it's expansive, not restrictive)
+        if (key === "*") {
+          throw new ScriptError("delegate: cannot add wildcard '*' - would expand permissions");
+        }
+        // If parent has wildcard, adding new restrictive params is allowed
+        // (we're narrowing from "everything" to "specific things")
+        if (parentHasWildcard) {
+          continue;
+        }
+        // Adding restrictive boolean flags is always OK (e.g., readonly: true)
+        if (typeof childValue === "boolean" && childValue === true) {
+          continue;
+        }
+        throw new ScriptError(
+          `delegate: cannot add new parameter '${key}' - parent capability lacks this parameter`,
+        );
+      }
+
+      // Validate the restriction is actually more restrictive
+      if (!isValidRestriction(parentValue, childValue, key)) {
+        throw new ScriptError(
+          `delegate: restriction '${key}' would expand permissions (parent: ${JSON.stringify(parentValue)}, child: ${JSON.stringify(childValue)})`,
+        );
+      }
+    }
+
+    const newParams = { ...parentParams, ...restrictionsObj };
     const newId = createCapability(ctx.this.id, parentCap.type, newParams);
 
     return hydrateCapability({

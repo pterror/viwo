@@ -1,5 +1,5 @@
 import * as KernelLib from "./runtime/lib/kernel";
-import { BooleanLib, ObjectLib, StdLib, createScriptContext, evaluate } from "@viwo/scripting";
+import { BooleanLib, ListLib, ObjectLib, StdLib, createScriptContext, evaluate } from "@viwo/scripting";
 import { CoreLib, db } from ".";
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createCapability, createEntity, getEntity } from "./repo";
@@ -169,6 +169,153 @@ describe("Capability Permissions", () => {
       expect(Promise.resolve().then(() => evaluate(script, ctx))).rejects.toThrow(
         "mint: authority must be sys.mint",
       );
+    });
+
+    test("Delegate cannot add wildcard", () => {
+      // Owner has a specific capability (target_id: item.id)
+      // Attacker tries to delegate and add wildcard to gain broader access
+      const script = StdLib.seq(
+        StdLib.let(
+          "cap",
+          KernelLib.getCapability("entity.control", ObjectLib.objNew(["target_id", item.id])),
+        ),
+        // Try to add wildcard - should fail
+        KernelLib.delegate(StdLib.var("cap"), ObjectLib.objNew(["*", true])),
+      );
+      const ctx = createScriptContext({ args: [], caller: owner, ops: GameOpcodes, this: owner });
+      expect(Promise.resolve().then(() => evaluate(script, ctx))).rejects.toThrow(
+        "delegate: cannot add wildcard '*' - would expand permissions",
+      );
+    });
+
+    test("Delegate cannot change target_id", () => {
+      // Owner has control of item
+      // Attacker tries to delegate with different target_id
+      const script = StdLib.seq(
+        StdLib.let(
+          "cap",
+          KernelLib.getCapability("entity.control", ObjectLib.objNew(["target_id", item.id])),
+        ),
+        // Try to change target to admin - should fail
+        KernelLib.delegate(StdLib.var("cap"), ObjectLib.objNew(["target_id", admin.id])),
+      );
+      const ctx = createScriptContext({ args: [], caller: owner, ops: GameOpcodes, this: owner });
+      expect(Promise.resolve().then(() => evaluate(script, ctx))).rejects.toThrow(
+        "delegate: restriction 'target_id' would expand permissions",
+      );
+    });
+
+    test("Delegate can narrow wildcard to specific target", () => {
+      // Admin has wildcard control
+      // Should be able to delegate with specific target (more restrictive)
+      const script = StdLib.seq(
+        StdLib.let(
+          "cap",
+          KernelLib.getCapability("entity.control", ObjectLib.objNew(["*", true])),
+        ),
+        // Narrow from wildcard to specific target - should succeed
+        StdLib.let(
+          "newCap",
+          KernelLib.delegate(StdLib.var("cap"), ObjectLib.objNew(["target_id", item.id])),
+        ),
+        KernelLib.giveCapability(StdLib.var("newCap"), CoreLib.entity(other.id)),
+      );
+      const ctx = createScriptContext({ args: [], caller: admin, ops: GameOpcodes, this: admin });
+      // Should not throw
+      expect(Promise.resolve().then(() => evaluate(script, ctx))).resolves.toBeDefined();
+    });
+
+    test("Delegate cannot expand array restrictions", () => {
+      // Create a capability with method restriction
+      const capId = createCapability(owner.id, "net.http", { domain: "example.com", method: ["GET"] });
+      const cap = {
+        __brand: "Capability" as const,
+        id: capId,
+        ownerId: owner.id,
+        type: "net.http",
+      };
+      // Try to expand to include POST - should fail
+      const script = KernelLib.delegate(cap, ObjectLib.objNew(["method", ListLib.listNew("GET", "POST")]));
+      const ctx = createScriptContext({ args: [], caller: owner, ops: GameOpcodes, this: owner });
+      expect(Promise.resolve().then(() => evaluate(script, ctx))).rejects.toThrow(
+        "delegate: restriction 'method' would expand permissions",
+      );
+    });
+
+    test("Delegate can narrow array restrictions", () => {
+      // Create a capability with multiple methods
+      const capId = createCapability(owner.id, "net.http", { domain: "example.com", method: ["GET", "POST", "PUT"] });
+      const cap = {
+        __brand: "Capability" as const,
+        id: capId,
+        ownerId: owner.id,
+        type: "net.http",
+      };
+      // Narrow to just GET - should succeed
+      const script = KernelLib.delegate(cap, ObjectLib.objNew(["method", ListLib.listNew("GET")]));
+      const ctx = createScriptContext({ args: [], caller: owner, ops: GameOpcodes, this: owner });
+      expect(Promise.resolve().then(() => evaluate(script, ctx))).resolves.toBeDefined();
+    });
+
+    test("Delegate cannot expand path restriction", () => {
+      // Create capability with path restriction
+      const capId = createCapability(owner.id, "fs.read", { path: "/home/user/docs" });
+      const cap = {
+        __brand: "Capability" as const,
+        id: capId,
+        ownerId: owner.id,
+        type: "fs.read",
+      };
+      // Try to expand to parent path - should fail
+      const script = KernelLib.delegate(cap, ObjectLib.objNew(["path", "/home/user"]));
+      const ctx = createScriptContext({ args: [], caller: owner, ops: GameOpcodes, this: owner });
+      expect(Promise.resolve().then(() => evaluate(script, ctx))).rejects.toThrow(
+        "delegate: restriction 'path' would expand permissions",
+      );
+    });
+
+    test("Delegate can narrow path restriction", () => {
+      // Create capability with path restriction
+      const capId = createCapability(owner.id, "fs.read", { path: "/home/user" });
+      const cap = {
+        __brand: "Capability" as const,
+        id: capId,
+        ownerId: owner.id,
+        type: "fs.read",
+      };
+      // Narrow to subdirectory - should succeed
+      const script = KernelLib.delegate(cap, ObjectLib.objNew(["path", "/home/user/docs"]));
+      const ctx = createScriptContext({ args: [], caller: owner, ops: GameOpcodes, this: owner });
+      expect(Promise.resolve().then(() => evaluate(script, ctx))).resolves.toBeDefined();
+    });
+
+    test("Delegate wildcard can add path restriction", () => {
+      // Create wildcard capability
+      const capId = createCapability(owner.id, "fs.read", { "*": true });
+      const cap = {
+        __brand: "Capability" as const,
+        id: capId,
+        ownerId: owner.id,
+        type: "fs.read",
+      };
+      // Add path restriction to wildcard - should succeed (more restrictive)
+      const script = KernelLib.delegate(cap, ObjectLib.objNew(["path", "/home/user"]));
+      const ctx = createScriptContext({ args: [], caller: owner, ops: GameOpcodes, this: owner });
+      expect(Promise.resolve().then(() => evaluate(script, ctx))).resolves.toBeDefined();
+    });
+
+    test("Delegate wildcard can add target_id restriction", () => {
+      // Admin has wildcard entity.control
+      // Delegate with specific target_id (narrowing from all to one)
+      const script = StdLib.seq(
+        StdLib.let(
+          "cap",
+          KernelLib.getCapability("entity.control", ObjectLib.objNew(["*", true])),
+        ),
+        KernelLib.delegate(StdLib.var("cap"), ObjectLib.objNew(["target_id", item.id])),
+      );
+      const ctx = createScriptContext({ args: [], caller: admin, ops: GameOpcodes, this: admin });
+      expect(Promise.resolve().then(() => evaluate(script, ctx))).resolves.toBeDefined();
     });
   });
 });
