@@ -2,7 +2,10 @@
 
 ## Next Up
 
-(Empty - see backlog sections below)
+1. Fix `delegate` privilege escalation - implement proper subset validation in `packages/core/src/runtime/lib/kernel.ts`
+2. Fix optional chaining `this` context loss in transpiler (TODO at line ~1020)
+3. Surface optimizer errors to user instead of silent `console.error`
+4. Transpiler: Support ES6 shorthand property syntax (`{ content, role }` drops properties)
 
 ## 1. Deep Simulation (Sandbox)
 
