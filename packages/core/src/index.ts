@@ -177,15 +177,17 @@ export function startServer(port = 8080) {
         const playerId = createEntity(
           {
             description: "A new player.",
-            location: 1, // Start in The Void (or Lobby if seeded)
+            location: 7, // Start in Lobby (id 7 in seed order)
             name: "Player",
           },
-          2, // Inherit from Player Base
+          6, // Inherit from Player Base (id 6 in seed order)
         );
 
         // Mint capabilities for new player
         createCapability(playerId, "sys.create", {});
-        createCapability(playerId, "entity.control", { target_id: playerId });
+        // Wildcard capability to allow room interactions (moving between rooms)
+        // This must come first so get_capability finds it before specific ones
+        createCapability(playerId, "entity.control", { "*": true });
 
         ws.data = { userId: playerId };
         clients.set(playerId, ws);
@@ -314,17 +316,11 @@ export async function handleJsonRpcRequest(
 
       // Call system.get_available_verbs(player)
       const verbs = evaluate(
-        {
-          args: [
-            { args: [{ type: "value", value: system.id }], type: "entity" },
-            { type: "value", value: "get_available_verbs" },
-            { args: [{ type: "value", value: player.id }], type: "entity" },
-          ],
-          type: "call",
-        },
+        CoreLib.call(system, "get_available_verbs", player),
         createScriptContext({
           args: [],
           caller: system,
+          gas: 10000, // Higher gas limit for verb retrieval
           ops: GameOpcodes,
           send: createSendFunction(ws),
           this: system,
@@ -569,10 +565,16 @@ function executeVerb(
  */
 function createSendFunction(ws: any): (type: string, payload: unknown) => void {
   return (type: string, payload: unknown) => {
+    // Wrap "message" type to match MessageNotification format
+    let params: any = payload;
+    if (type === "message" && typeof payload === "string") {
+      params = { text: payload, type: "info" };
+    }
+
     const notification: JsonRpcNotification = {
       jsonrpc: "2.0",
       method: type,
-      params: payload as any,
+      params,
     };
     ws.send(JSON.stringify(notification));
   };

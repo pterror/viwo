@@ -209,10 +209,13 @@ export function seed() {
   });
 
   // Create another room
-  const gardenId = createEntity({
-    description: "A lush garden with blooming flowers.",
-    name: "Garden",
-  });
+  const gardenId = createEntity(
+    {
+      description: "A lush garden with blooming flowers.",
+      name: "Garden",
+    },
+    entityBaseId,
+  );
 
   // Link Lobby and Garden
   const northExitId = createEntity({
@@ -240,10 +243,13 @@ export function seed() {
   });
 
   // 9. Create a Gemstore
-  const gemstoreId = createEntity({
-    description: "A glittering shop filled with rare stones and oddities.",
-    name: "Gemstore",
-  });
+  const gemstoreId = createEntity(
+    {
+      description: "A glittering shop filled with rare stones and oddities.",
+      name: "Gemstore",
+    },
+    entityBaseId,
+  );
 
   // Link Lobby and Gemstore
   // Link Lobby and Gemstore

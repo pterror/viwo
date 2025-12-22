@@ -422,7 +422,8 @@ function transpileNode(node: ts.Node, scope: Set<string>): any {
     if (typeof key === "number") {
       return ListLib.listGet(obj, key);
     }
-    return ObjectLib.objGet(obj, key);
+    // Use null as default to avoid throwing when key is missing
+    return ObjectLib.objGet(obj, key, null);
   }
 
   if (ts.isCallExpression(node)) {

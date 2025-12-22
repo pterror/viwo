@@ -13,7 +13,9 @@ export class EntityBase implements Entity {
   [key: string]: unknown;
 
   find(query: string) {
-    const locationId = (std.caller() as EntityBase).location;
+    // Use entity(id) to get a fresh copy with all properties from the database
+    const caller = entity(std.caller().id) as EntityBase;
+    const locationId = caller.location;
     const location = entity(locationId!) as EntityBase;
     const found = list.find(location.contents ?? [], (id: number) => {
       const props = resolve_props(entity(id)) as EntityBase;
@@ -24,7 +26,9 @@ export class EntityBase implements Entity {
   }
 
   find_exit(direction: string) {
-    const location = resolve_props(entity((std.caller() as EntityBase).location!)) as EntityBase;
+    // Use entity(id) to get a fresh copy with all properties from the database
+    const caller = entity(std.caller().id) as EntityBase;
+    const location = resolve_props(entity(caller.location!)) as EntityBase;
     const exits = location.exits ?? [];
     return list.find(exits, (id: number) => (entity(id) as EntityBase).name === direction);
   }
@@ -61,7 +65,8 @@ export class EntityBase implements Entity {
       send("message", "Invalid destination.");
       return;
     }
-    const mover = std.caller() as EntityBase;
+    // Use entity(id) to get a fresh copy with all properties from the database
+    const mover = entity(std.caller().id) as EntityBase;
     let checkId: number | null = destId;
     let isRecursive = false;
     while (checkId) {
@@ -71,10 +76,12 @@ export class EntityBase implements Entity {
       } else {
         const checkEnt = entity(checkId) as EntityBase;
         // Break infinite loop if entity is its own location (e.g. Void)
-        if (checkEnt.location === checkId) {
+        // Use bracket notation to get null default for missing properties
+        const entLocation = checkEnt["location"] as number | null;
+        if (entLocation === checkId || entLocation === null || entLocation === undefined) {
           checkId = null;
         } else {
-          checkId = checkEnt.location ?? null;
+          checkId = entLocation;
         }
       }
     }
