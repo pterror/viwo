@@ -2,10 +2,8 @@
 
 ## Next Up
 
-1. Fix `delegate` privilege escalation - implement proper subset validation in `packages/core/src/runtime/lib/kernel.ts`
-2. Fix optional chaining `this` context loss in transpiler (TODO at line ~1020)
-3. Surface optimizer errors to user instead of silent `console.error`
-4. Transpiler: Support ES6 shorthand property syntax (`{ content, role }` drops properties)
+1. Surface optimizer errors to user instead of silent `console.error`
+2. Transpiler: Support ES6 shorthand property syntax (`{ content, role }` drops properties)
 
 ## 1. Deep Simulation (Sandbox)
 
@@ -75,10 +73,10 @@
 ## Issues Found During Architecture Review
 
 - [x] **Transpiler**: Temp variable generation uses `Math.random()` suffix - theoretically can collide (use counter instead) - FIXED: uses counter now
-- [ ] **Transpiler**: Optional chaining `obj?.method()` may lose `this` context (TODO comment at line ~1020)
+- [x] **Transpiler**: Optional chaining `obj?.method()` may lose `this` context - FIXED: buildChain() fuses prop+call into callMethod
 - [x] **Interpreter**: `std.set` silently does nothing if variable not found in scope chain - should throw or create at top level - FIXED: throws ScriptError
 - [ ] **Optimizer**: Catches all errors silently with `console.error` - optimization failures not surfaced to user
 - [x] **Stdlib**: Several opcode labels are wrong (e.g., `listEmpty` labeled "Index Of", `listGet` labeled "Insert Item") - FIXED: corrected 10 labels
 - [ ] **Core**: Copy-on-Write pattern only helps scope forking, doesn't protect against external mutation of vars object
 - [ ] **Core**: Verb compilation cache uses `JSON.stringify(code)` as key - inefficient for large verbs
-- [ ] **Kernel**: `delegate` opcode allows privilege ESCALATION - restrictions can override parent params (see comment in kernel.ts)
+- [x] **Kernel**: `delegate` opcode allows privilege ESCALATION - FIXED: now validates subset restrictions

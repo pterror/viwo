@@ -999,29 +999,9 @@ function applyPart(base: any, part: ChainPart): any {
     }
     return ObjectLib.objGet(base, part.key);
   } else if (part.kind === "call") {
-    // If we are chaining a call, base is the function?
-    // Wait, optional chain `obj?.method()` handling is complex.
-    // The `part` structure separates property access from call?
-    // Let's see `transpileOptionalChain`.
-    // It creates `kind: "call"` for `CallExpression`.
-    // But `CallExpression` inside `OptionalChain` usually involves property access too?
-    // e.g. `obj?.method()` -> PropertyAccess(obj, method) then Call.
-    // In `transpileOptionalChain`:
-    // It unshifts parts.
-    // If it sees `CallExpression`, it takes arguments and pushes "call".
-    // Then it moves to `current.expression`.
-    // If `current.expression` is `PropertyAccess`, it pushes "prop".
-    // So `obj?.method()` becomes [prop(method), call(args)].
-    // `applyPart` is called sequentially.
-    // 1. apply `prop(method)` -> `obj.get(obj, "method")` -> returns Function.
-    // 2. apply `call(args)` -> `std.apply(Function, ...args)`.
-    // This LOSES `this` context!
-    // We need to fuse `prop` and `call` if possible, OR use `call_method`.
-    // But `transpileOptionalChain` splits them.
-    // To support `obj?.method()`, we might need `std.call_method_optional` or logic in `applyPart` to peek ahead?
-    // Or just accept `std.apply` for optional chains for now?
-    // Optional chains are rare in core game logic compared to standard calls.
-    // Let's stick to `std.apply` for optional chains for now, or flag TODO.
+    // This is reached for standalone calls like `func?.()`.
+    // Method calls like `obj?.method()` are fused into std.callMethod in buildChain()
+    // before reaching applyPart, preserving `this` context.
     return StdLib.apply(base, ...(part.args || []));
   }
   throw new Error("Unknown chain part kind");
