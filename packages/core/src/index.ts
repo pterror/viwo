@@ -530,6 +530,7 @@ function executeVerb(
   const ctx = createScriptContext({
     args,
     caller: player,
+    gas: 50000, // High gas limit for verb execution
     ops: GameOpcodes,
     send: createSendFunction(ws),
     this: getEntity(verb.source)!,

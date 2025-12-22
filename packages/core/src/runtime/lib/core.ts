@@ -20,6 +20,7 @@ export const call = defineFullOpcode<[Entity, string, ...unknown[]], any>("call"
       createScriptContext({
         args: hydratedArgs,
         caller: ctx.caller,
+        gas: ctx.gas, // Inherit gas from parent context
         ops: ctx.ops,
         stack: [...(ctx.stack ?? []), { args: hydratedArgs, name: verb }],
         this: target,
